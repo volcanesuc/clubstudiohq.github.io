@@ -13,12 +13,12 @@ import {
 } from "/torneos/js/model.js";
 import { REG, listTeams, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
 import { myRegistrationsFor } from "/torneos/js/squads.js";
-import { esc, fmtDateRange, fmtDayOnly, gameRowHtml, gameUrl, hideLoader, isGoogleUser, playerLabel, regChip, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/torneos/js/ui.js";
+import { esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [] };
+const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "" };
 
 // fila de partido con nombre, color y logo actuales del equipo
 const row = (g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id), teams: state.teams });
@@ -111,29 +111,89 @@ function divisionPicker() {
     </div>`;
 }
 
+/* ---------- Posiciones (tabla tipo transmisión deportiva) ---------- */
+// Últimos resultados de un equipo (más reciente al final): "W" / "L" / "E"
+function recentResults(teamId, games, n = 5) {
+  return games
+    .filter((g) => g.status === GAME_STATUS.FINAL && (g.teamA?.id === teamId || g.teamB?.id === teamId))
+    .sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt))
+    .slice(-n)
+    .map((g) => {
+      const us = g.teamA?.id === teamId ? g.scoreA || 0 : g.scoreB || 0;
+      const them = g.teamA?.id === teamId ? g.scoreB || 0 : g.scoreA || 0;
+      return us > them ? "W" : us < them ? "L" : "E";
+    });
+}
+
+const streakDots = (res) => `<span class="st-streak">${res.map((r) => `<i class="st-dot st-dot--${r}" title="${esc(r === "W" ? EX.resWin : r === "L" ? EX.resLoss : EX.resTie)}">${esc(r === "W" ? "G" : r === "L" ? "P" : "E")}</i>`).join("") || "<span class=\"ev-muted\">—</span>"}</span>`;
+
 function standingsTab() {
   const teams = state.teams.filter(inDivision(state.division));
   const games = state.games.filter(inDivision(state.division)).filter((g) => !g.phase); // fase de grupos
   const pools = [...new Set(teams.map((t) => (t.pool || "").toUpperCase()))].sort();
+  const divName = divisions().find((d) => d.id === state.division)?.name || divisions()[0]?.name || "";
   const table = (pool) => {
     const ts = teams.filter((t) => (t.pool || "").toUpperCase() === pool);
     const ids = new Set(ts.map((t) => t.id));
-    const rows = standings(ts, games.filter((g) => ids.has(g.teamA?.id) && ids.has(g.teamB?.id)));
+    const poolGames = games.filter((g) => ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
+    const rows = standings(ts, poolGames);
+    const played = poolGames.filter((g) => g.status === GAME_STATUS.FINAL).length;
     return `
-      <div class="ev-card p-0 overflow-hidden mb-3">
-        ${pool ? `<div class="px-3 pt-3 fw-bold">${esc(exf(EX.phasePool, { pool }))}</div>` : ""}
+      <section class="st-card">
+        <header class="st-card__head">
+          <div>
+            <div class="st-card__title">${esc(pool ? exf(EX.phasePool, { pool }) : divName || EX.tabStandings)}</div>
+            <div class="st-card__sub">${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}</div>
+          </div>
+          <span class="st-live"><i class="bi bi-broadcast"></i> ${esc(EX.standUpdated)}</span>
+        </header>
         <div class="table-responsive">
-          <table class="table table-sm mb-0 ev-table">
-            <thead><tr><th class="ps-3">#</th><th>${esc(EX.standTeam)}</th><th class="num">${esc(EX.standPlayed)}</th><th class="num">${esc(EX.standW)}</th><th class="num">${esc(EX.standL)}</th><th class="num">${esc(EX.standPF)}</th><th class="num">${esc(EX.standPA)}</th><th class="num pe-3">${esc(EX.standDiff)}</th></tr></thead>
-            <tbody>${rows.map((r, i) => `
-              <tr><td class="ps-3 fw-bold">${i + 1}</td><td><span class="ev-team-dot" style="background:${esc(r.team.color || "#ccc")}"></span> ${esc(r.team.name)}</td>
-              <td class="num">${r.played}</td><td class="num fw-bold">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.pf}</td><td class="num">${r.pa}</td><td class="num pe-3">${r.diff > 0 ? "+" : ""}${r.diff}</td></tr>`).join("")}
+          <table class="st-table">
+            <thead><tr>
+              <th class="st-pos">#</th>
+              <th class="st-team">${esc(EX.standTeam)}</th>
+              <th class="num" title="${esc(EX.standPlayedLong)}">${esc(EX.standPlayed)}</th>
+              <th class="num" title="${esc(EX.standWLong)}">${esc(EX.standW)}</th>
+              <th class="num" title="${esc(EX.standLLong)}">${esc(EX.standL)}</th>
+              <th class="num d-none d-md-table-cell" title="${esc(EX.standPctLong)}">${esc(EX.standPct)}</th>
+              <th class="num d-none d-sm-table-cell" title="${esc(EX.standPFLong)}">${esc(EX.standPF)}</th>
+              <th class="num d-none d-sm-table-cell" title="${esc(EX.standPALong)}">${esc(EX.standPA)}</th>
+              <th class="num" title="${esc(EX.standDiffLong)}">${esc(EX.standDiff)}</th>
+              <th class="d-none d-md-table-cell">${esc(EX.standStreak)}</th>
+            </tr></thead>
+            <tbody>${rows.map((r, i) => {
+              const pct = r.played ? (r.w / r.played).toFixed(3).replace(/^0/, "") : ".000";
+              return `
+              <tr class="${i === 0 && r.played ? "is-leader" : ""}">
+                <td class="st-pos"><span class="st-rank">${i + 1}</span></td>
+                <td class="st-team">
+                  <div class="d-flex align-items-center gap-2">
+                    ${teamBadge(r.team, 30)}
+                    <div class="min-w-0">
+                      <div class="st-team__name">${esc(r.team.name)}</div>
+                      ${r.team.city ? `<div class="st-team__sub d-none d-sm-block">${esc(r.team.city)}</div>` : ""}
+                    </div>
+                  </div>
+                </td>
+                <td class="num">${r.played}</td>
+                <td class="num fw-bold">${r.w}</td>
+                <td class="num">${r.l}</td>
+                <td class="num d-none d-md-table-cell">${pct}</td>
+                <td class="num d-none d-sm-table-cell">${r.pf}</td>
+                <td class="num d-none d-sm-table-cell">${r.pa}</td>
+                <td class="num"><span class="st-diff ${r.diff > 0 ? "is-pos" : r.diff < 0 ? "is-neg" : ""}">${r.diff > 0 ? "+" : ""}${r.diff}</span></td>
+                <td class="d-none d-md-table-cell">${streakDots(recentResults(r.team.id, poolGames))}</td>
+              </tr>`;
+            }).join("")}
             </tbody>
           </table>
         </div>
-      </div>`;
+      </section>`;
   };
-  return divisionPicker() + (teams.length ? pools.map(table).join("") : `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`);
+  return `
+    <div class="sb-toolbar">${divisionPicker()}</div>
+    ${teams.length ? pools.map(table).join("") : `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`}
+    ${teams.length ? `<div class="st-legend">${esc(EX.standLegend)}</div>` : ""}`;
 }
 
 function statsTab() {
@@ -194,18 +254,115 @@ function teamsTab() {
     </div>`;
 }
 
-function gamesTab() {
-  const games = state.games.filter(inDivision(state.division));
-  if (!games.length) return divisionPicker() + `<div class="ev-card ev-muted">${esc(EX.noGames)}</div>`;
-  const byDay = new Map();
-  games.forEach((g) => {
-    const day = toMillis(g.startAt) ? fmtDayOnly(g.startAt) : "";
-    if (!byDay.has(day)) byDay.set(day, []);
-    byDay.get(day).push(g);
+/* ---------- Partidos (marcadores tipo transmisión deportiva) ---------- */
+const dayKey = (v) => {
+  const ms = toMillis(v);
+  if (!ms) return "";
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// Récord G-P de cada equipo (partidos finalizados)
+function teamRecords(games) {
+  const rec = new Map();
+  const add = (id, k) => {
+    const r = rec.get(id) || { w: 0, l: 0 };
+    r[k] += 1;
+    rec.set(id, r);
+  };
+  games.filter((g) => g.status === GAME_STATUS.FINAL).forEach((g) => {
+    const a = g.scoreA || 0;
+    const b = g.scoreB || 0;
+    if (a > b) { add(g.teamA?.id, "w"); add(g.teamB?.id, "l"); }
+    if (b > a) { add(g.teamB?.id, "w"); add(g.teamA?.id, "l"); }
   });
-  return divisionPicker() + [...byDay.entries()].map(([day, list]) => `
-    ${day ? `<div class="tn-day-title">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</div>` : ""}
-    <div class="d-grid gap-2">${list.map(row).join("")}</div>`).join("");
+  return rec;
+}
+
+function scoreCard(game, records) {
+  const g = withLiveTeams(game, state.teams);
+  const live = g.status === GAME_STATUS.LIVE;
+  const final = g.status === GAME_STATUS.FINAL;
+  const started = live || final;
+  const a = g.scoreA || 0;
+  const b = g.scoreB || 0;
+  const status = live
+    ? `<span class="sb-pill sb-pill--live"><i></i>${esc(EX.gameLive)}</span>`
+    : final
+      ? `<span class="sb-pill sb-pill--final">${esc(EX.gameFinal)}</span>`
+      : `<span class="sb-pill">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</span>`;
+  const team = (t, score, other) => {
+    const r = records.get(t?.id);
+    const cls = final ? (score > other ? "is-winner" : score < other ? "is-loser" : "") : "";
+    return `
+      <div class="sb-team ${cls}">
+        ${teamBadge(t || {}, 36)}
+        <div class="sb-team__info">
+          <div class="sb-team__name">${esc(t?.name || "—")}</div>
+          ${r ? `<div class="sb-team__rec">${r.w}-${r.l}</div>` : ""}
+        </div>
+        <div class="sb-team__score">${started ? score : ""}${final && score > other ? `<i class="bi bi-caret-left-fill sb-win-mark"></i>` : ""}</div>
+      </div>`;
+  };
+  return `
+    <a class="sb-card ${live ? "is-live" : ""}" href="${esc(gameUrl(state.event.id, g.id))}">
+      <div class="sb-card__head">
+        ${status}
+        <span class="sb-card__meta">${esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}</span>
+      </div>
+      ${team(g.teamA, a, b)}
+      ${team(g.teamB, b, a)}
+      <div class="sb-card__foot">${esc(live ? EX.sbFollow : final ? EX.sbRecap : EX.sbPreview)} <i class="bi bi-chevron-right"></i></div>
+    </a>`;
+}
+
+function gamesTab() {
+  const all = state.games.filter(inDivision(state.division));
+  if (!all.length) return `<div class="sb-toolbar">${divisionPicker()}</div><div class="ev-card ev-muted">${esc(EX.noGames)}</div>`;
+  const records = teamRecords(all);
+
+  // días con partidos
+  const days = [...new Set(all.map((g) => dayKey(g.startAt)).filter(Boolean))].sort();
+  if (state.gameDay && !days.includes(state.gameDay)) state.gameDay = "";
+  const byStatus = (s) => all.filter((g) => (s === "all" ? true : s === "upcoming" ? g.status === GAME_STATUS.SCHEDULED || !g.status : g.status === s));
+  const filters = [
+    ["all", EX.filterAll, all.length],
+    [GAME_STATUS.LIVE, EX.filterLive, byStatus(GAME_STATUS.LIVE).length],
+    ["upcoming", EX.filterUpcoming, byStatus("upcoming").length],
+    [GAME_STATUS.FINAL, EX.filterFinal, byStatus(GAME_STATUS.FINAL).length],
+  ];
+  const games = byStatus(state.gameFilter)
+    .filter((g) => !state.gameDay || dayKey(g.startAt) === state.gameDay)
+    .sort((x, y) => toMillis(x.startAt) - toMillis(y.startAt));
+
+  const grouped = new Map();
+  games.forEach((g) => {
+    const k = dayKey(g.startAt);
+    if (!grouped.has(k)) grouped.set(k, []);
+    grouped.get(k).push(g);
+  });
+
+  const dayLabel = (k) => {
+    const sample = all.find((g) => dayKey(g.startAt) === k);
+    return sample ? fmtWhen(sample.startAt, { weekday: "short", day: "numeric", month: "short" }) : EX.noSchedule;
+  };
+
+  return `
+    <div class="sb-toolbar">
+      ${divisionPicker()}
+      <div class="sb-filters" role="tablist">
+        ${filters.map(([id, label, n]) => `<button class="sb-filter ${state.gameFilter === id ? "is-active" : ""} ${id === GAME_STATUS.LIVE && n ? "has-live" : ""}" data-gfilter="${id}">${id === GAME_STATUS.LIVE && n ? "<i class=\"sb-live-dot\"></i>" : ""}${esc(label)} <span>${n}</span></button>`).join("")}
+      </div>
+    </div>
+    ${days.length > 1 ? `
+      <div class="sb-days">
+        <button class="sb-day sb-day--all ${!state.gameDay ? "is-active" : ""}" data-gday="">${esc(EX.allDays)}</button>
+        ${days.map((k) => `<button class="sb-day ${state.gameDay === k ? "is-active" : ""}" data-gday="${k}">${esc(dayLabel(k))}<span>${all.filter((g) => dayKey(g.startAt) === k).length}</span></button>`).join("")}
+      </div>` : ""}
+    ${games.length ? [...grouped.entries()].map(([k, list]) => `
+      <div class="tn-day-title">${esc(k ? fmtDayOnly(list[0].startAt).replace(/^./, (c) => c.toUpperCase()) : EX.noSchedule)}</div>
+      <div class="row g-3">${list.map((g) => `<div class="col-12 col-md-6 col-xl-4">${scoreCard(g, records)}</div>`).join("")}</div>`).join("")
+      : `<div class="ev-card ev-muted text-center">${esc(EX.sbNoGamesFilter)}</div>`}`;
 }
 
 function spiritTab() {
@@ -282,6 +439,16 @@ $("tnRoot").addEventListener("click", async (ev) => {
     }
     return;
   }
+  const gf = ev.target.closest("[data-gfilter]");
+  if (gf) {
+    state.gameFilter = gf.dataset.gfilter;
+    return render();
+  }
+  const gd = ev.target.closest("[data-gday]");
+  if (gd) {
+    state.gameDay = gd.dataset.gday;
+    return render();
+  }
   const btn = ev.target.closest("[data-tab]");
   if (!btn) return;
   state.tab = btn.dataset.tab;
@@ -320,8 +487,14 @@ $("tnRoot").addEventListener("change", (ev) => {
         if (regs.length) render();
       }).catch(() => {});
     }
+    let firstLoad = true;
     subscribeGames(event.id, (games) => {
       state.games = games;
+      if (firstLoad) {
+        firstLoad = false;
+        const today = dayKey(Date.now());
+        if (games.some((g) => dayKey(g.startAt) === today)) state.gameDay = today;
+      }
       render();
     });
   } catch (err) {
