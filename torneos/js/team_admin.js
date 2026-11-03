@@ -16,7 +16,7 @@ import {
   saveRegistration,
   withdrawRegistration,
 } from "/torneos/js/services.js";
-import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, squadUrl } from "/torneos/js/squads.js";
+import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, squadUrl } from "/torneos/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -78,6 +78,8 @@ async function renderList() {
     listPublicEvents().catch(() => []),
   ]);
   const open = events.filter((e) => e.registrationOpen && isApproved(e));
+  // mis inscripciones en cada torneo abierto
+  const mine = new Map(await Promise.all(open.map(async (e) => [e.id, await myRegistrationsFor(state.user, e.id).catch(() => [])])));
   root.innerHTML = `
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
       <div>
@@ -106,14 +108,20 @@ async function renderList() {
     </form>
 
     <h2 class="h6 mt-4 mb-2">${esc(EX.openRegistrations)}</h2>
-    ${open.length ? open.map((e) => `
-      <div class="ev-card ev-event-item">
+    ${open.length ? open.map((e) => {
+      const regs = mine.get(e.id) || [];
+      return `
+      <div class="ev-card ev-event-item flex-wrap">
         <div class="flex-grow-1 min-w-0">
           <a class="fw-bold text-decoration-none" href="${esc(eventUrl(e))}">${esc(e.name || "—")}</a>
           <div class="small ev-muted">${esc(fmtDateRange(e.startDate, e.endDate))}${e.venue ? ` · ${esc(e.venue)}` : ""}</div>
+          ${regs.map(({ squad, reg }) => `<div class="d-flex align-items-center gap-2 mt-1 small">${teamBadge(squad, 20)}<span class="fw-semibold">${esc(squad.name)}</span>${regChip(reg.status)}<a href="${esc(regUrl(e.id, { r: reg.id }))}">${esc(EX.regEditMine)}</a></div>`).join("")}
         </div>
-        <a class="btn btn-sm tn-btn-grad" href="${esc(regUrl(e.id))}">${esc(EX.registerTeam)}</a>
-      </div>`).join("") : `<div class="ev-card ev-muted">${esc(EX.noOpenRegistrations)}</div>`}`;
+        ${regs.length < squads.filter((s) => isSquadAdmin(s, state.user.uid)).length || !squads.length
+          ? `<a class="btn btn-sm tn-btn-grad" href="${esc(regUrl(e.id))}">${esc(regs.length ? EX.registerAnother : EX.registerTeam)}</a>`
+          : ""}
+      </div>`;
+    }).join("") : `<div class="ev-card ev-muted">${esc(EX.noOpenRegistrations)}</div>`}`;
 
   $("#sqCreate").onsubmit = (ev) => {
     ev.preventDefault();
@@ -342,6 +350,16 @@ async function openRegistration(eventKey, regId, squadId) {
       return renderList();
     }
     if (!state.squads.length) return renderNoSquad();
+    const already = await myRegistrationsFor(state.user, event.id).catch(() => []);
+    const taken = new Set(already.map((x) => x.squad.id));
+    const free = state.squads.filter((s) => !taken.has(s.id));
+    if (!free.length) {
+      // todos mis equipos ya están inscritos: abre la inscripción existente
+      const first = already.find((x) => x.squad.id === squadId) || already[0];
+      history.replaceState(null, "", regUrl(event.id, { r: first.reg.id }));
+      return openRegistration(event.id, first.reg.id);
+    }
+    state.squads = free;
     state.reg = { divisionId: divisions()[0].id };
     const pick = state.squads.find((s) => s.id === squadId) || state.squads[0];
     await useSquad(pick.id, true);

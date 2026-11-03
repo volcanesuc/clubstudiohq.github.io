@@ -26,6 +26,7 @@ import {
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId } from "/torneos/js/model.js";
+import { DIVISION_OPTIONS } from "/torneos/js/divisions-config.js";
 import { toMillis } from "/torneos/js/ui.js";
 
 export const APPROVAL = { NONE: "none", REQUESTED: "requested", APPROVED: "approved", REJECTED: "rejected" };
@@ -40,6 +41,26 @@ const playsCol = (eid, gid) => collection(db, COL.events, eid, "games", gid, "pl
 const byStartDesc = (a, b) => String(b.startDate || "").localeCompare(String(a.startDate || ""));
 
 export const isApproved = (event) => event?.approval?.status === APPROVAL.APPROVED;
+
+/* =========================
+   Configuración de la plataforma
+========================= */
+// Opciones de divisiones: platform_config/divisions en Firestore o, si no existe, el archivo de config
+let divisionOptions = null;
+export async function loadDivisionOptions() {
+  if (divisionOptions) return divisionOptions;
+  try {
+    const snap = await getDoc(doc(db, COL.platformConfig, "divisions"));
+    const d = snap.exists() ? snap.data() : {};
+    divisionOptions = {
+      levels: Array.isArray(d.levels) && d.levels.length ? d.levels : DIVISION_OPTIONS.levels,
+      genders: Array.isArray(d.genders) && d.genders.length ? d.genders : DIVISION_OPTIONS.genders,
+    };
+  } catch {
+    divisionOptions = DIVISION_OPTIONS;
+  }
+  return divisionOptions;
+}
 
 /* =========================
    Admins de la plataforma
@@ -307,6 +328,24 @@ export async function updateGame(eid, gid, patch) {
 
 export async function deleteGame(eid, gid) {
   await deleteDoc(doc(gamesCol(eid), gid));
+}
+
+// Partido sin datos: nunca empezó ni tiene marcador
+export const isUnplayed = (g) => g.status === GAME_STATUS.SCHEDULED && !g.startedAt && !(g.scoreA || 0) && !(g.scoreB || 0);
+
+// Borra los partidos sin jugar (y sus links de planillero) para regenerar el calendario
+export async function deleteUnplayedGames(eid, games, keysByGame = new Map()) {
+  const doomed = games.filter(isUnplayed);
+  for (let i = 0; i < doomed.length; i += 200) {
+    const batch = writeBatch(db);
+    doomed.slice(i, i + 200).forEach((g) => {
+      batch.delete(doc(gamesCol(eid), g.id));
+      const token = keysByGame.get(g.id);
+      if (token) batch.delete(doc(db, COL.gameKeys, token));
+    });
+    await batch.commit();
+  }
+  return doomed.length;
 }
 
 /* =========================

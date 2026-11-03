@@ -8,9 +8,11 @@ import {
   eventRules,
   feedPlays,
   mvpScore,
+  ratioForPoint,
+  ratioLabel,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, waitForUser } from "/torneos/js/ui.js";
+import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -19,9 +21,12 @@ const GID = params.get("game") || "";
 
 const state = { event: null, rules: eventRules({}), teams: [], game: null, plays: [], playersById: new Map() };
 
-const teamName = (side) => (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
-const teamColor = (side) => (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
+// mixto: proporción del punto en juego (FMP / MMP)
+const ratioChip = (letter) => (letter ? `<div class="ev-chip ev-chip--ok mt-1">${esc(letter === "F" ? EX.skFmp : EX.skMmp)} · ${esc(ratioLabel(letter, state.rules.playersOnField))}</div>` : "");
 const teamDoc = (side) => state.teams.find((t) => t.id === (side === "A" ? state.game?.teamA?.id : state.game?.teamB?.id));
+// datos actuales del equipo (si lo renombraron o cambió de color después de crear el partido)
+const teamName = (side) => teamDoc(side)?.name || (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
+const teamColor = (side) => teamDoc(side)?.color || (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
 
 function boxScore(side, calc) {
   const players = (teamDoc(side)?.players || [])
@@ -78,7 +83,8 @@ function render() {
 
   const side = (k) => `
     <div class="ev-score__team">
-      <div class="ev-score__name"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
+      <div class="d-flex justify-content-center mb-1">${teamBadge({ ...(teamDoc(k) || {}), name: teamName(k), color: teamColor(k) }, 44)}</div>
+      <div class="ev-score__name">${esc(teamName(k))}</div>
       <div class="ev-score__pts">${score[k]}</div>
       ${live && calc.possession === k ? `<div class="ev-score__disc">🥏</div>` : ""}
     </div>`;
@@ -97,6 +103,7 @@ function render() {
         <div class="ev-score__clock" id="gvClock">${started ? clockView(g.clock || {}, state.rules).text : esc(fmtWhen(g.startAt, { hour: "2-digit", minute: "2-digit" }) || EX.vs)}</div>
         ${live && g.clock?.pausedAt && !g.clock?.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
         ${live && g.clock?.break ? `<div class="ev-chip mt-1" id="gvBreak">${esc(g.clock.break.type === "halftime" ? EX.skBreakHalftime : exf(EX.skBreakTimeout, { team: teamName(g.clock.break.team) }))} · <span id="gvBreakClock">${clockView(g.clock, state.rules).brk?.text || ""}</span></div>` : ""}
+        ${live && g.ratioFirst ? ratioChip(ratioForPoint(calc.points.length, g.ratioFirst)) : ""}
       </div>
       ${side("B")}
     </div>

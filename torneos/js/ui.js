@@ -268,7 +268,20 @@ export function feedItemHtml(play, ctx, { actions = "", audit = false } = {}) {
     </div>`;
 }
 
-export function gameRowHtml(g, { href = "" } = {}) {
+// Los partidos guardan una copia del nombre/color del equipo al crearse; esto usa los datos actuales
+// (nombre, color y logo) si se pasan los equipos del torneo.
+export function withLiveTeams(g, teams) {
+  if (!g || !teams) return g;
+  const byId = teams instanceof Map ? teams : new Map(teams.map((t) => [t.id, t]));
+  const live = (ref) => {
+    const t = ref?.id ? byId.get(ref.id) : null;
+    return t ? { ...ref, name: t.name || ref.name, color: t.color || ref.color, logo: t.logo || "" } : ref;
+  };
+  return { ...g, teamA: live(g.teamA), teamB: live(g.teamB) };
+}
+
+export function gameRowHtml(game, { href = "", teams = null } = {}) {
+  const g = withLiveTeams(game, teams);
   const final = g.status === GAME_STATUS.FINAL;
   const live = g.status === GAME_STATUS.LIVE;
   const aWin = final && (g.scoreA || 0) > (g.scoreB || 0);
@@ -277,14 +290,14 @@ export function gameRowHtml(g, { href = "" } = {}) {
   return `
     <${tag} class="ev-game-row" ${href ? `href="${esc(href)}"` : ""}>
       <div class="ev-game-row__team ${aWin ? "is-winner" : ""}">
-        <span class="ev-team-dot" style="background:${esc(g.teamA?.color || "#ccc")}"></span> ${esc(g.teamA?.name || "—")}
+        ${teamBadge(g.teamA || {}, 34)}<span class="ev-game-row__name">${esc(g.teamA?.name || "—")}</span>
       </div>
       <div class="ev-game-row__mid">
         ${final || live ? `<div class="ev-game-row__score">${g.scoreA || 0} – ${g.scoreB || 0}</div>` : `<div class="fw-bold">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</div>`}
         <div class="ev-game-row__meta">${live ? statusChip(g.status) : esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}</div>
       </div>
       <div class="ev-game-row__team ev-game-row__team--b ${bWin ? "is-winner" : ""}">
-        ${esc(g.teamB?.name || "—")} <span class="ev-team-dot" style="background:${esc(g.teamB?.color || "#ccc")}"></span>
+        <span class="ev-game-row__name">${esc(g.teamB?.name || "—")}</span>${teamBadge(g.teamB || {}, 34)}
       </div>
     </${tag}>`;
 }

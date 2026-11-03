@@ -31,6 +31,9 @@ export const DEFAULT_RULES = {
   gameMinutes: 90, // el reloj cuenta hacia atrás desde aquí (0 = hacia arriba)
   stopClockOnBreaks: true, // el reloj se detiene en timeouts y medio tiempo
   auditLog: true, // Jugadas muestra todo: anuladas, pausas, ajustes de reloj, reaperturas
+  mode: "7v7", // modalidad (ver GAME_MODES en divisions-config.js)
+  playersOnField: 7,
+  betweenGamesMin: 10, // descanso entre partidos al armar el calendario
   gameTo: 13,
   halftimeAt: 7,
   softCapMin: 0,
@@ -48,6 +51,9 @@ export function eventRules(event = {}) {
     gameMinutes: n(r.gameMinutes, DEFAULT_RULES.gameMinutes),
     stopClockOnBreaks: typeof r.stopClockOnBreaks === "boolean" ? r.stopClockOnBreaks : DEFAULT_RULES.stopClockOnBreaks,
     auditLog: typeof r.auditLog === "boolean" ? r.auditLog : DEFAULT_RULES.auditLog,
+    mode: r.mode || DEFAULT_RULES.mode,
+    playersOnField: n(r.playersOnField, DEFAULT_RULES.playersOnField),
+    betweenGamesMin: n(r.betweenGamesMin, DEFAULT_RULES.betweenGamesMin),
     gameTo: n(r.gameTo, DEFAULT_RULES.gameTo),
     halftimeAt: n(r.halftimeAt, DEFAULT_RULES.halftimeAt),
     softCapMin: n(r.softCapMin, 0),
@@ -65,6 +71,42 @@ export function eventRules(event = {}) {
 }
 
 export const other = (side) => (side === "A" ? "B" : "A");
+
+// Minutos que ocupa cada partido en el calendario (duración + descanso)
+export function slotMinutes(rules = DEFAULT_RULES) {
+  const game = rules.gameMinutes || rules.hardCapMin || 90;
+  return game + (rules.betweenGamesMin || 0);
+}
+
+/* =========================
+   Divisiones y mixto
+========================= */
+export const findDivision = (event, id) => (event?.divisions || []).find((d) => d.id === id) || null;
+
+export function isMixedDivision(division) {
+  if (!division) return false;
+  if (typeof division.mixed === "boolean") return division.mixed;
+  return /mixt|mixed/i.test(division.name || "");
+}
+
+// Regla A (WFDF, ABBA): el 1er punto usa la proporción elegida, luego se alterna cada dos puntos.
+// pointIndex 0 = primer punto. Devuelve "F" (FMP) o "M" (MMP).
+export function ratioForPoint(pointIndex, first) {
+  if (first !== "F" && first !== "M") return "";
+  const group = Math.floor((pointIndex + 1) / 2);
+  return group % 2 === 0 ? first : first === "F" ? "M" : "F";
+}
+
+// "4F · 3M" para 7 en cancha; vacío si es par (no hay proporción que elegir)
+export function ratioLabel(letter, players = 7) {
+  const p = Number(players) || 0;
+  if (!letter || p < 2 || p % 2 === 0) return "";
+  const maj = Math.ceil(p / 2);
+  const min = Math.floor(p / 2);
+  return letter === "F" ? `${maj}F · ${min}M` : `${maj}M · ${min}F`;
+}
+
+export const needsRatio = (division, rules = DEFAULT_RULES) => isMixedDivision(division) && (rules.playersOnField || 0) % 2 === 1;
 
 export function slugify(text) {
   return String(text || "")

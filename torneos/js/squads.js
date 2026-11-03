@@ -20,7 +20,7 @@ import {
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId } from "/torneos/js/model.js";
-import { listGames, listTeams, loadEvent } from "/torneos/js/services.js";
+import { listGames, listTeams, loadEvent, loadRegistration } from "/torneos/js/services.js";
 
 export const INVITE_ROLE = { PLAYER: "player", ADMIN: "admin" };
 
@@ -214,6 +214,23 @@ export async function leaveSquad(user, squad) {
 /* =========================
    Torneos e historial
 ========================= */
+/**
+ * Inscripciones de mis equipos (los que administro) en un torneo.
+ * La lista trae además freeSquads: cuántos de mis equipos todavía no están inscritos.
+ * @returns {Promise<{ squad: object, reg: object }[] & { freeSquads: number }>}
+ */
+export async function myRegistrationsFor(user, eventId) {
+  if (!user || !eventId) return Object.assign([], { freeSquads: 0 });
+  const squads = (await listMySquads(user)).filter((s) => isSquadAdmin(s, user.uid));
+  const found = (await Promise.all(squads.map(async (squad) => {
+    const ptr = await getDoc(doc(db, COL.squads, squad.id, "tournaments", eventId)).catch(() => null);
+    if (!ptr?.exists()) return null;
+    const reg = await loadRegistration(eventId, ptr.data().regId).catch(() => null);
+    return reg ? { squad, reg } : null;
+  }))).filter(Boolean);
+  return Object.assign(found, { freeSquads: squads.length - found.length });
+}
+
 export async function listSquadTournaments(sid) {
   const snap = await getDocs(collection(db, COL.squads, sid, "tournaments"));
   return list(snap).sort((a, b) => String(b.startDate || "").localeCompare(String(a.startDate || "")));

@@ -11,13 +11,66 @@ import {
   spiritTable,
   standings,
 } from "/torneos/js/model.js";
-import { listTeams, loadEvent, loadPublicEventBySlug, subscribeGames } from "/torneos/js/services.js";
-import { esc, fmtDateRange, fmtDayOnly, gameRowHtml, gameUrl, hideLoader, playerLabel, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/torneos/js/ui.js";
+import { REG, listTeams, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
+import { myRegistrationsFor } from "/torneos/js/squads.js";
+import { esc, fmtDateRange, fmtDayOnly, gameRowHtml, gameUrl, hideLoader, isGoogleUser, playerLabel, regChip, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "" };
+const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [] };
+
+// fila de partido con nombre, color y logo actuales del equipo
+const row = (g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id), teams: state.teams });
+
+// Consulta para el mapa: coordenadas o lugar del link de Google Maps; si no, sede + dirección
+function mapQuery(e) {
+  const url = e.mapsUrl || "";
+  const at = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (at) return `${at[1]},${at[2]}`;
+  const q = url.match(/[?&](?:q|query|destination)=([^&]+)/);
+  if (q) return decodeURIComponent(q[1].replace(/\+/g, " "));
+  const place = url.match(/\/place\/([^/@?]+)/);
+  if (place) return decodeURIComponent(place[1].replace(/\+/g, " "));
+  return [e.venue, e.address].filter(Boolean).join(", ");
+}
+
+function venueCard() {
+  const e = state.event;
+  if (!e.mapsUrl && !e.address) return "";
+  const q = mapQuery(e);
+  return `
+    <div class="ev-card mt-3">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+        <div>
+          <div class="fw-bold"><i class="bi bi-geo-alt-fill text-danger me-1"></i>${esc(e.venue || EX.venueTitle)}</div>
+          ${e.address ? `<div class="small ev-muted">${esc(e.address)}</div>` : ""}
+        </div>
+        ${e.mapsUrl ? `<a class="btn btn-sm btn-outline-primary" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map me-1"></i>${esc(EX.openMaps)}</a>` : ""}
+      </div>
+      ${q ? `<iframe class="tn-map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="${esc(EX.venueTitle)}" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=15&output=embed"></iframe>` : ""}
+    </div>`;
+}
+
+// Mis inscripciones en este torneo (si soy admin de un equipo) o el botón para inscribirme
+function myRegistrationHtml() {
+  const e = state.event;
+  const items = state.myRegs.map(({ squad, reg }) => {
+    const edit = `/torneos/equipo.html?${new URLSearchParams({ e: e.id, r: reg.id })}`;
+    return `
+      <div class="tn-my-reg">
+        ${teamBadge(squad, 26)}<span class="fw-bold">${esc(squad.name)}</span>${regChip(reg.status)}
+        <a class="btn btn-light btn-sm fw-bold" href="${esc(edit)}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a>
+        ${reg.status !== REG.APPROVED ? `<button class="btn btn-outline-light btn-sm" data-withdraw="${esc(reg.id)}" data-squad="${esc(squad.id)}">${esc(EX.regWithdrawMine)}</button>` : ""}
+      </div>`;
+  }).join("");
+  // "inscribir otro" solo si me queda algún equipo sin inscribir
+  const register = e.registrationOpen && (!state.myRegs.length || state.myRegs.freeSquads > 0)
+    ?`<a class="btn btn-light btn-sm fw-bold" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(state.myRegs.length ? EX.registerAnother : EX.registerTeam)}</a>`
+    : "";
+  if (!items && !register) return "";
+  return `<div class="d-flex flex-wrap gap-2 mt-3">${items}${register}</div>`;
+}
 
 const divisions = () => (state.event.divisions?.length ? state.event.divisions : [{ id: "", name: "" }]);
 const inDivision = (divId) => (x) => !state.division || (x.divisionId || divisions()[0].id) === divId;
@@ -33,7 +86,7 @@ function overview() {
   const players = state.teams.reduce((n, t) => n + (t.players || []).length, 0);
   const goals = finals.concat(live).reduce((n, g) => n + (g.scoreA || 0) + (g.scoreB || 0), 0);
   const tile = (v, l) => `<div class="ev-stat"><div class="ev-stat__value">${esc(v)}</div><div class="ev-stat__label">${esc(l)}</div></div>`;
-  const list = (title, arr) => (arr.length ? `<h2 class="h6 mt-4 mb-2">${esc(title)}</h2><div class="d-grid gap-2">${arr.map((g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id) })).join("")}</div>` : "");
+  const list = (title, arr) => (arr.length ? `<h2 class="h6 mt-4 mb-2">${esc(title)}</h2><div class="d-grid gap-2">${arr.map(row).join("")}</div>` : "");
   return `
     ${state.event.description ? `<div class="ev-card mb-3" style="white-space:pre-line">${esc(state.event.description)}</div>` : ""}
     <div class="ev-stat-grid">
@@ -42,6 +95,7 @@ function overview() {
       ${tile(`${finals.length}/${games.length}`, EX.overviewGames)}
       ${tile(goals, EX.overviewGoals)}
     </div>
+    ${venueCard()}
     ${list(EX.liveNow, live)}
     ${list(EX.upcoming, upcoming)}
     ${list(EX.results, finals.slice().reverse().slice(0, 6))}`;
@@ -150,8 +204,8 @@ function gamesTab() {
     byDay.get(day).push(g);
   });
   return divisionPicker() + [...byDay.entries()].map(([day, list]) => `
-    ${day ? `<h2 class="h6 mt-3 mb-2">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</h2>` : ""}
-    <div class="d-grid gap-2">${list.map((g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id) })).join("")}</div>`).join("");
+    ${day ? `<div class="tn-day-title">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</div>` : ""}
+    <div class="d-grid gap-2">${list.map(row).join("")}</div>`).join("");
 }
 
 function spiritTab() {
@@ -203,7 +257,7 @@ function render() {
         ${e.venue ? `<span><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</span>` : ""}
         ${e.mapsUrl ? `<a class="text-white" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map"></i></a>` : ""}
       </div>
-      ${e.registrationOpen ? `<a class="btn btn-light btn-sm fw-bold mt-3" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(EX.registerTeam)}</a>` : ""}
+      ${myRegistrationHtml()}
     </section>
     <ul class="nav nav-pills mb-3 ev-tabs">
       ${TABS.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
@@ -211,7 +265,23 @@ function render() {
     <div id="evpTab">${tab[2]()}</div>`;
 }
 
-$("tnRoot").addEventListener("click", (ev) => {
+$("tnRoot").addEventListener("click", async (ev) => {
+  const wd = ev.target.closest("[data-withdraw]");
+  if (wd) {
+    if (!confirm(EX.regWithdrawConfirm)) return;
+    showLoader();
+    try {
+      await withdrawRegistration(state.event.id, wd.dataset.withdraw, wd.dataset.squad);
+      state.myRegs = state.myRegs.filter((x) => x.reg.id !== wd.dataset.withdraw);
+      render();
+    } catch (err) {
+      console.error(err);
+      alert(EX.error);
+    } finally {
+      hideLoader();
+    }
+    return;
+  }
   const btn = ev.target.closest("[data-tab]");
   if (!btn) return;
   state.tab = btn.dataset.tab;
@@ -228,7 +298,9 @@ $("tnRoot").addEventListener("change", (ev) => {
 (async function init() {
   showLoader();
   try {
-    renderNav({ active: "dir", user: await waitForUser() });
+    const user = await waitForUser();
+    state.user = isGoogleUser(user) ? user : null;
+    renderNav({ active: "dir", user });
     // público por link; el organizador también puede verlo antes de publicarlo (por id)
     const event = (await loadPublicEventBySlug(KEY).catch(() => null)) || (await loadEvent(KEY).catch(() => null));
     if (!event) {
@@ -241,6 +313,13 @@ $("tnRoot").addEventListener("change", (ev) => {
     state.division = divisions().length > 1 ? divisions()[0].id : "";
     state.teams = await listTeams(event.id);
     render();
+    // estado de mi inscripción (no bloquea la página)
+    if (state.user) {
+      myRegistrationsFor(state.user, event.id).then((regs) => {
+        state.myRegs = regs;
+        if (regs.length) render();
+      }).catch(() => {});
+    }
     subscribeGames(event.id, (games) => {
       state.games = games;
       render();

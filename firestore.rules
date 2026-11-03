@@ -72,6 +72,12 @@ service cloud.firestore {
     /* =========================
        ADMINS DE LA PLATAFORMA (se crean a mano en la consola)
     ========================= */
+    // opciones de la plataforma (ej: platform_config/divisions); las edita un admin
+    match /platform_config/{docId} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
     match /platform_admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
@@ -169,7 +175,7 @@ service cloud.firestore {
           && isActive(eventId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "status", "scoreA", "scoreB", "clock", "offenseFirst", "teamStats", "playerStats",
-            "halftimeDone", "spirit", "startedAt", "finishedAt", "updatedAt"
+            "halftimeDone", "spirit", "startedAt", "finishedAt", "updatedAt", "ratioFirst"
           ])
           // ajustar el reloj es solo del organizador
           && request.resource.data.get("clock", {}).get("offsetMs", 0) == resource.data.get("clock", {}).get("offsetMs", 0)

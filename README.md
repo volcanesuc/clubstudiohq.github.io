@@ -45,6 +45,7 @@ estadísticas) no cambia.
   - `members/{id}`: roster (id = uid si el jugador se unió con su cuenta) · `private/invites`: tokens · `tournaments/{eventId}`: inscripciones
 - `squad_invites/{token}`: links para unirse (jugador o co-admin)
 - `profiles/{uid}`: perfil del jugador (foto, número, F/M, equipos); el historial se calcula de los partidos
+- `platform_config/divisions`: (opcional) opciones de categorías y ramas `{ levels: ["Open", "Masters", …], genders: [{ id, name, mixed }] }`. Si no existe se usan las de `torneos/js/divisions-config.js`.
 
 ## Fase 2
 

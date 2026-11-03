@@ -13,6 +13,10 @@ import {
   endBreak,
   eventRules,
   feedPlays,
+  findDivision,
+  needsRatio,
+  ratioForPoint,
+  ratioLabel,
   startBreak,
   sortPlays,
   gameElapsedMs,
@@ -49,7 +53,8 @@ const state = {
   plays: [],
   calc: null,
   pickSide: "A",
-  offenseChoice: "A",
+  offenseChoice: "", // se elige antes de empezar (quién recibe el primer pull)
+  ratioChoice: "", // mixto: "F" (FMP) o "M" (MMP) en el primer punto
   // organizador o admin de la plataforma (cuenta de Google) -> puede ajustar el reloj
   isOrganizer: false,
 };
@@ -62,8 +67,11 @@ const picker = new bootstrap.Modal($("skPicker"));
 /* =========================
    Helpers
 ========================= */
-const teamName = (side) => (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
-const teamColor = (side) => (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
+// datos actuales del equipo (si lo renombraron o cambió de color después de crear el partido)
+const teamName = (side) => state.teams[side]?.name || (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
+const teamColor = (side) => state.teams[side]?.color || (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
+const mixedRatio = () => needsRatio(findDivision(state.event, state.game?.divisionId), state.rules);
+const ratioText = (letter) => `${letter === "F" ? EX.skFmp : EX.skMmp} · ${ratioLabel(letter, state.rules.playersOnField)}`;
 const roster = (side) => state.teams[side]?.players || [];
 const elapsedSec = () => Math.floor(gameElapsedMs(state.game?.clock) / 1000);
 const isLive = () => state.game?.status === GAME_STATUS.LIVE;
@@ -202,14 +210,18 @@ function adjustClock(deltaSec) {
    Reloj / estado del partido
 ========================= */
 async function startGame() {
+  if (!state.offenseChoice) return alert(EX.skPickOffense);
+  if (mixedRatio() && !state.ratioChoice) return alert(EX.skPickRatio);
   const now = Date.now();
+  const ratio = mixedRatio() ? { ratioFirst: state.ratioChoice } : {};
   await updateGame(EID, GID, {
     status: GAME_STATUS.LIVE,
     offenseFirst: state.offenseChoice,
+    ...ratio,
     startedAt: new Date(now),
     clock: { startedAt: now, pausedMs: 0, pausedAt: null, offsetMs: 0 },
   });
-  state.game = { ...state.game, status: GAME_STATUS.LIVE, offenseFirst: state.offenseChoice, clock: { startedAt: now, pausedMs: 0, pausedAt: null, offsetMs: 0 } };
+  state.game = { ...state.game, status: GAME_STATUS.LIVE, offenseFirst: state.offenseChoice, ...ratio, clock: { startedAt: now, pausedMs: 0, pausedAt: null, offsetMs: 0 } };
   record({ type: PLAY.START, team: state.offenseChoice });
 }
 
@@ -300,14 +312,35 @@ function scoreHeader() {
 }
 
 function renderPreGame() {
+  const mixed = mixedRatio();
+  const ready = !!state.offenseChoice && (!mixed || !!state.ratioChoice);
   return `
     ${scoreHeader()}
-    <div class="ev-card mt-3 text-center">
-      <div class="fw-bold mb-2">${esc(EX.skWhoStarts)}</div>
-      <div class="btn-group w-100 mb-3" role="group">
-        ${["A", "B"].map((k) => `<button type="button" class="btn ${state.offenseChoice === k ? "btn-primary" : "btn-outline-primary"}" data-offense="${k}">${esc(teamName(k))}</button>`).join("")}
+    <div class="ev-card mt-3">
+      <div class="fw-bold">🥏 ${esc(EX.skWhoStarts)}</div>
+      <div class="small ev-muted mb-2">${esc(EX.skWhoStartsHint)}</div>
+      <div class="sk-choice mb-3">
+        ${["A", "B"].map((k) => `<button type="button" class="btn ${state.offenseChoice === k ? "btn-primary" : "btn-outline-primary"}" data-offense="${k}"><span class="ev-team-dot me-1" style="background:${esc(teamColor(k))}"></span>${esc(teamName(k))}</button>`).join("")}
       </div>
-      <button class="btn btn-primary btn-lg w-100" id="skStart"><i class="bi bi-play-fill me-1"></i>${esc(EX.skStart)}</button>
+      ${mixed ? `
+        <div class="fw-bold">⚥ ${esc(EX.skFirstRatio)}</div>
+        <div class="small ev-muted mb-2">${esc(EX.skFirstRatioHint)}</div>
+        <div class="sk-choice mb-3">
+          ${["F", "M"].map((k) => `<button type="button" class="btn ${state.ratioChoice === k ? "btn-primary" : "btn-outline-primary"}" data-ratio="${k}">${esc(ratioText(k))}</button>`).join("")}
+        </div>` : ""}
+      <button class="btn btn-primary btn-lg w-100" id="skStart" ${ready ? "" : "disabled"}><i class="bi bi-play-fill me-1"></i>${esc(EX.skStart)}</button>
+    </div>`;
+}
+
+// Punto en juego: número, proporción (mixto) y quién tiene el disco
+function pointInfo() {
+  const n = state.calc.points.length;
+  const letter = ratioForPoint(n, state.game.ratioFirst);
+  return `
+    <div class="sk-point-info">
+      <span class="ev-chip">${esc(exf(EX.skPointN, { n: n + 1 }))}</span>
+      ${letter ? `<span class="ev-chip ev-chip--ok">${esc(ratioText(letter))}</span>` : ""}
+      <span class="ev-chip">🥏 ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</span>
     </div>`;
 }
 
@@ -335,6 +368,7 @@ function breakBanner() {
       <div>
         <div class="sk-break__label">${esc(label)}</div>
         ${state.game.clock?.break?.stopsClock ? `<div class="small opacity-75">${esc(EX.skClockStopped)}</div>` : ""}
+        <div class="small fw-bold">🥏 ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</div>
       </div>
       <div class="sk-break__time" id="skBreakClock">${view.brk.text}</div>
       <button class="btn btn-sm btn-light" data-act="break-end">${esc(EX.skBreakEnd)}</button>
@@ -347,6 +381,7 @@ function renderLive() {
   const ctx = { playersById: state.playersById, teamName };
   return `
     ${scoreHeader()}
+    ${pointInfo()}
     ${breakBanner()}
     ${state.calc.suggestHalftime && !state.game.clock?.break ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
     <div class="sk-actions">${sideButtons("A")}${sideButtons("B")}</div>
@@ -429,6 +464,11 @@ $("tnRoot").addEventListener("click", (ev) => {
   const off = ev.target.closest("[data-offense]");
   if (off) {
     state.offenseChoice = off.dataset.offense;
+    return render();
+  }
+  const ratio = ev.target.closest("[data-ratio]");
+  if (ratio) {
+    state.ratioChoice = ratio.dataset.ratio;
     return render();
   }
   if (ev.target.closest("#skStart")) return startGame().catch((err) => alert(`${EX.error} ${err?.code || ""}`));

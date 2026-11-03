@@ -9,8 +9,10 @@ import {
   eventRules,
   parseRoster,
   rosterToText,
+  slotMinutes,
   slugify,
 } from "/torneos/js/model.js";
+import { GAME_MODES } from "/torneos/js/divisions-config.js";
 import { assignSlots, getFormat, listFormats } from "/torneos/js/formats.js";
 import {
   APPROVAL,
@@ -22,7 +24,9 @@ import {
   deleteEvent,
   deleteGame,
   deleteTeam,
+  deleteUnplayedGames,
   isApproved,
+  isUnplayed,
   isPlatformAdmin,
   listGameKeys,
   listGames,
@@ -30,6 +34,7 @@ import {
   listRegistrations,
   rejectRegistration,
   listTeams,
+  loadDivisionOptions,
   loadEvent,
   requestApproval,
   saveEvent,
@@ -41,6 +46,7 @@ import {
   esc,
   eventUrl,
   fmtDateRange,
+  fmtDayOnly,
   fmtWhen,
   fromLocalInput,
   gameUrl,
@@ -54,7 +60,9 @@ import {
   statusChip,
   teamBadge,
   toLocalInput,
+  toMillis,
   waitForUser,
+  withLiveTeams,
 } from "/torneos/js/ui.js";
 
 const root = document.getElementById("tnRoot");
@@ -67,6 +75,7 @@ const state = {
   games: [],
   keys: new Map(), // gameId -> token
   regs: [], // inscripciones de equipos
+  divOptions: null, // categorías y ramas para armar divisiones
   tab: "info",
 };
 
@@ -144,6 +153,7 @@ async function openEvent(id) {
   if (!event) return renderList();
   state.event = event;
   setUrl(id);
+  state.divOptions = await loadDivisionOptions();
   await reloadData();
   renderEvent();
 }
@@ -205,107 +215,177 @@ function renderEvent() {
 }
 
 /* ---------- Info y reglas ---------- */
+const section = (icon, title, body, extra = "") => `
+  <section class="tn-section ${extra}">
+    <h2 class="tn-section__title"><i class="bi bi-${icon}"></i>${esc(title)}</h2>
+    ${body}
+  </section>`;
+
+// Fila de división: categoría + rama, de las opciones de la plataforma
+function divisionRow(d = {}) {
+  const opts = state.divOptions;
+  const name = String(d.name || "").toLowerCase();
+  const level = d.level || opts.levels.find((l) => name.startsWith(l.toLowerCase())) || opts.levels[0];
+  const gender = d.gender || opts.genders.find((g) => name.includes(g.name.toLowerCase()))?.id || opts.genders[0].id;
+  return `
+    <div class="tn-div-row" data-div-row data-id="${esc(d.id || "")}">
+      <select class="form-select" data-div="level" aria-label="${esc(EX.divLevel)}">
+        ${opts.levels.map((l) => `<option ${l === level ? "selected" : ""}>${esc(l)}</option>`).join("")}
+      </select>
+      <select class="form-select" data-div="gender" aria-label="${esc(EX.divGender)}">
+        ${opts.genders.map((g) => `<option value="${esc(g.id)}" ${g.id === gender ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
+      </select>
+      <button type="button" class="btn btn-light text-danger" data-div-del title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+}
+
+function readDivisions() {
+  const opts = state.divOptions;
+  const used = new Set();
+  return [...document.querySelectorAll("[data-div-row]")].map((row) => {
+    const level = row.querySelector("[data-div=level]").value;
+    const g = opts.genders.find((x) => x.id === row.querySelector("[data-div=gender]").value) || opts.genders[0];
+    const name = `${level} ${g.name}`;
+    // se conserva el id de las divisiones existentes (equipos y partidos lo usan)
+    let id = row.dataset.id || slugify(name) || "open";
+    while (used.has(id)) id += "-2";
+    used.add(id);
+    return { id, name, level, gender: g.id, mixed: !!g.mixed };
+  });
+}
+
+function publishSection(e) {
+  const pub = `${location.origin}${eventUrl(e)}`;
+  const linkBox = (id, url, wa) => `
+    <div class="input-group input-group-sm mt-2">
+      <input class="form-control" readonly value="${esc(url)}" aria-label="${esc(EX.copy)}" />
+      <button class="btn btn-outline-secondary" type="button" data-copy-link="${esc(url)}"><i class="bi bi-clipboard me-1"></i>${esc(EX.regCopyLink)}</button>
+      <a class="btn btn-outline-success" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(wa)}"><i class="bi bi-whatsapp"></i></a>
+    </div>`;
+  return section("megaphone", EX.secPublish, `
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <div class="form-check form-switch fs-6">
+          <input class="form-check-input" type="checkbox" id="ePublic" ${e.isPublic ? "checked" : ""} ${isApproved(e) ? "" : "disabled"} />
+          <label class="form-check-label fw-semibold" for="ePublic">${esc(EX.eventPublic)}</label>
+        </div>
+        <div class="form-text">${esc(isApproved(e) ? EX.publicHint : EX.approvalNeeded)}</div>
+        ${e.isPublic ? linkBox("pub", pub, exf(EX.waPublic, { event: e.name, url: pub })) : ""}
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="form-check form-switch fs-6">
+          <input class="form-check-input" type="checkbox" id="eRegOpen" ${e.registrationOpen ? "checked" : ""} />
+          <label class="form-check-label fw-semibold" for="eRegOpen">${esc(EX.regOpen)}</label>
+        </div>
+        <div class="form-text">${esc(isApproved(e) ? EX.regOpenHint : EX.regOpenNeedsActive)}</div>
+        ${e.registrationOpen ? linkBox("reg", registerLink(), exf(EX.waRegister, { event: e.name, url: registerLink() })) : ""}
+      </div>
+    </div>`, "tn-section--highlight");
+}
+
 function renderInfo() {
   const e = state.event;
   const r = eventRules(e);
-  const f = (id, label, value, { type = "text", col = "col-12 col-md-6", attrs = "" } = {}) => `
+  const f = (id, label, value, { type = "text", col = "col-12 col-md-6", attrs = "", hint = "" } = {}) => `
     <div class="${col}">
       <label class="form-label small" for="${id}">${esc(label)}</label>
       <input class="form-control" id="${id}" type="${type}" value="${esc(value ?? "")}" ${attrs} />
+      ${hint ? `<div class="form-text">${esc(hint)}</div>` : ""}
     </div>`;
+  const mode = GAME_MODES.find((m) => m.id === r.mode) || GAME_MODES[0];
   const tab = document.getElementById("evTab");
   tab.innerHTML = `
-    <form id="evInfoForm" class="ev-card">
-      <div class="row g-3">
-        ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
-        <div class="col-12 col-md-4">
-          <label class="form-label small" for="eStatus">${esc(EX.eventStatus)}</label>
-          <select class="form-select" id="eStatus">
-            <option value="draft">${esc(EX.statusDraft)}</option>
-            <option value="published" ${isApproved(e) ? "" : "disabled"}>${esc(EX.statusPublished)}</option>
-            <option value="finished">${esc(EX.statusFinished)}</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label small" for="eSlug">${esc(EX.eventSlug)}</label>
-          <div class="input-group"><span class="input-group-text small">/torneos/evento.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
-        </div>
-        ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
-        ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
-        ${f("eVenue", EX.eventVenue, e.venue)}
-        ${f("eAddress", EX.eventAddress, e.address)}
-        ${f("eMaps", EX.eventMaps, e.mapsUrl, { col: "col-12" })}
-        <div class="col-12">
-          <label class="form-label small" for="eDesc">${esc(EX.eventDescription)}</label>
-          <textarea class="form-control" id="eDesc" rows="3">${esc(e.description || "")}</textarea>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label small" for="eDivisions">${esc(EX.eventDivisions)}</label>
-          <textarea class="form-control" id="eDivisions" rows="3">${esc(divisions().map((d) => d.name).join("\n"))}</textarea>
-          <div class="form-text">${esc(EX.eventDivisionsHint)}</div>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label small" for="eFields">${esc(EX.eventFields)}</label>
-          <textarea class="form-control" id="eFields" rows="3">${esc(fields().join("\n"))}</textarea>
-        </div>
-        <div class="col-12">
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="ePublic" ${e.isPublic ? "checked" : ""} ${isApproved(e) ? "" : "disabled"} />
-            <label class="form-check-label" for="ePublic">${esc(EX.eventPublic)}</label>
+    ${publishSection(e)}
+    <form id="evInfoForm" class="mt-3">
+      ${section("info-circle", EX.secInfo, `
+        <div class="row g-3">
+          ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
+          <div class="col-12 col-md-4">
+            <label class="form-label small" for="eStatus">${esc(EX.eventStatus)}</label>
+            <select class="form-select" id="eStatus">
+              <option value="draft">${esc(EX.statusDraft)}</option>
+              <option value="published" ${isApproved(e) ? "" : "disabled"}>${esc(EX.statusPublished)}</option>
+              <option value="finished">${esc(EX.statusFinished)}</option>
+            </select>
           </div>
-          ${isApproved(e) ? "" : `<div class="form-text">${esc(EX.approvalNeeded)}</div>`}
-        </div>
-        <div class="col-12">
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="eRegOpen" ${e.registrationOpen ? "checked" : ""} />
-            <label class="form-check-label" for="eRegOpen">${esc(EX.regOpen)}</label>
+          <div class="col-12 col-md-6">
+            <label class="form-label small" for="eSlug">${esc(EX.eventSlug)}</label>
+            <div class="input-group"><span class="input-group-text small">/torneos/evento.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
           </div>
-          <div class="form-text">${esc(isApproved(e) ? EX.regOpenHint : EX.regOpenNeedsActive)}</div>
-          ${e.registrationOpen ? `<div class="input-group input-group-sm mt-1" style="max-width:560px">
-            <input class="form-control" readonly value="${esc(registerLink())}" />
-            <button class="btn btn-outline-secondary" type="button" id="eRegCopy"><i class="bi bi-clipboard me-1"></i>${esc(EX.regCopyLink)}</button>
-          </div>` : ""}
-        </div>
-        <div class="col-12">
-          <label class="form-label small" for="eOrganizers">${esc(EX.organizers)}</label>
-          <textarea class="form-control" id="eOrganizers" rows="2" ${e.ownerUid === state.user.uid ? "" : "disabled"}>${esc((e.organizerEmails || []).join("\n"))}</textarea>
-          <div class="form-text">${esc(EX.organizersHint)}</div>
-        </div>
+          ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
+          ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
+          ${f("eVenue", EX.eventVenue, e.venue)}
+          ${f("eAddress", EX.eventAddress, e.address)}
+          ${f("eMaps", EX.eventMaps, e.mapsUrl, { col: "col-12", hint: EX.eventMapsHint })}
+          <div class="col-12">
+            <label class="form-label small" for="eDesc">${esc(EX.eventDescription)}</label>
+            <textarea class="form-control" id="eDesc" rows="3">${esc(e.description || "")}</textarea>
+          </div>
+        </div>`)}
 
-        <div class="col-12"><hr class="my-1" /><h2 class="h6 mt-2 mb-0">${esc(EX.rulesTitle)}</h2></div>
-        ${f("rGameMin", EX.ruleGameMinutes, r.gameMinutes, { type: "number", col: "col-12 col-md-6", attrs: 'min="0" step="any"' })}
-        <div class="col-12 col-md-6 d-flex align-items-end">
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="rStopBreaks" ${r.stopClockOnBreaks ? "checked" : ""} />
-            <label class="form-check-label" for="rStopBreaks">${esc(EX.ruleStopOnBreaks)}</label>
+      ${section("diagram-3", EX.secDivisions, `
+        <div class="row g-4">
+          <div class="col-12 col-lg-7">
+            <label class="form-label small">${esc(EX.eventDivisions)}</label>
+            <div id="eDivRows">${divisions().map(divisionRow).join("")}</div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="eDivAdd"><i class="bi bi-plus-lg me-1"></i>${esc(EX.divAdd)}</button>
+            <div class="form-text">${esc(EX.divHint)}</div>
           </div>
-        </div>
-        <div class="col-12 mt-0"><div class="form-text">${esc(EX.ruleGameMinutesHint)} ${esc(EX.ruleStopOnBreaksHint)}</div></div>
-        <div class="col-12">
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="rAudit" ${r.auditLog ? "checked" : ""} />
-            <label class="form-check-label" for="rAudit">${esc(EX.ruleAudit)}</label>
+          <div class="col-12 col-lg-5">
+            <label class="form-label small" for="rMode">${esc(EX.ruleMode)}</label>
+            <div class="d-flex gap-2">
+              <select class="form-select" id="rMode">${GAME_MODES.map((m) => `<option value="${esc(m.id)}" ${m.id === mode.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select>
+              <input class="form-control ${mode.id === "other" ? "" : "d-none"}" style="max-width:7rem" id="rPlayers" type="number" min="1" max="15" value="${esc(r.playersOnField)}" aria-label="${esc(EX.rulePlayers)}" placeholder="${esc(EX.rulePlayers)}" />
+            </div>
+            <div class="form-text">${esc(EX.ruleModeHint)}</div>
+            <label class="form-label small mt-3" for="eFields">${esc(EX.eventFields)}</label>
+            <textarea class="form-control" id="eFields" rows="3">${esc(fields().join("\n"))}</textarea>
           </div>
-          <div class="form-text">${esc(EX.ruleAuditHint)}</div>
-        </div>
-        ${f("rGameTo", EX.ruleGameTo, r.gameTo, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
-        ${f("rHalf", EX.ruleHalftimeAt, r.halftimeAt, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
-        ${f("rSoft", EX.ruleSoftCap, r.softCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
-        ${f("rHard", EX.ruleHardCap, r.hardCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
-        ${f("rTo", EX.ruleTimeouts, r.timeoutsPerHalf, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
-        ${f("rToSec", EX.ruleTimeoutSeconds, r.timeoutSeconds, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
-        ${f("rHalfMin", EX.ruleHalftimeMinutes, r.halftimeMinutes, { type: "number", col: "col-6 col-md-4", attrs: 'min="0" step="any"' })}
+        </div>`)}
 
-        <div class="col-12"><h2 class="h6 mt-2 mb-0">${esc(EX.mvpTitle)}</h2><div class="form-text mt-0">${esc(EX.mvpHint)}</div></div>
-        ${f("mG", EX.mvpGoals, r.mvp.goals, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
-        ${f("mA", EX.mvpAssists, r.mvp.assists, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
-        ${f("mB", EX.mvpBlocks, r.mvp.blocks, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
-        ${f("mT", EX.mvpTurns, r.mvp.turns, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
+      ${section("stopwatch", EX.rulesTitle, `
+        <div class="row g-3">
+          ${f("rGameMin", EX.ruleGameMinutes, r.gameMinutes, { type: "number", col: "col-6 col-md-4", attrs: 'min="0" step="any"' })}
+          ${f("rGap", EX.ruleBetweenGames, r.betweenGamesMin, { type: "number", col: "col-6 col-md-4", attrs: 'min="0" step="any"' })}
+          <div class="col-12 col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="rStopBreaks" ${r.stopClockOnBreaks ? "checked" : ""} />
+              <label class="form-check-label" for="rStopBreaks">${esc(EX.ruleStopOnBreaks)}</label>
+            </div>
+          </div>
+          <div class="col-12 mt-0"><div class="form-text">${esc(EX.ruleGameMinutesHint)} ${esc(EX.ruleStopOnBreaksHint)} ${esc(EX.ruleBetweenGamesHint)}</div></div>
+          ${f("rGameTo", EX.ruleGameTo, r.gameTo, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
+          ${f("rHalf", EX.ruleHalftimeAt, r.halftimeAt, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
+          ${f("rSoft", EX.ruleSoftCap, r.softCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
+          ${f("rHard", EX.ruleHardCap, r.hardCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
+          ${f("rTo", EX.ruleTimeouts, r.timeoutsPerHalf, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
+          ${f("rToSec", EX.ruleTimeoutSeconds, r.timeoutSeconds, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
+          ${f("rHalfMin", EX.ruleHalftimeMinutes, r.halftimeMinutes, { type: "number", col: "col-6 col-md-4", attrs: 'min="0" step="any"' })}
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="rAudit" ${r.auditLog ? "checked" : ""} />
+              <label class="form-check-label" for="rAudit">${esc(EX.ruleAudit)}</label>
+            </div>
+            <div class="form-text">${esc(EX.ruleAuditHint)}</div>
+          </div>
+        </div>`)}
 
-        <div class="col-12 d-flex justify-content-between flex-wrap gap-2 mt-2">
-          <button type="button" class="btn btn-outline-danger ${e.ownerUid === state.user.uid ? "" : "invisible"}" id="eDelete"><i class="bi bi-trash me-1"></i>${esc(EX.delete)}</button>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>${esc(EX.save)}</button>
-        </div>
+      ${section("trophy", EX.mvpTitle, `
+        <div class="form-text mt-0 mb-2">${esc(EX.mvpHint)}</div>
+        <div class="row g-3">
+          ${f("mG", EX.mvpGoals, r.mvp.goals, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
+          ${f("mA", EX.mvpAssists, r.mvp.assists, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
+          ${f("mB", EX.mvpBlocks, r.mvp.blocks, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
+          ${f("mT", EX.mvpTurns, r.mvp.turns, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
+        </div>`)}
+
+      ${section("people", EX.organizers, `
+        <textarea class="form-control" id="eOrganizers" rows="2" ${e.ownerUid === state.user.uid ? "" : "disabled"}>${esc((e.organizerEmails || []).join("\n"))}</textarea>
+        <div class="form-text">${esc(EX.organizersHint)}</div>`)}
+
+      <div class="tn-save-bar d-flex justify-content-between flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-danger ${e.ownerUid === state.user.uid ? "" : "invisible"}" id="eDelete"><i class="bi bi-trash me-1"></i>${esc(EX.delete)}</button>
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>${esc(EX.save)}</button>
       </div>
     </form>`;
 
@@ -313,16 +393,51 @@ function renderInfo() {
   const v = (id) => document.getElementById(id).value.trim();
   const num = (id) => Number(v(id)) || 0;
 
+  // publicar e inscripciones: se guardan al tocar el switch
+  const quickSave = (patch) => run(async () => {
+    await saveEvent(e.id, patch);
+    Object.assign(state.event, patch);
+    alertBox(EX.saved);
+    renderInfo();
+  });
+  document.getElementById("ePublic").onchange = (ev) => quickSave({ isPublic: isApproved(e) && ev.target.checked });
+  document.getElementById("eRegOpen").onchange = (ev) => quickSave({ registrationOpen: ev.target.checked });
+  tab.querySelectorAll("[data-copy-link]").forEach((b) => (b.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(b.dataset.copyLink);
+      alertBox(EX.regLinkCopied);
+    } catch {
+      prompt(EX.regCopyLink, b.dataset.copyLink);
+    }
+  }));
+
+  // divisiones
+  document.getElementById("eDivAdd").onclick = () => {
+    document.getElementById("eDivRows").insertAdjacentHTML("beforeend", divisionRow({}));
+  };
+  document.getElementById("eDivRows").onclick = (ev) => {
+    const del = ev.target.closest("[data-div-del]");
+    if (!del) return;
+    if (document.querySelectorAll("[data-div-row]").length <= 1) return alertBox(EX.divNeedOne, "warning");
+    const row = del.closest("[data-div-row]");
+    const id = row.dataset.id;
+    const inUse = id && (state.teams.some((t) => t.divisionId === id) || state.games.some((g) => g.divisionId === id));
+    if (inUse && !confirm(EX.divInUse)) return;
+    row.remove();
+  };
+  document.getElementById("rMode").onchange = (ev) => {
+    document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
+  };
+
   document.getElementById("evInfoForm").onsubmit = (ev) => {
     ev.preventDefault();
     run(async () => {
-      const divs = v("eDivisions").split(/\n+/).map((s) => s.trim()).filter(Boolean);
+      const modeId = v("rMode");
+      const modeDef = GAME_MODES.find((m) => m.id === modeId) || GAME_MODES[0];
       const data = {
         name: v("eName"),
         slug: slugify(v("eSlug") || v("eName")) || e.slug,
         status: !isApproved(e) && v("eStatus") === "published" ? "draft" : v("eStatus"),
-        isPublic: isApproved(e) && document.getElementById("ePublic").checked,
-        registrationOpen: document.getElementById("eRegOpen").checked,
         organizerEmails: e.ownerUid === state.user.uid
           ? v("eOrganizers").split(/[\n,;]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes("@"))
           : e.organizerEmails || [],
@@ -332,10 +447,13 @@ function renderInfo() {
         address: v("eAddress"),
         mapsUrl: v("eMaps"),
         description: v("eDesc"),
-        divisions: (divs.length ? divs : ["Open"]).map((name) => ({ id: slugify(name) || "open", name })),
+        divisions: readDivisions(),
         fields: v("eFields").split(/\n+/).map((s) => s.trim()).filter(Boolean),
         rules: {
+          mode: modeDef.id,
+          playersOnField: modeDef.players || num("rPlayers") || 7,
           gameMinutes: num("rGameMin"),
+          betweenGamesMin: num("rGap"),
           stopClockOnBreaks: document.getElementById("rStopBreaks").checked,
           auditLog: document.getElementById("rAudit").checked,
           gameTo: num("rGameTo") || 13,
@@ -354,15 +472,6 @@ function renderInfo() {
       renderEvent();
     });
   };
-
-  document.getElementById("eRegCopy")?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(registerLink());
-      alertBox(EX.regLinkCopied);
-    } catch {
-      prompt(EX.regCopyLink, registerLink());
-    }
-  });
 
   document.getElementById("eDelete").onclick = () => {
     if (!confirm(EX.confirmDelete)) return;
@@ -532,13 +641,17 @@ function requestsSection() {
 }
 
 /* ---------- Calendario ---------- */
+const pairKey = (a, b) => [a, b].sort().join("|");
+const gameDivision = (g) => g.divisionId || divisions()[0].id;
+
 function renderSchedule() {
   const tab = document.getElementById("evTab");
   const defaultStart = state.event.startDate ? `${state.event.startDate}T08:00` : "";
   const teamOpts = (sel) => state.teams.map((t) => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
+  const r = eventRules(state.event);
   tab.innerHTML = `
-    <form class="ev-card" id="evGenForm">
-      <h2 class="h6 mb-1">${esc(EX.scheduleTitle)}</h2>
+    <form class="tn-section" id="evGenForm">
+      <h2 class="tn-section__title"><i class="bi bi-magic"></i>${esc(EX.scheduleTitle)}</h2>
       <div class="small ev-muted mb-3">${esc(EX.scheduleHint)}</div>
       <div class="row g-3">
         <div class="col-12 col-md-4">
@@ -547,17 +660,17 @@ function renderSchedule() {
             ${listFormats().map((f) => `<option value="${esc(f.id)}" ${f.available ? "" : "disabled"} ${f.id === (state.event.format || "round_robin") ? "selected" : ""}>${esc(f.label)}${f.available ? "" : ` ${esc(EX.formatComingSoon)}`}</option>`).join("")}
           </select>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-4">
           <label class="form-label small" for="gDivision">${esc(EX.scheduleDivision)}</label>
           <select class="form-select" id="gDivision">${divisions().map((d) => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join("")}</select>
         </div>
-        <div class="col-7 col-md-3">
+        <div class="col-12 col-md-4">
           <label class="form-label small" for="gStart">${esc(EX.scheduleStart)}</label>
           <input class="form-control" id="gStart" type="datetime-local" value="${esc(defaultStart)}" />
         </div>
-        <div class="col-5 col-md-2">
-          <label class="form-label small" for="gMinutes">${esc(EX.scheduleGameMinutes)}</label>
-          <input class="form-control" id="gMinutes" type="number" min="20" value="${esc(state.event.gameMinutes || 100)}" />
+        <div class="col-12">
+          <div class="form-text m-0"><i class="bi bi-clock me-1"></i>${esc(exf(EX.scheduleSlotInfo, { slot: slotMinutes(r), game: r.gameMinutes || r.hardCapMin || 90, gap: r.betweenGamesMin || 0 }))}</div>
+          <div class="form-text m-0"><i class="bi bi-arrow-repeat me-1"></i>${esc(EX.scheduleReplaceInfo)}</div>
         </div>
         <div class="col-12 d-flex justify-content-end">
           <button class="btn btn-primary" type="submit"><i class="bi bi-magic me-1"></i>${esc(EX.generate)}</button>
@@ -565,8 +678,8 @@ function renderSchedule() {
       </div>
     </form>
 
-    <form class="ev-card" id="evManualForm">
-      <h2 class="h6 mb-3">${esc(EX.addGameManual)}</h2>
+    <form class="tn-section" id="evManualForm">
+      <h2 class="tn-section__title"><i class="bi bi-plus-circle"></i>${esc(EX.addGameManual)}</h2>
       <div class="row g-2">
         <div class="col-12 col-md-3"><label class="form-label small">${esc(EX.phase)}</label><input class="form-control" id="mPhase" placeholder="Semifinal" /></div>
         <div class="col-6 col-md-3"><label class="form-label small">${esc(EX.teamA)}</label><select class="form-select" id="mA">${teamOpts()}</select></div>
@@ -583,20 +696,25 @@ function renderSchedule() {
     const divisionId = document.getElementById("gDivision").value;
     const teams = state.teams.filter((t) => (t.divisionId || divisions()[0].id) === divisionId);
     if (teams.length < 2) return alertBox(EX.generateNeedTeams, "warning");
+    // los partidos sin jugar de la división se reemplazan; los jugados se conservan
+    const existing = state.games.filter((g) => gameDivision(g) === divisionId);
+    const unplayed = existing.filter(isUnplayed);
+    const played = new Set(existing.filter((g) => !isUnplayed(g)).map((g) => pairKey(g.teamA?.id, g.teamB?.id)));
+    if (unplayed.length && !confirm(exf(EX.generateReplaceConfirm, { n: unplayed.length }))) return;
     run(async () => {
-      const raw = getFormat(formatId).generate(teams, { event: state.event });
-      const minutes = Number(document.getElementById("gMinutes").value) || 100;
+      const removed = await deleteUnplayedGames(state.event.id, unplayed, state.keys);
+      const raw = getFormat(formatId).generate(teams, { event: state.event })
+        .filter((g) => !played.has(pairKey(g.teamA?.id, g.teamB?.id)));
       const slotted = assignSlots(raw, {
         fields: fields(),
         start: fromLocalInput(document.getElementById("gStart").value),
-        gameMinutes: minutes,
+        gameMinutes: slotMinutes(eventRules(state.event)),
       }).map((g) => ({ ...g, divisionId }));
       await createGames(state.event.id, slotted);
-      await saveEvent(state.event.id, { format: formatId, gameMinutes: minutes });
+      await saveEvent(state.event.id, { format: formatId });
       state.event.format = formatId;
-      state.event.gameMinutes = minutes;
       await reloadData();
-      alertBox(exf(EX.generated, { n: slotted.length }));
+      alertBox(removed ? exf(EX.generatedReplaced, { n: slotted.length, removed }) : exf(EX.generated, { n: slotted.length }));
       state.tab = "games";
       renderEvent();
     });
@@ -625,55 +743,69 @@ function renderSchedule() {
 }
 
 /* ---------- Partidos y links ---------- */
+function orgGameCard(game) {
+  const g = withLiveTeams(game, state.teams);
+  const token = state.keys.get(g.id);
+  const url = token ? scorekeeperUrl(state.event.id, g.id, token) : "";
+  const divName = divisions().length > 1 ? divisions().find((d) => d.id === g.divisionId)?.name || "" : "";
+  const started = g.status !== GAME_STATUS.SCHEDULED;
+  const team = (t, side) => `
+    <div class="tn-org-game__team ${side === "B" ? "tn-org-game__team--b" : ""}">
+      ${side === "A" ? teamBadge(t || {}, 36) : ""}<span class="text-truncate">${esc(t?.name || "—")}</span>${side === "B" ? teamBadge(t || {}, 36) : ""}
+    </div>`;
+  return `
+    <div class="tn-org-game" data-game="${esc(g.id)}">
+      <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <div class="small ev-muted">${esc([phaseLabel(g), divName].filter(Boolean).join(" · ") || EX.tabGames)}</div>
+        ${statusChip(g.status)}
+      </div>
+      <div class="tn-org-game__teams">
+        ${team(g.teamA, "A")}
+        <div class="tn-org-game__score">${started ? `${g.scoreA || 0} – ${g.scoreB || 0}` : `<span class="ev-muted fs-6">${esc(EX.vs)}</span>`}</div>
+        ${team(g.teamB, "B")}
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-7 col-md-4"><input class="form-control form-control-sm" type="datetime-local" data-gf="startAt" value="${esc(toLocalInput(g.startAt))}" aria-label="${esc(EX.startAt)}" /></div>
+        <div class="col-5 col-md-3"><select class="form-select form-select-sm" data-gf="field" aria-label="${esc(EX.field)}">${["", ...fields()].map((f) => `<option ${f === g.field ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></div>
+      </div>
+      <div class="tn-org-game__bar">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          ${url ? `
+            <span class="small fw-semibold ev-muted">${esc(EX.scorekeeperLink)}</span>
+            <button class="btn btn-sm btn-outline-secondary" data-copy="${esc(url)}" title="${esc(EX.copy)}"><i class="bi bi-clipboard"></i></button>
+            <a class="btn btn-sm btn-outline-success" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(exf(EX.waScorekeeper, { a: g.teamA?.name, b: g.teamB?.name, event: state.event.name, url }))}"><i class="bi bi-whatsapp"></i></a>
+            <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="${esc(url)}"><i class="bi bi-pencil-square me-1"></i>${esc(EX.openScorer)}</a>`
+          : isApproved(state.event)
+            ? `<button class="btn btn-sm btn-outline-primary" data-key="${esc(g.id)}" title="${esc(EX.linkHint)}"><i class="bi bi-link-45deg me-1"></i>${esc(EX.createLink)}</button>`
+            : `<span class="small ev-muted">${esc(EX.approvalNeeded)}</span>`}
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-light" target="_blank" rel="noopener" href="${esc(gameUrl(state.event.id, g.id))}" title="${esc(EX.liveTitle)}"><i class="bi bi-broadcast me-1"></i>${esc(EX.liveShort)}</a>
+          <button class="btn btn-sm btn-light text-danger" data-del="${esc(g.id)}" title="${esc(EX.delete)}"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderGames() {
   const tab = document.getElementById("evTab");
   if (!state.games.length) {
     tab.innerHTML = `<div class="ev-card ev-muted">${esc(EX.noGames)}</div>`;
     return;
   }
-  const divName = (id) => divisions().find((d) => d.id === id)?.name || "";
+  // por día, en orden de hora
+  const sorted = state.games.slice().sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt));
+  const byDay = new Map();
+  sorted.forEach((g) => {
+    const day = toMillis(g.startAt) ? fmtDayOnly(g.startAt) : EX.noSchedule;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(g);
+  });
   tab.innerHTML = `
-    <div class="ev-card p-0 overflow-hidden">
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0 ev-games-table ev-table">
-          <thead><tr>
-            <th>${esc(EX.startAt)}</th><th>${esc(EX.field)}</th><th>${esc(EX.phase)}</th>
-            <th>${esc(EX.teamA)} ${esc(EX.vs)} ${esc(EX.teamB)}</th><th></th><th>${esc(EX.scorekeeperLink)}</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${state.games.map((g) => {
-              const token = state.keys.get(g.id);
-              const url = token ? scorekeeperUrl(state.event.id, g.id, token) : "";
-              return `
-                <tr data-game="${esc(g.id)}">
-                  <td><input class="form-control form-control-sm" type="datetime-local" data-gf="startAt" value="${esc(toLocalInput(g.startAt))}" /></td>
-                  <td><select class="form-select form-select-sm" data-gf="field">${["", ...fields()].map((f) => `<option ${f === g.field ? "selected" : ""}>${esc(f)}</option>`).join("")}</select></td>
-                  <td class="small">${esc(phaseLabel(g))}<div class="ev-muted">${esc(divName(g.divisionId))}</div></td>
-                  <td class="small fw-semibold">${esc(g.teamA?.name || "—")} <span class="ev-muted">${esc(EX.vs)}</span> ${esc(g.teamB?.name || "—")}
-                    ${g.status !== GAME_STATUS.SCHEDULED ? `<div class="fw-bold">${g.scoreA || 0} – ${g.scoreB || 0}</div>` : ""}</td>
-                  <td>${statusChip(g.status)}</td>
-                  <td>
-                    ${url ? `
-                      <div class="ev-link-box">
-                        <button class="btn btn-sm btn-outline-secondary" data-copy="${esc(url)}" title="${esc(EX.copy)}"><i class="bi bi-clipboard"></i></button>
-                        <a class="btn btn-sm btn-outline-success" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(exf(EX.waScorekeeper, { a: g.teamA?.name, b: g.teamB?.name, event: state.event.name, url }))}"><i class="bi bi-whatsapp"></i></a>
-                        <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="${esc(url)}"><i class="bi bi-pencil-square"></i></a>
-                      </div>`
-                    : isApproved(state.event)
-                      ? `<button class="btn btn-sm btn-outline-primary" data-key="${esc(g.id)}" title="${esc(EX.linkHint)}"><i class="bi bi-link-45deg me-1"></i>${esc(EX.createLink)}</button>`
-                      : `<span class="small ev-muted">${esc(EX.approvalNeeded)}</span>`}
-                  </td>
-                  <td class="text-nowrap">
-                    <a class="btn btn-sm btn-light" target="_blank" rel="noopener" href="${esc(gameUrl(state.event.id, g.id))}" title="${esc(EX.liveTitle)}"><i class="bi bi-broadcast"></i></a>
-                    <button class="btn btn-sm btn-light text-danger" data-del="${esc(g.id)}" title="${esc(EX.delete)}"><i class="bi bi-trash"></i></button>
-                  </td>
-                </tr>`;
-            }).join("")}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="small ev-muted mt-2">${esc(EX.linkHint)}</div>`;
+    <div class="small ev-muted">${esc(EX.linkHint)}</div>
+    ${[...byDay.entries()].map(([day, list]) => `
+      <div class="tn-day-title">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</div>
+      ${list.map(orgGameCard).join("")}`).join("")}`;
 
   tab.onchange = (ev) => {
     const input = ev.target.closest("[data-gf]");
