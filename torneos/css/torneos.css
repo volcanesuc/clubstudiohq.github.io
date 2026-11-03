@@ -205,3 +205,26 @@ body.tn-busy::before {
 }
 .sk-break__label { font-weight: 800; }
 .sk-break__time { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ===== equipos: logo e inscripciones ===== */
+.tn-team-logo { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 12px; object-fit: contain; background: #fff; border: 1px solid rgba(0, 0, 0, .08); }
+.tn-team-logo--empty { color: #fff; font-weight: 900; border: 0; }
+.ev-chip--ok { background: #d1e7dd; color: #0f5132; }
+.ev-chip--wait { background: #fff3cd; color: #664d03; }
+.ev-chip--bad { background: #f8d7da; color: #842029; }
+.tn-reg-card { display: grid; gap: .5rem; }
+.tn-cap { font-size: .7rem; font-weight: 800; padding: 0 .3rem; border-radius: 6px; margin-left: .2rem; }
+.tn-cap--c { background: #fff3cd; color: #664d03; }
+.tn-cap--s { background: #f8d7da; color: #842029; }
+
+/* ===== jugadores: avatar, roster, perfil ===== */
+.tn-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 50%; object-fit: cover; background: #e9ecef; }
+.tn-avatar--empty { background: linear-gradient(135deg, #6f42c1, #0dcaf0); color: #fff; font-weight: 800; }
+.tn-roster-row { display: flex; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid rgba(0, 0, 0, .06); }
+.tn-roster-row:last-child { border-bottom: 0; }
+.tn-roster-num { width: 2.2rem; text-align: center; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--ev-muted); }
+.tn-invite { background: linear-gradient(135deg, rgba(111, 66, 193, .08), rgba(13, 202, 240, .08)); border: 1px dashed rgba(111, 66, 193, .35); border-radius: 14px; padding: 1rem; }
+.tn-stat-tile { text-align: center; padding: .75rem .5rem; border-radius: 14px; background: rgba(0, 0, 0, .03); }
+.tn-stat-tile__n { font-size: 1.6rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.tn-stat-tile__l { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ev-muted); margin-top: .25rem; }
+.tn-profile-hero { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }

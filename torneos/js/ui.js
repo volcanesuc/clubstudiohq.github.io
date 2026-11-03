@@ -68,12 +68,13 @@ export function renderNav({ active = "", isAdmin = false, user = null } = {}) {
       <a class="tn-nav__brand" href="/">ClubStudioHQ</a>
       <div class="d-flex gap-1 flex-grow-1 overflow-auto">
         ${link("dir", "/torneos/", EX.navTournaments)}
+        ${link("team", "/torneos/equipo.html", EX.navTeam)}
         ${link("org", "/torneos/organizar.html", EX.navOrganize)}
         ${isAdmin ? link("admin", "/torneos/admin.html", EX.navAdmin) : ""}
       </div>
       ${google
         ? `<div class="d-flex align-items-center gap-2">
-            ${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="" referrerpolicy="no-referrer" />` : ""}
+            <a href="/torneos/perfil.html" title="${esc(EX.navProfile)}" class="${active === "profile" ? "is-active" : ""}">${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="${esc(EX.navProfile)}" referrerpolicy="no-referrer" />` : `<i class="bi bi-person-circle text-white fs-5"></i>`}</a>
             <button class="btn btn-sm btn-outline-light" id="tnSignOut">${esc(EX.signOut)}</button>
           </div>`
         : `<button class="btn btn-sm tn-btn-grad" id="tnSignIn">${esc(EX.signIn)}</button>`}
@@ -140,6 +141,55 @@ export function statusChip(status) {
   if (status === GAME_STATUS.LIVE) return `<span class="ev-chip ev-chip--live">${esc(EX.gameLive)}</span>`;
   if (status === GAME_STATUS.FINAL) return `<span class="ev-chip ev-chip--final">${esc(EX.gameFinal)}</span>`;
   return `<span class="ev-chip">${esc(EX.gameScheduled)}</span>`;
+}
+
+export function regChip(status) {
+  if (status === "approved") return `<span class="ev-chip ev-chip--ok">${esc(EX.regApproved)}</span>`;
+  if (status === "rejected") return `<span class="ev-chip ev-chip--bad">${esc(EX.regRejected)}</span>`;
+  return `<span class="ev-chip ev-chip--wait">${esc(EX.regPending)}</span>`;
+}
+
+// Foto del jugador, o un círculo con sus iniciales
+export function avatarHtml(person = {}, size = 32) {
+  const style = `width:${size}px;height:${size}px`;
+  const src = String(person.photoURL || "");
+  if (src.startsWith("data:image/") || src.startsWith("https://")) {
+    return `<img class="tn-avatar" src="${esc(src)}" alt="" style="${style}" referrerpolicy="no-referrer" />`;
+  }
+  const initials = String(person.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("") || "?";
+  return `<span class="tn-avatar tn-avatar--empty" style="${style};font-size:${Math.round(size * 0.38)}px">${esc(initials)}</span>`;
+}
+
+// Reduce una imagen en el navegador (logo o foto) y la devuelve como data URL chica
+export async function shrinkImage(file, max = 256) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    const webp = canvas.toDataURL("image/webp", 0.85);
+    return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// Logo del equipo, o un círculo con su color e inicial
+export function teamBadge(team = {}, size = 32) {
+  const style = `width:${size}px;height:${size}px`;
+  if (team.logo && String(team.logo).startsWith("data:image/")) {
+    return `<img class="tn-team-logo" src="${esc(team.logo)}" alt="" style="${style}" />`;
+  }
+  const initial = String(team.name || "?").trim().charAt(0).toUpperCase() || "?";
+  return `<span class="tn-team-logo tn-team-logo--empty" style="${style};background:${esc(team.color || "#19473f")};font-size:${Math.round(size * 0.45)}px">${esc(initial)}</span>`;
 }
 
 export function phaseLabel(g) {

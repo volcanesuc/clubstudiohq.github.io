@@ -46,6 +46,24 @@ service cloud.firestore {
       return e.isPublic == true || e.approval.status == "approved" || organizerOf(e) || isPlatformAdmin();
     }
 
+    function isSquadAdmin(squadId) {
+      return isGoogle()
+        && request.auth.uid in get(/databases/$(database)/documents/squads/$(squadId)).data.ownerUids;
+    }
+
+    // admin del equipo de una inscripción o de un equipo del torneo (quien la creó o los co-admins del equipo)
+    function managesEntry(data) {
+      return isGoogle() && (
+        data.get("managerUid", "") == request.auth.uid
+        || (data.get("squadId", "") != "" && isSquadAdmin(data.squadId))
+      );
+    }
+
+    function inviteFor(token, squadId) {
+      let inv = get(/databases/$(database)/documents/squad_invites/$(token));
+      return inv != null && inv.data.squadId == squadId;
+    }
+
     function isScorekeeper(gameId) {
       return signedIn()
         && exists(/databases/$(database)/documents/game_claims/$(gameId + "_" + request.auth.uid));
@@ -100,6 +118,46 @@ service cloud.firestore {
       match /teams/{teamId} {
         allow read: if canRead(eventId);
         allow write: if isPlatformAdmin() || isOrganizer(eventId);
+        // el admin del equipo (inscripción aprobada) actualiza roster, logo y capitanes
+        allow update: if managesEntry(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "city", "logo", "players", "captainId", "spiritCaptainId", "updatedAt"
+          ]);
+      }
+
+      // inscripciones: las manda cualquier cuenta de Google si el torneo está activo y con inscripciones abiertas
+      match /registrations/{regId} {
+        allow read: if isPlatformAdmin() || isOrganizer(eventId) || managesEntry(resource.data);
+
+        allow create: if isGoogle()
+          && request.resource.data.managerUid == request.auth.uid
+          && (request.resource.data.get("squadId", "") == "" || isSquadAdmin(request.resource.data.squadId))
+          && request.resource.data.status == "pending"
+          && !("teamId" in request.resource.data)
+          && isActive(eventId)
+          && eventData(eventId).get("registrationOpen", false) == true;
+
+        allow update: if isPlatformAdmin() || isOrganizer(eventId) || (
+          managesEntry(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "name", "city", "color", "logo", "divisionId", "players", "captainId", "spiritCaptainId",
+            "contact", "eventName", "squadId", "status", "updatedAt"
+          ])
+          // el estado solo cambia de rechazada a pendiente (volver a enviar)
+          && (
+            request.resource.data.status == resource.data.status
+            || (resource.data.status == "rejected" && request.resource.data.status == "pending"
+                && eventData(eventId).get("registrationOpen", false) == true)
+          )
+          // aprobada: nombre, color y división los cambia el organizador
+          && (resource.data.status != "approved"
+              || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["name", "color", "divisionId", "squadId"]))
+          // si cambia de equipo, tiene que ser uno que administra
+          && (request.resource.data.get("squadId", "") == "" || isSquadAdmin(request.resource.data.squadId))
+        );
+
+        allow delete: if isPlatformAdmin() || isOrganizer(eventId)
+          || (managesEntry(resource.data) && resource.data.status != "approved");
       }
 
       match /games/{gameId} {
@@ -131,6 +189,75 @@ service cloud.firestore {
             && request.resource.data.deletedBy == request.auth.uid;
         }
       }
+    }
+
+    /* =========================
+       EQUIPOS PERMANENTES (como un club)
+    ========================= */
+    match /squads/{squadId} {
+      // página pública del equipo
+      allow read: if true;
+
+      allow create: if isGoogle()
+        && request.resource.data.ownerUids == [request.auth.uid];
+
+      allow update: if isGoogle() && (
+        // admins: todo, mientras quede al menos un admin
+        (request.auth.uid in resource.data.ownerUids && request.resource.data.ownerUids.size() > 0)
+        // co-admin nuevo con el link de admin: solo se agrega a sí mismo
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["ownerUids", "joinToken", "updatedAt"])
+          && request.resource.data.ownerUids.hasAll(resource.data.ownerUids)
+          && request.resource.data.ownerUids.size() == resource.data.ownerUids.size() + 1
+          && request.auth.uid in request.resource.data.ownerUids
+          && inviteFor(request.resource.data.joinToken, squadId)
+          && get(/databases/$(database)/documents/squad_invites/$(request.resource.data.joinToken)).data.role == "admin"
+        )
+      );
+
+      allow delete: if isGoogle() && request.auth.uid in resource.data.ownerUids;
+
+      // roster: id = uid del jugador con cuenta, o id al azar si lo cargó un admin
+      match /members/{memberId} {
+        allow read: if true;
+        allow write: if isSquadAdmin(squadId);
+        // jugador: se une con el link, edita sus datos y puede salir
+        allow create: if isGoogle()
+          && memberId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && inviteFor(request.resource.data.joinToken, squadId);
+        allow update: if isGoogle()
+          && memberId == request.auth.uid
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "number", "gender", "photoURL", "updatedAt"]);
+        allow delete: if isGoogle() && memberId == request.auth.uid;
+      }
+
+      // tokens vigentes de invitación
+      match /private/{docId} {
+        allow read, write: if isSquadAdmin(squadId);
+      }
+
+      // torneos donde se inscribió (público, para historial)
+      match /tournaments/{eventId} {
+        allow read: if true;
+        allow write: if isSquadAdmin(squadId);
+      }
+    }
+
+    // link de invitación: quien tiene el token lo puede leer (no se pueden listar)
+    match /squad_invites/{token} {
+      allow get: if true;
+      allow create: if isGoogle()
+        && request.resource.data.createdBy == request.auth.uid
+        && isSquadAdmin(request.resource.data.squadId);
+      allow delete: if isGoogle() && isSquadAdmin(resource.data.squadId);
+    }
+
+    // perfil público del jugador; solo él lo edita
+    match /profiles/{uid} {
+      allow read: if true;
+      allow write: if isGoogle() && request.auth.uid == uid;
     }
 
     /* =========================

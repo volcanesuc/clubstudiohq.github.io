@@ -2,6 +2,9 @@
 // Firestore de la plataforma de torneos:
 //   events/{eventId}                        torneo (info, reglas, organizadores, activación)
 //   events/{eventId}/teams/{teamId}         equipos con roster
+//   events/{eventId}/registrations/{regId}  inscripciones que mandan los admins de equipo
+//   squads/{id} (+ members, private, tournaments)  equipos permanentes: ver squads.js
+//   squad_invites/{token}, profiles/{uid}          invitaciones y perfiles de jugador
 //   events/{eventId}/games/{gameId}         partidos (marcador, reloj, resumen, espíritu)
 //   events/{eventId}/games/{gameId}/plays   jugadas
 //   game_keys/{token}                       link de planillero -> { eventId, gameId }
@@ -26,10 +29,12 @@ import { GAME_STATUS, randomId } from "/torneos/js/model.js";
 import { toMillis } from "/torneos/js/ui.js";
 
 export const APPROVAL = { NONE: "none", REQUESTED: "requested", APPROVED: "approved", REJECTED: "rejected" };
+export const REG = { PENDING: "pending", APPROVED: "approved", REJECTED: "rejected" };
 
 const list = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 const eventRef = (eid) => doc(db, COL.events, eid);
 const teamsCol = (eid) => collection(db, COL.events, eid, "teams");
+const regsCol = (eid) => collection(db, COL.events, eid, "registrations");
 const gamesCol = (eid) => collection(db, COL.events, eid, "games");
 const playsCol = (eid, gid) => collection(db, COL.events, eid, "games", gid, "plays");
 const byStartDesc = (a, b) => String(b.startDate || "").localeCompare(String(a.startDate || ""));
@@ -101,9 +106,10 @@ export async function saveEvent(eid, data) {
 }
 
 export async function deleteEvent(eid) {
-  const [teams, games] = await Promise.all([listTeams(eid), listGames(eid)]);
+  const [teams, games, regs] = await Promise.all([listTeams(eid), listGames(eid), listRegistrations(eid).catch(() => [])]);
   const batch = writeBatch(db);
   teams.forEach((t) => batch.delete(doc(teamsCol(eid), t.id)));
+  regs.forEach((r) => batch.delete(doc(regsCol(eid), r.id)));
   games.forEach((g) => batch.delete(doc(gamesCol(eid), g.id)));
   batch.delete(eventRef(eid));
   await batch.commit();
@@ -162,6 +168,96 @@ export async function saveTeam(eid, team) {
 
 export async function deleteTeam(eid, tid) {
   await deleteDoc(doc(teamsCol(eid), tid));
+}
+
+/* =========================
+   Inscripciones de equipos
+========================= */
+// La inscripción toma nombre, logo y jugadores del equipo (squad) y queda como copia para el torneo.
+// Una vez aprobada, nombre, color y división son del organizador.
+const REG_FIELDS = ["name", "city", "color", "logo", "divisionId", "players", "captainId", "spiritCaptainId", "contact", "squadId"];
+const REG_LOCKED_WHEN_APPROVED = ["name", "color", "divisionId", "squadId"];
+// Lo que se copia al equipo del torneo (público: sin contacto ni correo)
+const TEAM_FIELDS = ["name", "city", "color", "logo", "divisionId", "players", "captainId", "spiritCaptainId", "squadId"];
+const TEAM_MANAGER_FIELDS = ["city", "logo", "players", "captainId", "spiritCaptainId"];
+const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, obj[k]]));
+const squadTournamentRef = (sid, eid) => doc(db, COL.squads, sid, "tournaments", eid);
+
+export async function listRegistrations(eid) {
+  const snap = await getDocs(regsCol(eid));
+  return list(snap).sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
+}
+
+export async function loadRegistration(eid, rid) {
+  const snap = await getDoc(doc(regsCol(eid), rid));
+  return snap.exists() ? { id: snap.id, eventId: eid, ...snap.data() } : null;
+}
+
+/**
+ * Crea o actualiza la inscripción. Si ya está aprobada, también actualiza el equipo del torneo.
+ * Deja un puntero en squads/{id}/tournaments/{eventId} para el historial del equipo y sus jugadores.
+ * @returns {Promise<string>} id de la inscripción
+ */
+export async function saveRegistration(user, event, reg) {
+  const eid = event.id;
+  const approved = reg.status === REG.APPROVED;
+  const fields = pick(reg, approved ? REG_FIELDS.filter((k) => !REG_LOCKED_WHEN_APPROVED.includes(k)) : REG_FIELDS);
+  let id = reg.id;
+  if (!id) {
+    id = randomId("rg");
+    await setDoc(doc(regsCol(eid), id), {
+      ...fields,
+      eventId: eid,
+      eventName: event.name || "",
+      managerUid: user.uid,
+      managerEmail: (user.email || "").toLowerCase(),
+      managerName: user.displayName || "",
+      status: REG.PENDING,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    // rechazada: al corregirla vuelve a quedar pendiente
+    const resubmit = reg.status === REG.REJECTED ? { status: REG.PENDING } : {};
+    await setDoc(doc(regsCol(eid), id), { ...fields, ...resubmit, eventName: event.name || "", updatedAt: serverTimestamp() }, { merge: true });
+    if (approved && reg.teamId) {
+      await setDoc(doc(teamsCol(eid), reg.teamId), { ...pick(reg, TEAM_MANAGER_FIELDS), updatedAt: serverTimestamp() }, { merge: true });
+    }
+  }
+  const sid = reg.squadId;
+  if (sid) {
+    await setDoc(squadTournamentRef(sid, eid), {
+      eventId: eid,
+      regId: id,
+      eventName: event.name || "",
+      eventSlug: event.slug || "",
+      startDate: event.startDate || "",
+      endDate: event.endDate || "",
+      updatedAt: serverTimestamp(),
+    });
+  }
+  return id;
+}
+
+export async function withdrawRegistration(eid, rid, sid) {
+  await deleteDoc(doc(regsCol(eid), rid));
+  if (sid) await deleteDoc(squadTournamentRef(sid, eid)).catch(() => {});
+}
+
+// Organizador: aprobar crea (o actualiza) el equipo del torneo con los datos de la inscripción
+export async function approveRegistration(eid, reg) {
+  const teamId = await saveTeam(eid, {
+    id: reg.teamId || undefined,
+    ...pick(reg, TEAM_FIELDS),
+    managerUid: reg.managerUid,
+    registrationId: reg.id,
+  });
+  await setDoc(doc(regsCol(eid), reg.id), { status: REG.APPROVED, teamId, note: "", decidedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  return teamId;
+}
+
+export async function rejectRegistration(eid, rid, note = "") {
+  await setDoc(doc(regsCol(eid), rid), { status: REG.REJECTED, note: String(note).slice(0, 500), decidedAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
 }
 
 /* =========================

@@ -12,7 +12,7 @@ import {
   standings,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, loadPublicEventBySlug, subscribeGames } from "/torneos/js/services.js";
-import { esc, fmtDateRange, fmtDayOnly, gameRowHtml, gameUrl, hideLoader, playerLabel, renderNav, showLoader, toMillis, waitForUser } from "/torneos/js/ui.js";
+import { esc, fmtDateRange, fmtDayOnly, gameRowHtml, gameUrl, hideLoader, playerLabel, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
@@ -123,9 +123,18 @@ function teamsTab() {
       ${teams.map((t) => `
         <div class="col-12 col-md-6">
           <div class="ev-card h-100">
-            <div class="fw-bold"><span class="ev-team-dot" style="background:${esc(t.color || "#ccc")}"></span> ${esc(t.name)}</div>
-            <div class="small ev-muted mb-2">${esc([t.city, t.pool ? exf(EX.phasePool, { pool: t.pool }) : ""].filter(Boolean).join(" · "))} · ${esc(exf(EX.playersCount, { n: (t.players || []).length }))}</div>
-            <div class="small">${(t.players || []).map((p) => esc(playerLabel(p))).join(" · ") || "—"}</div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              ${teamBadge(t, 40)}
+              <div class="min-w-0">
+                <div class="fw-bold text-truncate">${esc(t.name)}</div>
+                <div class="small ev-muted">${esc([t.city, t.pool ? exf(EX.phasePool, { pool: t.pool }) : ""].filter(Boolean).join(" · "))}${t.city || t.pool ? " · " : ""}${esc(exf(EX.playersSummary, {
+                  n: (t.players || []).length,
+                  f: (t.players || []).filter((p) => p.gender === "F").length,
+                  m: (t.players || []).filter((p) => p.gender === "M").length,
+                }))}</div>
+              </div>
+            </div>
+            <div class="small">${(t.players || []).map((p) => `<span class="text-nowrap">${p.uid ? `<a class="text-decoration-none" href="/torneos/perfil.html?u=${encodeURIComponent(p.uid)}">${esc(playerLabel(p))}</a>` : esc(playerLabel(p))}${p.id === t.captainId ? `<span class="tn-cap tn-cap--c" title="${esc(EX.captain)}">C</span>` : ""}${p.id === t.spiritCaptainId ? `<span class="tn-cap tn-cap--s" title="${esc(EX.spiritCaptain)}">E</span>` : ""}</span>`).join(" · ") || "—"}</div>
           </div>
         </div>`).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}
     </div>`;
@@ -194,6 +203,7 @@ function render() {
         ${e.venue ? `<span><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</span>` : ""}
         ${e.mapsUrl ? `<a class="text-white" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map"></i></a>` : ""}
       </div>
+      ${e.registrationOpen ? `<a class="btn btn-light btn-sm fw-bold mt-3" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(EX.registerTeam)}</a>` : ""}
     </section>
     <ul class="nav nav-pills mb-3 ev-tabs">
       ${TABS.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}

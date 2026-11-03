@@ -35,11 +35,16 @@ estadísticas) no cambia.
 ## Datos
 
 - `events/{id}`: torneo (info, reglas, `ownerUid`, `organizerUids`, `organizerEmails`, `approval`)
-  - `teams/{id}`: equipos con roster
+  - `teams/{id}`: equipos con roster, logo, capitán(a) y capitán(a) de espíritu
+  - `registrations/{id}`: inscripciones de equipos (pendiente / aprobada / rechazada)
   - `games/{id}`: partidos (marcador, reloj, resumen de estadísticas, espíritu)
     - `plays/{id}`: jugadas (gol, drop, pase perdido, bloqueo, timeout, medio tiempo…)
 - `game_keys/{token}`: links de planillero · `game_claims/{gameId}_{uid}`: sesiones que los usaron
 - `platform_admins/{uid}`: quién aprueba torneos
+- `squads/{id}`: equipos permanentes (dueños/co-admins, logo, capitanes)
+  - `members/{id}`: roster (id = uid si el jugador se unió con su cuenta) · `private/invites`: tokens · `tournaments/{eventId}`: inscripciones
+- `squad_invites/{token}`: links para unirse (jugador o co-admin)
+- `profiles/{uid}`: perfil del jugador (foto, número, F/M, equipos); el historial se calcula de los partidos
 
 ## Fase 2
 

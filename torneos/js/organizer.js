@@ -14,6 +14,8 @@ import {
 import { assignSlots, getFormat, listFormats } from "/torneos/js/formats.js";
 import {
   APPROVAL,
+  REG,
+  approveRegistration,
   createEvent,
   createGameKey,
   createGames,
@@ -25,6 +27,8 @@ import {
   listGameKeys,
   listGames,
   listMyEvents,
+  listRegistrations,
+  rejectRegistration,
   listTeams,
   loadEvent,
   requestApproval,
@@ -43,10 +47,12 @@ import {
   hideLoader,
   isGoogleUser,
   phaseLabel,
+  regChip,
   renderNav,
   showLoader,
   signInGoogle,
   statusChip,
+  teamBadge,
   toLocalInput,
   waitForUser,
 } from "/torneos/js/ui.js";
@@ -60,6 +66,7 @@ const state = {
   teams: [],
   games: [],
   keys: new Map(), // gameId -> token
+  regs: [], // inscripciones de equipos
   tab: "info",
 };
 
@@ -143,11 +150,20 @@ async function openEvent(id) {
 
 async function reloadData() {
   const eid = state.event.id;
-  const [teams, games, keys] = await Promise.all([listTeams(eid), listGames(eid), listGameKeys(eid).catch(() => [])]);
+  const [teams, games, keys, regs] = await Promise.all([
+    listTeams(eid),
+    listGames(eid),
+    listGameKeys(eid).catch(() => []),
+    listRegistrations(eid).catch(() => []),
+  ]);
+  state.regs = regs;
   state.teams = teams;
   state.games = games;
   state.keys = new Map(keys.map((k) => [k.gameId, k.id]));
 }
+
+const pendingRegs = () => state.regs.filter((r) => r.status === REG.PENDING);
+const registerLink = () => `${location.origin}/torneos/equipo.html?e=${encodeURIComponent(state.event.id)}`;
 
 const divisions = () => (state.event.divisions?.length ? state.event.divisions : [{ id: "open", name: "Open" }]);
 const fields = () => state.event.fields || [];
@@ -156,7 +172,7 @@ function renderEvent() {
   const e = state.event;
   const tabs = [
     ["info", EX.tabInfo],
-    ["teams", `${EX.tabTeams} (${state.teams.length})`],
+    ["teams", `${EX.tabTeams} (${state.teams.length})${pendingRegs().length ? ` · ${pendingRegs().length} 🔔` : ""}`],
     ["schedule", EX.tabSchedule],
     ["games", `${EX.tabGames} (${state.games.length})`],
   ];
@@ -240,6 +256,17 @@ function renderInfo() {
           ${isApproved(e) ? "" : `<div class="form-text">${esc(EX.approvalNeeded)}</div>`}
         </div>
         <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="eRegOpen" ${e.registrationOpen ? "checked" : ""} />
+            <label class="form-check-label" for="eRegOpen">${esc(EX.regOpen)}</label>
+          </div>
+          <div class="form-text">${esc(isApproved(e) ? EX.regOpenHint : EX.regOpenNeedsActive)}</div>
+          ${e.registrationOpen ? `<div class="input-group input-group-sm mt-1" style="max-width:560px">
+            <input class="form-control" readonly value="${esc(registerLink())}" />
+            <button class="btn btn-outline-secondary" type="button" id="eRegCopy"><i class="bi bi-clipboard me-1"></i>${esc(EX.regCopyLink)}</button>
+          </div>` : ""}
+        </div>
+        <div class="col-12">
           <label class="form-label small" for="eOrganizers">${esc(EX.organizers)}</label>
           <textarea class="form-control" id="eOrganizers" rows="2" ${e.ownerUid === state.user.uid ? "" : "disabled"}>${esc((e.organizerEmails || []).join("\n"))}</textarea>
           <div class="form-text">${esc(EX.organizersHint)}</div>
@@ -295,6 +322,7 @@ function renderInfo() {
         slug: slugify(v("eSlug") || v("eName")) || e.slug,
         status: !isApproved(e) && v("eStatus") === "published" ? "draft" : v("eStatus"),
         isPublic: isApproved(e) && document.getElementById("ePublic").checked,
+        registrationOpen: document.getElementById("eRegOpen").checked,
         organizerEmails: e.ownerUid === state.user.uid
           ? v("eOrganizers").split(/[\n,;]+/).map((x) => x.trim().toLowerCase()).filter((x) => x.includes("@"))
           : e.organizerEmails || [],
@@ -327,6 +355,15 @@ function renderInfo() {
     });
   };
 
+  document.getElementById("eRegCopy")?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(registerLink());
+      alertBox(EX.regLinkCopied);
+    } catch {
+      prompt(EX.regCopyLink, registerLink());
+    }
+  });
+
   document.getElementById("eDelete").onclick = () => {
     if (!confirm(EX.confirmDelete)) return;
     run(async () => {
@@ -338,9 +375,26 @@ function renderInfo() {
 }
 
 /* ---------- Equipos ---------- */
+function captainSelect(field, label, t) {
+  return `
+    <div class="col-6 col-md-3">
+      <label class="form-label small">${esc(label)}</label>
+      <select class="form-select form-select-sm" data-f="${field}">
+        <option value="">—</option>
+        ${(t.players || []).map((p) => `<option value="${esc(p.id)}" ${p.id === t[field] ? "selected" : ""}>${esc(p.name)}${p.number !== null && p.number !== undefined ? ` #${esc(p.number)}` : ""}</option>`).join("")}
+      </select>
+    </div>`;
+}
+
 function teamCard(t = {}) {
+  const reg = t.registrationId ? state.regs.find((r) => r.id === t.registrationId) : null;
   return `
     <form class="ev-card ev-team-card" data-team="${esc(t.id || "")}">
+      ${t.id ? `<div class="d-flex align-items-center gap-2 mb-2">
+        ${teamBadge(t, 36)}
+        <div class="fw-bold flex-grow-1 text-truncate">${esc(t.name || "")}</div>
+        ${reg ? `<span class="small ev-muted text-truncate">${esc(exf(EX.regManagedBy, { who: reg.managerEmail || reg.managerName || "" }))}${reg.contact ? ` · ${esc(reg.contact)}` : ""}</span>` : ""}
+      </div>` : ""}
       <div class="row g-2">
         <div class="col-12 col-md-4"><label class="form-label small">${esc(EX.teamName)}</label><input class="form-control" data-f="name" value="${esc(t.name || "")}" required /></div>
         <div class="col-6 col-md-3"><label class="form-label small">${esc(EX.teamCity)}</label><input class="form-control" data-f="city" value="${esc(t.city || "")}" /></div>
@@ -355,6 +409,7 @@ function teamCard(t = {}) {
           <textarea class="form-control" data-f="roster" rows="${Math.min(10, Math.max(3, (t.players || []).length + 1))}" placeholder="${esc(EX.rosterHint)}">${esc(rosterToText(t.players || []))}</textarea>
           <div class="form-text">${esc(EX.rosterHint)}</div>
         </div>
+        ${t.id ? captainSelect("captainId", EX.captain, t) + captainSelect("spiritCaptainId", EX.spiritCaptain, t) : ""}
         <div class="col-12 d-flex justify-content-between gap-2">
           <button type="button" class="btn btn-sm btn-outline-danger" data-team-delete>${esc(EX.delete)}</button>
           <button type="submit" class="btn btn-sm btn-primary">${esc(EX.save)}</button>
@@ -370,6 +425,7 @@ function renderTeams() {
       <div class="small ev-muted">${esc(EX.teamPoolHint)}</div>
       <button class="btn btn-sm btn-outline-primary" id="evAddTeam"><i class="bi bi-plus-lg me-1"></i>${esc(EX.addTeam)}</button>
     </div>
+    ${requestsSection()}
     <div id="evTeams">${state.teams.length ? state.teams.map(teamCard).join("") : `<div class="ev-card ev-muted">${esc(EX.noTeams)}</div>`}</div>`;
 
   document.getElementById("evAddTeam").onclick = () => {
@@ -395,6 +451,10 @@ function renderTeams() {
         pool: val("pool").toUpperCase(),
         players: parseRoster(form.querySelector("[data-f=roster]").value, prev?.players || []),
       };
+      if (prev) {
+        team.captainId = form.querySelector("[data-f=captainId]")?.value || "";
+        team.spiritCaptainId = form.querySelector("[data-f=spiritCaptainId]")?.value || "";
+      }
       if (!team.name) return;
       await saveTeam(state.event.id, team);
       await reloadData();
@@ -404,6 +464,26 @@ function renderTeams() {
   });
 
   tab.addEventListener("click", (ev) => {
+    const decide = ev.target.closest("[data-reg-approve],[data-reg-reject]");
+    if (decide) {
+      const reg = state.regs.find((r) => r.id === decide.dataset.regApprove || r.id === decide.dataset.regReject);
+      if (!reg) return;
+      if (decide.dataset.regReject) {
+        const note = prompt(EX.regRejectNote, "");
+        if (note === null) return;
+        return run(async () => {
+          await rejectRegistration(state.event.id, reg.id, note);
+          await reloadData();
+          renderEvent();
+        });
+      }
+      return run(async () => {
+        await approveRegistration(state.event.id, reg);
+        await reloadData();
+        alertBox(EX.saved);
+        renderEvent();
+      });
+    }
     if (!ev.target.closest("[data-team-delete]")) return;
     const form = ev.target.closest("[data-team]");
     if (!form.dataset.team) return form.remove();
@@ -414,6 +494,41 @@ function renderTeams() {
       renderEvent();
     });
   });
+}
+
+function requestsSection() {
+  const regs = state.regs.filter((r) => r.status !== REG.APPROVED);
+  if (!regs.length && !state.event.registrationOpen) return "";
+  const divName = (id) => divisions().find((d) => d.id === id)?.name || "";
+  const pname = (r, id) => (r.players || []).find((p) => p.id === id)?.name || "—";
+  return `
+    <h2 class="h6 mt-1 mb-2">${esc(EX.regRequests)}</h2>
+    ${regs.length ? regs.map((r) => {
+      const ps = r.players || [];
+      return `
+        <div class="ev-card tn-reg-card">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            ${teamBadge(r, 40)}
+            <div class="flex-grow-1 min-w-0">
+              <div class="fw-bold">${esc(r.name || "—")} ${regChip(r.status)}</div>
+              <div class="small ev-muted text-truncate">${esc([r.city, divisions().length > 1 ? divName(r.divisionId) : "", exf(EX.regManagedBy, { who: r.managerEmail || r.managerName || "" }), r.contact].filter(Boolean).join(" · "))}</div>
+            </div>
+            ${r.status === REG.PENDING ? `
+              <button class="btn btn-sm btn-outline-danger" data-reg-reject="${esc(r.id)}">${esc(EX.regReject)}</button>
+              <button class="btn btn-sm btn-success" data-reg-approve="${esc(r.id)}"><i class="bi bi-check-lg me-1"></i>${esc(EX.regApprove)}</button>` : ""}
+          </div>
+          <div class="small">
+            <i class="bi bi-star-fill text-warning"></i> ${esc(pname(r, r.captainId))}
+            · <i class="bi bi-heart-fill text-danger"></i> ${esc(pname(r, r.spiritCaptainId))}
+            · ${esc(exf(EX.playersSummary, { n: ps.length, f: ps.filter((p) => p.gender === "F").length, m: ps.filter((p) => p.gender === "M").length }))}
+          </div>
+          <details class="small"><summary class="ev-muted">${esc(EX.roster)}</summary>
+            <div class="mt-1">${ps.map((p) => esc(`${p.number ?? ""} ${p.name} (${p.gender || "?"})`.trim())).join(" · ")}</div>
+          </details>
+          ${r.status === REG.REJECTED && r.note ? `<div class="small ev-muted">${esc(r.note)}</div>` : ""}
+        </div>`;
+    }).join("") : `<div class="ev-card ev-muted small mb-3">${esc(EX.regNoRequests)}</div>`}
+    <h2 class="h6 mt-3 mb-2">${esc(EX.tabTeams)}</h2>`;
 }
 
 /* ---------- Calendario ---------- */

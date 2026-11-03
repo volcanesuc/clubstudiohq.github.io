@@ -14,7 +14,7 @@ function card(e) {
         <div class="fw-bold">${esc(e.name || "—")}</div>
         <div class="small ev-muted mt-1"><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</div>
         ${e.venue ? `<div class="small ev-muted"><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</div>` : ""}
-        ${(e.divisions || []).length ? `<div class="mt-2 d-flex flex-wrap gap-1">${e.divisions.map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}</div>` : ""}
+        ${(e.divisions || []).length || e.registrationOpen ? `<div class="mt-2 d-flex flex-wrap gap-1">${e.registrationOpen ? `<span class="ev-chip ev-chip--ok">${esc(EX.regOpen)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}</div>` : ""}
       </a>
     </div>`;
 }

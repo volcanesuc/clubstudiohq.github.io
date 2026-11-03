@@ -15,4 +15,7 @@ export const COL = {
   gameKeys: "game_keys", // link de planillero -> { eventId, gameId }
   gameClaims: "game_claims", // sesión que reclamó un link
   platformAdmins: "platform_admins", // platform_admins/{uid}: quién aprueba torneos
+  squads: "squads", // squads/{id}: equipos permanentes (dueños, roster en members/, invitaciones, torneos)
+  squadInvites: "squad_invites", // squad_invites/{token}: link para unirse a un equipo (jugador o co-admin)
+  profiles: "profiles", // profiles/{uid}: perfil del jugador (foto, número, equipos)
 };
