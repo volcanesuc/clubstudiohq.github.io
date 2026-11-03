@@ -265,6 +265,39 @@ export async function myRegistrationsFor(user, eventId) {
   return Object.assign(found, { freeSquads: squads.length - found.length });
 }
 
+// Ficha de jugador que se guarda en la inscripción / equipo del torneo
+const tournamentPlayer = (m) => ({ id: m.id, uid: m.uid || null, name: m.name || "", number: m.number ?? null, gender: m.gender || "" });
+
+/**
+ * Mantiene al día el roster de las inscripciones del equipo (y del equipo del torneo si ya está aprobada):
+ * actualiza nombre, número, F/M y cuenta de los jugadores inscritos con los datos actuales del roster.
+ * No saca jugadores (eso lo decide el capitán al editar la inscripción) ni agrega nuevos salvo addIds.
+ * Solo escribe si algo cambió.
+ * @param {object[]} members roster actual del equipo
+ * @param {{ addIds?: string[], onlyEventId?: string }} opts addIds: jugadores a sumar a la inscripción
+ * @returns {Promise<{ eventId: string, reg: object, missing: object[] }[]>} por torneo, con los jugadores del equipo que no están inscritos
+ */
+export async function syncSquadRegistrations(sid, members, { addIds = [], onlyEventId = "" } = {}) {
+  const byId = new Map(members.map((m) => [m.id, m]));
+  const ptrs = (await listSquadTournaments(sid)).filter((p) => !onlyEventId || p.eventId === onlyEventId);
+  const out = await Promise.all(ptrs.map(async (ptr) => {
+    const reg = await loadRegistration(ptr.eventId, ptr.regId).catch(() => null);
+    if (!reg) return null;
+    const before = (reg.players || []).map(tournamentPlayer);
+    const players = before.map((p) => (byId.has(p.id) ? tournamentPlayer(byId.get(p.id)) : p));
+    addIds.filter((id) => byId.has(id) && !players.some((p) => p.id === id)).forEach((id) => players.push(tournamentPlayer(byId.get(id))));
+    if (JSON.stringify(players) !== JSON.stringify(before)) {
+      await setDoc(doc(db, COL.events, ptr.eventId, "registrations", reg.id), { players, updatedAt: serverTimestamp() }, { merge: true });
+      if (reg.status === "approved" && reg.teamId) {
+        await setDoc(doc(db, COL.events, ptr.eventId, "teams", reg.teamId), { players, updatedAt: serverTimestamp() }, { merge: true });
+      }
+    }
+    const inReg = new Set(players.map((p) => p.id));
+    return { eventId: ptr.eventId, reg: { ...reg, players }, missing: members.filter((m) => !inReg.has(m.id)) };
+  }));
+  return out.filter(Boolean);
+}
+
 export async function listSquadTournaments(sid) {
   const snap = await getDocs(collection(db, COL.squads, sid, "tournaments"));
   return list(snap).sort((a, b) => String(b.startDate || "").localeCompare(String(a.startDate || "")));

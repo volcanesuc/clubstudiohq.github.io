@@ -438,6 +438,8 @@ export const EX = {
   sqLeave: "Salir del equipo",
   sqNotInRoster: "Sos admin pero no estás en el roster de este equipo.",
   sqAddSelf: "Agregarme al roster",
+  sqMissingInReg: "Del roster, sin inscribir en este torneo ({n}): {names}.",
+  sqAddToReg: "Agregarlos",
   sqLeaveConfirm: "¿Salir de este equipo? Tu historial en torneos pasados se mantiene.",
   sqLastAdmin: "Sos el único admin: sumá otro co-admin antes de salir.",
 

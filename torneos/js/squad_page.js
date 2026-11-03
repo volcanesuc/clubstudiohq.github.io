@@ -2,7 +2,7 @@
 // Página del equipo (?s=ID). Pública: roster y torneos. Admins: editar datos, roster, capitanes,
 // links de invitación (jugadores y co-admins), co-admins e inscripciones.
 import { EX, exf } from "/torneos/js/strings.js";
-import { REG, isApproved, listPublicEvents, loadRegistration } from "/torneos/js/services.js";
+import { REG, isApproved, listPublicEvents } from "/torneos/js/services.js";
 import {
   INVITE_ROLE,
   addSelfToRoster,
@@ -18,6 +18,7 @@ import {
   profileUrl,
   regenerateInvite,
   repairMemberLinks,
+  syncSquadRegistrations,
   saveMember,
   saveSquad,
   setOwners,
@@ -48,6 +49,7 @@ const state = {
   members: [],
   tournaments: [],
   regs: new Map(), // eventId -> inscripción (solo admins)
+  missing: new Map(), // eventId -> jugadores del equipo que no están inscritos
   invites: null,
   owners: [], // perfiles de los admins
   openEvents: [],
@@ -89,15 +91,20 @@ async function load() {
   state.members = members;
   state.tournaments = tournaments;
   if (admin()) {
-    const [invites, owners, regs, events] = await Promise.all([
+    // las inscripciones se actualizan con los datos actuales del roster (nombre, número, F/M, cuenta)
+    const [invites, owners, synced, events] = await Promise.all([
       getInvites(SID, state.user).catch(() => null),
       Promise.all((squad.ownerUids || []).map(async (uid) => ({ uid, ...((await loadProfile(uid).catch(() => null)) || {}) }))),
-      Promise.all(tournaments.map((t) => loadRegistration(t.eventId, t.regId).catch(() => null))),
+      syncSquadRegistrations(SID, members).catch((err) => {
+        console.warn("[equipo] sync inscripciones:", err?.code || err);
+        return [];
+      }),
       listPublicEvents().catch(() => []),
     ]);
     state.invites = invites;
     state.owners = owners;
-    state.regs = new Map(regs.filter(Boolean).map((r) => [r.eventId, r]));
+    state.regs = new Map(synced.map((x) => [x.eventId, x.reg]));
+    state.missing = new Map(synced.map((x) => [x.eventId, x.missing]));
     const registered = new Set(tournaments.map((t) => t.eventId));
     state.openEvents = events.filter((e) => e.registrationOpen && isApproved(e) && !registered.has(e.id));
   }
@@ -252,14 +259,20 @@ function ownersSection() {
 function tournamentsSection() {
   const rows = state.tournaments.map((t) => {
     const reg = state.regs.get(t.eventId);
+    const missing = admin() ? state.missing.get(t.eventId) || [] : [];
     return `
-      <div class="tn-roster-row">
+      <div class="tn-roster-row flex-wrap">
         <div class="flex-grow-1 min-w-0">
           <a class="fw-semibold text-decoration-none" href="${esc(eventUrl({ id: t.eventId, slug: t.eventSlug }))}">${esc(t.eventName || "—")}</a>
-          <div class="small ev-muted">${esc(fmtDateRange(t.startDate, t.endDate))}</div>
+          <div class="small ev-muted">${esc([fmtDateRange(t.startDate, t.endDate), reg ? exf(EX.playersCount, { n: (reg.players || []).length }) : ""].filter(Boolean).join(" · "))}</div>
         </div>
         ${reg ? regChip(reg.status) : ""}
         ${admin() && reg ? `<a class="btn btn-sm btn-light" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}">${esc(EX.edit)}</a>` : ""}
+        ${missing.length ? `
+          <div class="alert alert-warning w-100 py-2 px-3 mb-0 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="small">${esc(exf(EX.sqMissingInReg, { n: missing.length, names: missing.map((m) => m.name).join(", ") }))}</span>
+            <button class="btn btn-sm btn-warning" data-reg-add="${esc(t.eventId)}"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddToReg)}</button>
+          </div>` : ""}
       </div>`;
   }).join("");
   const open = admin() && state.openEvents.length ? `
@@ -390,6 +403,17 @@ root.addEventListener("click", (ev) => {
     return run(async () => {
       await leaveSquad(state.user, state.squad);
       location.href = "/torneos/equipo.html";
+    });
+  }
+  const regAdd = t.closest("[data-reg-add]");
+  if (regAdd) {
+    const eid = regAdd.dataset.regAdd;
+    const ids = (state.missing.get(eid) || []).map((m) => m.id);
+    return run(async () => {
+      await syncSquadRegistrations(SID, state.members, { addIds: ids, onlyEventId: eid });
+      await load();
+      alertBox(EX.saved);
+      render();
     });
   }
   if (t.closest("#sqAddSelf")) {
