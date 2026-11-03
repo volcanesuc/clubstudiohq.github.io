@@ -17,6 +17,7 @@ import {
   loadSquad,
   profileUrl,
   regenerateInvite,
+  repairMemberLinks,
   saveMember,
   saveSquad,
   setOwners,
@@ -80,7 +81,11 @@ async function load() {
   const squad = await loadSquad(SID);
   if (!squad) return false;
   state.squad = squad;
-  const [members, tournaments] = await Promise.all([listMembers(SID), listSquadTournaments(SID).catch(() => [])]);
+  let [members, tournaments] = await Promise.all([listMembers(SID), listSquadTournaments(SID).catch(() => [])]);
+  // admins: vuelve a vincular jugadores con cuenta que una edición anterior dejó "sin cuenta"
+  if (admin() && members.some((m) => !m.uid) && (await repairMemberLinks(SID, members).catch(() => 0))) {
+    members = await listMembers(SID);
+  }
   state.members = members;
   state.tournaments = tournaments;
   if (admin()) {

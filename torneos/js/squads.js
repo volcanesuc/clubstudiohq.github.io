@@ -146,12 +146,30 @@ export async function listMembers(sid) {
   return list(snap).sort((a, b) => (a.number ?? 999) - (b.number ?? 999) || String(a.name).localeCompare(String(b.name)));
 }
 
-// Admin: agrega o edita un jugador (sin cuenta, o corrige datos)
+// Admin: agrega un jugador sin cuenta, o corrige datos de uno existente.
+// Al editar solo se tocan los campos que vienen: no se pierde la cuenta (uid) ni la foto del jugador.
 export async function saveMember(sid, member) {
-  const id = member.id || randomId("p");
-  const { id: _id, ...data } = member;
-  await setDoc(doc(membersCol(sid), id), { uid: null, photoURL: "", ...data, updatedAt: serverTimestamp() }, { merge: true });
+  const { id: existing, ...data } = member;
+  const id = existing || randomId("p");
+  const defaults = existing ? {} : { uid: null, photoURL: "" };
+  await setDoc(doc(membersCol(sid), id), { ...defaults, ...data, updatedAt: serverTimestamp() }, { merge: true });
   return id;
+}
+
+/**
+ * Repara jugadores con cuenta que quedaron sin uid/foto por una edición anterior:
+ * su ficha tiene id = uid, así que si existe un perfil con ese id que incluye este equipo, se vuelven a vincular.
+ * @returns {Promise<number>} cuántos se repararon
+ */
+export async function repairMemberLinks(sid, members) {
+  const broken = members.filter((m) => !m.uid);
+  const fixed = await Promise.all(broken.map(async (m) => {
+    const prof = await loadProfile(m.id).catch(() => null);
+    if (!prof || !(prof.squadIds || []).includes(sid)) return false;
+    await setDoc(doc(membersCol(sid), m.id), { uid: m.id, photoURL: m.photoURL || prof.photoURL || "", updatedAt: serverTimestamp() }, { merge: true });
+    return true;
+  }));
+  return fixed.filter(Boolean).length;
 }
 
 export async function deleteMember(sid, mid) {
