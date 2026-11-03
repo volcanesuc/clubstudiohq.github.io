@@ -4,6 +4,7 @@
 // el marcador y las estadísticas del partido se recalculan desde las jugadas.
 import { EX, exf } from "/torneos/js/strings.js";
 import {
+  AUDIT_PLAYS,
   GAME_STATUS,
   PLAY,
   SPIRIT_KEYS,
@@ -11,6 +12,7 @@ import {
   computeGameState,
   endBreak,
   eventRules,
+  feedPlays,
   startBreak,
   sortPlays,
   gameElapsedMs,
@@ -18,9 +20,11 @@ import {
   other,
   spiritTotal,
 } from "/torneos/js/model.js";
+import { auth } from "/torneos/js/firebase.js";
 import {
   addPlay,
   claimScorekeeper,
+  isPlatformAdmin,
   listTeams,
   loadEvent,
   subscribeGame,
@@ -46,7 +50,12 @@ const state = {
   calc: null,
   pickSide: "A",
   offenseChoice: "A",
+  // organizador o admin de la plataforma (cuenta de Google) -> puede ajustar el reloj
+  isOrganizer: false,
 };
+
+const byRole = () => (state.isOrganizer ? "organizer" : "scorekeeper");
+const byInfo = () => ({ by: auth.currentUser?.uid || "", byRole: byRole() });
 
 const picker = new bootstrap.Modal($("skPicker"));
 
@@ -92,9 +101,10 @@ function record(play) {
     extra.scoreB = next.B;
   }
   const at = Date.now();
-  const id = addPlay(EID, GID, { ...play, ...extra, t, at });
+  const full = { ...play, ...extra, t, at, ...byInfo() };
+  const id = addPlay(EID, GID, full);
   // pinta ya, sin esperar a Firestore
-  state.plays = [...state.plays.filter((p) => p.id !== id), { id, ...play, ...extra, t, at }];
+  state.plays = [...state.plays.filter((p) => p.id !== id), { id, ...full }];
   recompute();
   render();
   syncSummary();
@@ -174,9 +184,18 @@ function beginBreak(opts) {
   setClock(startBreak(clock.break ? endBreak(clock) : clock, opts, state.rules), { replace: true });
 }
 
-function finishBreak() {
-  if (!state.game?.clock?.break) return;
+function finishBreak({ early = false } = {}) {
+  const brk = state.game?.clock?.break;
+  if (!brk) return;
+  if (early) record({ type: PLAY.BREAK_END, breakType: brk.type, team: brk.team || "" });
   setClock(endBreak(state.game.clock), { replace: true });
+}
+
+// Solo organizadores: queda registrado en Jugadas
+function adjustClock(deltaSec) {
+  if (!state.isOrganizer) return;
+  record({ type: PLAY.CLOCK_ADJUST, deltaSec });
+  setClock({ offsetMs: (state.game.clock?.offsetMs || 0) + deltaSec * 1000 });
 }
 
 /* =========================
@@ -213,15 +232,16 @@ function togglePause() {
 }
 
 function undoLast() {
-  const last = sortPlays(state.plays.filter((p) => !p.deleted && p.type !== PLAY.START)).pop();
+  const last = sortPlays(state.plays.filter((p) => !p.deleted && p.type !== PLAY.START && !AUDIT_PLAYS.includes(p.type))).pop();
   if (last) removePlay(last.id);
 }
 
 function removePlay(id) {
   const play = state.plays.find((p) => p.id === id);
   if (play && (play.type === PLAY.TIMEOUT || play.type === PLAY.HALFTIME)) finishBreak();
-  updatePlay(EID, GID, id, { deleted: true });
-  state.plays = state.plays.map((p) => (p.id === id ? { ...p, deleted: true } : p));
+  const voided = { deleted: true, deletedAt: elapsedSec(), deletedBy: auth.currentUser?.uid || "", deletedByRole: byRole() };
+  updatePlay(EID, GID, id, voided);
+  state.plays = state.plays.map((p) => (p.id === id ? { ...p, ...voided } : p));
   recompute();
   render();
   syncSummary();
@@ -238,6 +258,7 @@ async function finishGame() {
 
 async function reopenGame() {
   state.plays.filter((p) => p.type === PLAY.END && !p.deleted).forEach((p) => removePlay(p.id));
+  record({ type: PLAY.REOPEN });
   const clock = { ...(state.game.clock || {}), endedAt: null };
   await updateGame(EID, GID, { status: GAME_STATUS.LIVE, clock });
   state.game = { ...state.game, status: GAME_STATUS.LIVE, clock };
@@ -322,7 +343,7 @@ function breakBanner() {
 
 function renderLive() {
   const paused = !!state.game.clock?.pausedAt;
-  const feed = [...state.calc.feed].reverse().slice(0, 40);
+  const feed = feedPlays(state.plays, state.rules).reverse().slice(0, 60);
   const ctx = { playersById: state.playersById, teamName };
   return `
     ${scoreHeader()}
@@ -335,15 +356,18 @@ function renderLive() {
       ${state.calc.halftimeDone ? "" : `<button class="btn btn-outline-secondary" data-act="halftime">${esc(EX.skHalftime)}</button>`}
       <button class="btn btn-outline-danger" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button>
     </div>
-    <details class="mt-2 small">
+    ${state.isOrganizer ? `<details class="mt-2 small">
       <summary class="ev-muted">${esc(EX.skClockAdjust)}</summary>
       <div class="d-flex gap-2 mt-2">
         ${[-30, -1, 1, 30].map((s) => `<button class="btn btn-sm btn-light" data-clock="${s}">${s > 0 ? "+" : ""}${s}s</button>`).join("")}
       </div>
-    </details>
+    </details>` : ""}
     <h2 class="h6 mt-3 mb-2">${esc(EX.skFeed)}</h2>
     <div class="ev-feed">
-      ${feed.length ? feed.map((p) => feedItemHtml(p, ctx, { actions: p.type === PLAY.START ? "" : `<button class="btn btn-sm btn-light text-danger" data-del-play="${esc(p.id)}" title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>` })).join("") : `<div class="ev-muted small">${esc(EX.noEventsYet)}</div>`}
+      ${feed.length ? feed.map((p) => feedItemHtml(p, ctx, {
+        audit: state.rules.auditLog,
+        actions: p.type === PLAY.START || AUDIT_PLAYS.includes(p.type) ? "" : `<button class="btn btn-sm btn-light text-danger" data-del-play="${esc(p.id)}" title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>`,
+      })).join("") : `<div class="ev-muted small">${esc(EX.noEventsYet)}</div>`}
     </div>`;
 }
 
@@ -413,7 +437,7 @@ $("tnRoot").addEventListener("click", (ev) => {
   if (del) return confirm(EX.confirmDelete) && removePlay(del.dataset.delPlay);
 
   const clockBtn = ev.target.closest("[data-clock]");
-  if (clockBtn) return setClock({ offsetMs: (state.game.clock?.offsetMs || 0) + Number(clockBtn.dataset.clock) * 1000 });
+  if (clockBtn) return adjustClock(Number(clockBtn.dataset.clock));
 
   const btn = ev.target.closest("[data-act]");
   if (!btn) return;
@@ -425,7 +449,7 @@ $("tnRoot").addEventListener("click", (ev) => {
     case "block": return onBlock(side);
     case "timeout": return onTimeout(side);
     case "halftime": return onHalftime();
-    case "break-end": return finishBreak();
+    case "break-end": return finishBreak({ early: true });
     case "pause": return togglePause();
     case "undo": return undoLast();
     case "finish": return finishGame();
@@ -509,6 +533,13 @@ window.addEventListener("offline", updateOnline);
   if (!event) return showError(EX.skNoAccess);
   state.event = event;
   state.rules = eventRules(event);
+  const u = auth.currentUser;
+  const email = (u?.email || "").toLowerCase();
+  state.isOrganizer = !!u && !u.isAnonymous && (
+    (event.organizerUids || []).includes(u.uid)
+    || (!!email && (event.organizerEmails || []).includes(email))
+    || (await isPlatformAdmin(u.uid))
+  );
 
   subscribeGame(EID, GID, (game) => {
     if (!game) return showError(EX.skNoAccess);

@@ -17,13 +17,20 @@ export const PLAY = {
   PAUSE: "pause",
   RESUME: "resume",
   END: "end",
+  // registro (no cambian el marcador): quedan en Jugadas para que todo sea trazable
+  CLOCK_ADJUST: "clock_adjust",
+  BREAK_END: "break_end",
+  REOPEN: "reopen",
 };
+
+export const AUDIT_PLAYS = [PLAY.CLOCK_ADJUST, PLAY.BREAK_END, PLAY.REOPEN];
 
 export const SPIRIT_KEYS = ["rules", "fouls", "fair", "attitude", "comm"];
 
 export const DEFAULT_RULES = {
   gameMinutes: 90, // el reloj cuenta hacia atrás desde aquí (0 = hacia arriba)
   stopClockOnBreaks: true, // el reloj se detiene en timeouts y medio tiempo
+  auditLog: true, // Jugadas muestra todo: anuladas, pausas, ajustes de reloj, reaperturas
   gameTo: 13,
   halftimeAt: 7,
   softCapMin: 0,
@@ -40,6 +47,7 @@ export function eventRules(event = {}) {
   return {
     gameMinutes: n(r.gameMinutes, DEFAULT_RULES.gameMinutes),
     stopClockOnBreaks: typeof r.stopClockOnBreaks === "boolean" ? r.stopClockOnBreaks : DEFAULT_RULES.stopClockOnBreaks,
+    auditLog: typeof r.auditLog === "boolean" ? r.auditLog : DEFAULT_RULES.auditLog,
     gameTo: n(r.gameTo, DEFAULT_RULES.gameTo),
     halftimeAt: n(r.halftimeAt, DEFAULT_RULES.halftimeAt),
     softCapMin: n(r.softCapMin, 0),
@@ -289,6 +297,16 @@ export function gameSummary(state) {
     playerStats: state.players,
     halftimeDone: state.halftimeDone,
   };
+}
+
+/* =========================
+   Lista de jugadas
+========================= */
+// Con historial completo se ven también las anuladas y los registros (reloj, reaperturas);
+// sin él, solo las jugadas vigentes.
+export function feedPlays(plays = [], rules = DEFAULT_RULES) {
+  const list = rules.auditLog ? plays : plays.filter((p) => !p.deleted && !AUDIT_PLAYS.includes(p.type));
+  return sortPlays(list);
 }
 
 /* =========================

@@ -69,6 +69,8 @@ export const EX = {
   ruleGameMinutesHint: "El reloj cuenta hacia atrás desde aquí hasta 0. Poné 0 para que cuente hacia arriba.",
   ruleStopOnBreaks: "Detener el reloj en timeouts y medio tiempo",
   ruleStopOnBreaksHint: "Si lo apagás, el reloj sigue corriendo como en reglas WFDF.",
+  ruleAudit: "Historial completo en Jugadas",
+  ruleAuditHint: "Muestra todo lo que se tocó: jugadas anuladas, pausas, fin anticipado de descansos, ajustes de reloj y reaperturas, con quién lo hizo. Siempre se guarda; esto solo decide si se ve.",
   mvpTitle: "Fórmula MVP",
   mvpHint: "MVP = goles × peso + asistencias × peso + bloqueos × peso − turnovers × peso.",
   mvpGoals: "Goles",
@@ -182,6 +184,14 @@ export const EX = {
   evStart: "Inicio",
   evEnd: "Final",
   evAssistBy: "asistencia de {name}",
+  evClockAdjust: "Reloj ajustado",
+  evClockAdjustText: "{delta} s",
+  evBreakEnd: "Fin anticipado",
+  evReopen: "Partido reabierto",
+  evVoided: "Anulada",
+  evVoidedAt: "anulada en {time}",
+  byOrganizer: "Organizador",
+  byScorekeeper: "Planillero",
   evCallahan: "Callahan",
 
   // público: partido

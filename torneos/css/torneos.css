@@ -98,6 +98,12 @@
 .ev-feed__item--turn .ev-feed__type { color: #b02a37; }
 .ev-feed__item--block .ev-feed__type { color: #0a58ca; }
 .ev-feed__item--meta { background: rgba(0, 0, 0, .025); }
+.ev-feed__item--audit { background: rgba(255, 193, 7, .08); border-left: 4px solid #ffc107; }
+.ev-feed__item--audit .ev-feed__type { color: #997404; }
+.ev-feed__item.is-voided { opacity: .6; }
+.ev-feed__item.is-voided .ev-feed__what { text-decoration: line-through; }
+.ev-feed__by { font-size: .72rem; color: var(--ev-muted); }
+.ev-chip--void { background: #6c757d; color: #fff; }
 .ev-feed__score { font-weight: 900; font-variant-numeric: tabular-nums; }
 
 /* ===== tablas ===== */

@@ -184,22 +184,37 @@ export function describePlay(play, ctx) {
       return { cls: "meta", type: EX.evStart, text: "" };
     case PLAY.END:
       return { cls: "meta", type: EX.evEnd, text: "" };
+    case PLAY.CLOCK_ADJUST:
+      return { cls: "audit", type: EX.evClockAdjust, text: exf(EX.evClockAdjustText, { delta: `${play.deltaSec > 0 ? "+" : ""}${play.deltaSec}` }) };
+    case PLAY.BREAK_END:
+      return { cls: "audit", type: EX.evBreakEnd, text: play.breakType === "halftime" ? EX.evHalftime : `${EX.evTimeout}${play.team ? ` · ${team}` : ""}` };
+    case PLAY.REOPEN:
+      return { cls: "audit", type: EX.evReopen, text: "" };
     default:
       return { cls: "meta", type: play.type, text: "" };
   }
 }
 
-export function feedItemHtml(play, ctx, { actions = "" } = {}) {
+const roleLabel = (role) => (role === "organizer" ? EX.byOrganizer : role === "scorekeeper" ? EX.byScorekeeper : "");
+
+export function feedItemHtml(play, ctx, { actions = "", audit = false } = {}) {
   const d = describePlay(play, ctx);
-  const score = play.type === PLAY.GOAL && play.scoreA !== undefined ? `<span class="ev-feed__score">${play.scoreA}–${play.scoreB}</span>` : "";
+  const voided = !!play.deleted;
+  const score = play.type === PLAY.GOAL && play.scoreA !== undefined && !voided ? `<span class="ev-feed__score">${play.scoreA}–${play.scoreB}</span>` : "";
+  // historial: quién lo hizo y, si se anuló, cuándo y quién
+  const who = audit ? roleLabel(play.byRole) : "";
+  const voidNote = voided
+    ? [play.deletedAt !== undefined ? exf(EX.evVoidedAt, { time: fmtClock((play.deletedAt || 0) * 1000) }) : "", roleLabel(play.deletedByRole)].filter(Boolean).join(" · ")
+    : "";
   return `
-    <div class="ev-feed__item ev-feed__item--${d.cls}" data-play="${esc(play.id)}">
-      <div class="ev-feed__time">${esc(fmtClock(play.t || 0))}</div>
+    <div class="ev-feed__item ev-feed__item--${d.cls} ${voided ? "is-voided" : ""}" data-play="${esc(play.id)}">
+      <div class="ev-feed__time">${esc(fmtClock((play.t || 0) * 1000))}</div>
       <div class="min-w-0">
-        <div class="ev-feed__type">${esc(d.type)}</div>
-        ${d.text ? `<div class="small text-truncate">${esc(d.text)}</div>` : ""}
+        <div class="ev-feed__type">${voided ? `<span class="ev-chip ev-chip--void me-1">${esc(EX.evVoided)}</span>` : ""}<span class="ev-feed__what">${esc(d.type)}</span></div>
+        ${d.text ? `<div class="small text-truncate ev-feed__what">${esc(d.text)}</div>` : ""}
+        ${who || voidNote ? `<div class="ev-feed__by">${esc([who, voidNote].filter(Boolean).join(" · "))}</div>` : ""}
       </div>
-      <div class="d-flex align-items-center gap-2">${score}${actions}</div>
+      <div class="d-flex align-items-center gap-2">${score}${voided ? "" : actions}</div>
     </div>`;
 }
 

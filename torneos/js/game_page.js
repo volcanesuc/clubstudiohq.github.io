@@ -6,6 +6,7 @@ import {
   clockView,
   computeGameState,
   eventRules,
+  feedPlays,
   mvpScore,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
@@ -82,7 +83,7 @@ function render() {
       ${live && calc.possession === k ? `<div class="ev-score__disc">🥏</div>` : ""}
     </div>`;
   const ctx = { playersById: state.playersById, teamName };
-  const feed = [...calc.feed].reverse();
+  const feed = feedPlays(state.plays, state.rules).reverse();
 
   $("tnRoot").innerHTML = `
     <a class="small ev-muted text-decoration-none" href="${esc(eventUrl(state.event))}"><i class="bi bi-arrow-left"></i> ${esc(state.event.name || "")}</a>
@@ -106,7 +107,7 @@ function render() {
       </div>
       <div class="col-12 col-lg-7">
         <h2 class="h6 mb-2">${esc(EX.skFeed)}</h2>
-        <div class="ev-feed">${feed.length ? feed.map((p) => feedItemHtml(p, ctx)).join("") : `<div class="ev-card ev-muted small">${esc(started ? EX.noEventsYet : exf(EX.scheduledFor, { when: fmtWhen(g.startAt) || "—" }))}</div>`}</div>
+        <div class="ev-feed">${feed.length ? feed.map((p) => feedItemHtml(p, ctx, { audit: state.rules.auditLog })).join("") : `<div class="ev-card ev-muted small">${esc(started ? EX.noEventsYet : exf(EX.scheduledFor, { when: fmtWhen(g.startAt) || "—" }))}</div>`}</div>
       </div>
     </div>
 

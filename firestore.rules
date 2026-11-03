@@ -113,11 +113,22 @@ service cloud.firestore {
             "status", "scoreA", "scoreB", "clock", "offenseFirst", "teamStats", "playerStats",
             "halftimeDone", "spirit", "startedAt", "finishedAt", "updatedAt"
           ])
+          // ajustar el reloj es solo del organizador
+          && request.resource.data.get("clock", {}).get("offsetMs", 0) == resource.data.get("clock", {}).get("offsetMs", 0)
         );
 
         match /plays/{playId} {
           allow read: if canRead(eventId);
-          allow write: if isPlatformAdmin() || isOrganizer(eventId) || (isScorekeeper(gameId) && isActive(eventId));
+          allow write: if isPlatformAdmin() || isOrganizer(eventId);
+          // planillero: crea jugadas a su nombre (sin ajustes de reloj) y solo puede anularlas,
+          // nunca borrarlas ni editarlas, para que el historial quede completo
+          allow create: if isScorekeeper(gameId) && isActive(eventId)
+            && request.resource.data.by == request.auth.uid
+            && request.resource.data.type != "clock_adjust";
+          allow update: if isScorekeeper(gameId) && isActive(eventId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["deleted", "deletedAt", "deletedBy", "deletedByRole", "updatedAt"])
+            && request.resource.data.deleted == true
+            && request.resource.data.deletedBy == request.auth.uid;
         }
       }
     }
