@@ -161,7 +161,9 @@ body.tn-body { background: #f6f5fb; color: #1d1b26; min-height: 100vh; }
   background: rgba(7, 8, 11, .92); backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, .1);
 }
-.tn-nav__brand { color: #fff; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.tn-nav__brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.tn-nav__brand img { border-radius: 8px; flex: 0 0 auto; }
+.tn-nav__hq { background: linear-gradient(135deg, #a78bfa, #22d3ee); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tn-nav__link { color: rgba(255, 255, 255, .65); text-decoration: none; padding: .3rem .65rem; border-radius: 999px; font-size: .92rem; white-space: nowrap; }
 .tn-nav__link:hover { color: #fff; }
 .tn-nav__link.is-active { color: #fff; background: rgba(255, 255, 255, .1); }
