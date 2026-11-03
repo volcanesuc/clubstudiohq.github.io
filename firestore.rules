@@ -1,0 +1,145 @@
+rules_version = '2';
+
+// Reglas del proyecto de Firebase de la PLATAFORMA ClubStudioHQ (torneos).
+// Firebase console > Firestore > Reglas: pegar este archivo completo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* =========================
+       HELPERS
+    ========================= */
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // cuenta de Google (no la sesión anónima del planillero)
+    function isGoogle() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+
+    function isPlatformAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid));
+    }
+
+    function eventData(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data;
+    }
+
+    function organizerOf(data) {
+      return isGoogle() && (
+        request.auth.uid in data.organizerUids
+        || (request.auth.token.email != null && request.auth.token.email.lower() in data.get("organizerEmails", []))
+      );
+    }
+
+    function isOrganizer(eventId) {
+      return organizerOf(eventData(eventId));
+    }
+
+    function isActive(eventId) {
+      return eventData(eventId).approval.status == "approved";
+    }
+
+    // visible al público: publicado o activo (para que el planillero y el público vean los partidos)
+    function canRead(eventId) {
+      let e = eventData(eventId);
+      return e.isPublic == true || e.approval.status == "approved" || organizerOf(e) || isPlatformAdmin();
+    }
+
+    function isScorekeeper(gameId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/game_claims/$(gameId + "_" + request.auth.uid));
+    }
+
+    /* =========================
+       ADMINS DE LA PLATAFORMA (se crean a mano en la consola)
+    ========================= */
+    match /platform_admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    /* =========================
+       TORNEOS
+    ========================= */
+    match /events/{eventId} {
+      allow read: if resource.data.isPublic == true
+        || resource.data.approval.status == "approved"
+        || organizerOf(resource.data)
+        || isPlatformAdmin();
+
+      // cualquiera con Google crea un torneo: queda como borrador privado y sin activar
+      allow create: if isGoogle()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.organizerUids == [request.auth.uid]
+        && request.resource.data.isPublic == false
+        && request.resource.data.approval.status == "none";
+
+      // organizadores: no cambian dueño ni activación (solo pueden pedirla);
+      // solo se publica si está activo
+      allow update: if isPlatformAdmin() || (
+        organizerOf(resource.data)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.organizerUids == resource.data.organizerUids
+        && (
+          request.resource.data.approval == resource.data.approval
+          || (
+            resource.data.approval.status in ["none", "rejected"]
+            && request.resource.data.approval.status == "requested"
+            && request.resource.data.approval.keys().hasOnly(["status", "note", "requestedAt"])
+          )
+        )
+        && (request.resource.data.isPublic == false || resource.data.approval.status == "approved")
+        // solo el dueño cambia la lista de co-organizadores
+        && (request.resource.data.get("organizerEmails", []) == resource.data.get("organizerEmails", [])
+            || request.auth.uid == resource.data.ownerUid)
+      );
+
+      allow delete: if isPlatformAdmin() || (isGoogle() && resource.data.ownerUid == request.auth.uid);
+
+      match /teams/{teamId} {
+        allow read: if canRead(eventId);
+        allow write: if isPlatformAdmin() || isOrganizer(eventId);
+      }
+
+      match /games/{gameId} {
+        allow read: if canRead(eventId);
+        allow create, delete: if isPlatformAdmin() || isOrganizer(eventId);
+        // el planillero (link) solo toca marcador, reloj, resumen y espíritu, y solo con el torneo activo
+        allow update: if isPlatformAdmin() || isOrganizer(eventId) || (
+          isScorekeeper(gameId)
+          && isActive(eventId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "scoreA", "scoreB", "clock", "offenseFirst", "teamStats", "playerStats",
+            "halftimeDone", "spirit", "startedAt", "finishedAt", "updatedAt"
+          ])
+        );
+
+        match /plays/{playId} {
+          allow read: if canRead(eventId);
+          allow write: if isPlatformAdmin() || isOrganizer(eventId) || (isScorekeeper(gameId) && isActive(eventId));
+        }
+      }
+    }
+
+    /* =========================
+       LINKS DE PLANILLERO
+    ========================= */
+    match /game_keys/{token} {
+      allow read: if isPlatformAdmin() || isOrganizer(resource.data.eventId);
+      // solo con el torneo activo
+      allow create: if isPlatformAdmin() || (isOrganizer(request.resource.data.eventId) && isActive(request.resource.data.eventId));
+      allow update, delete: if isPlatformAdmin() || isOrganizer(resource.data.eventId);
+    }
+
+    match /game_claims/{claimId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && claimId == request.resource.data.gameId + "_" + request.auth.uid
+        && exists(/databases/$(database)/documents/game_keys/$(request.resource.data.token))
+        && get(/databases/$(database)/documents/game_keys/$(request.resource.data.token)).data.gameId == request.resource.data.gameId;
+      allow update, delete: if isPlatformAdmin();
+    }
+  }
+}

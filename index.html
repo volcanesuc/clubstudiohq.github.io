@@ -112,6 +112,7 @@
       <div class="collapse navbar-collapse" id="nav">
         <ul class="navbar-nav ms-auto gap-2">
           <li class="nav-item"><a class="nav-link text-white-50" href="#features">Features</a></li>
+          <li class="nav-item"><a class="nav-link text-white-50" href="#torneos">Torneos</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="#how">Cómo funciona</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="#pricing">Precios</a></li>
           <li class="nav-item"><a class="nav-link text-white-50" href="#faq">FAQ</a></li>
@@ -150,6 +151,9 @@
           <a class="btn btn-primary-soft btn-lg" href="/signup">Probar gratis</a>
           <a class="btn btn-outline-light btn-lg" href="/demo">Ver demo</a>
         </div>
+        <a class="d-inline-block mt-3 tiny" style="color:rgba(34,211,238,.95);text-decoration:none;" href="/torneos/">
+          🏆 ¿Organizás un torneo? Planillaje en vivo y estadísticas →
+        </a>
 
         <div class="mt-4 d-flex flex-wrap gap-2 tiny muted">
           <span class="badge-soft">✅ Mobile-first</span>
@@ -269,7 +273,7 @@
             <div class="feature-icon">🏆</div>
             <div>
               <div class="fw-bold text-white">Torneos</div>
-              <div class="muted">Roster por torneo, disponibilidad, logística y notas internas.</div>
+              <div class="muted">Roster por torneo, disponibilidad, logística y notas internas. Y si organizás uno: <a href="#torneos" style="color:rgba(34,211,238,.95)">planillaje en vivo</a>.</div>
             </div>
           </div>
         </div>
@@ -295,6 +299,69 @@
               <div class="fw-bold text-white">Roles & permisos</div>
               <div class="muted">Admins editan. Jugadores ven. Control real sin complicarte.</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container"><div class="divider"></div></div>
+
+  <!-- TORNEOS -->
+  <section id="torneos" class="container pb-4">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-6">
+        <div class="text-uppercase fw-bold tiny" style="color:rgba(34,211,238,.9);letter-spacing:.08em;">
+          Torneos
+        </div>
+        <h2 class="text-white fw-bold mt-2">Organizá tu torneo con resultados en vivo</h2>
+        <p class="muted">
+          Para cualquier organizador, tengas o no un club en ClubStudioHQ. Armá equipos y calendario,
+          compartí un link de planillero por partido y seguí cada punto en tiempo real.
+        </p>
+        <ul class="muted list-check">
+          <li>📋 Equipos, rosters y calendario round robin automático (más formatos pronto)</li>
+          <li>⏱️ Planillaje desde el celular: goles, asistencias, bloqueos, turnovers, timeouts y reloj</li>
+          <li>📊 Posiciones, MVP, goleadores, asistencias y breaks al instante</li>
+          <li>🤝 Espíritu de juego WFDF por partido y promedios por equipo</li>
+          <li>🔗 Página pública del torneo para jugadores y familias</li>
+        </ul>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-primary-soft" href="/torneos/organizar.html">Organizar un torneo</a>
+          <a class="btn btn-outline-light" href="/torneos/">Ver torneos</a>
+        </div>
+        <div class="muted tiny mt-2">Creás el torneo gratis; para publicarlo y planillar en vivo se activa con prueba gratis o plan pago.</div>
+      </div>
+
+      <div class="col-lg-6">
+        <!-- Mock del marcador en vivo -->
+        <div class="glass p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="fw-bold text-white">Final · Cancha 1</div>
+            <span class="badge-soft" style="border-color:rgba(239,68,68,.45);color:#fecaca;background:rgba(239,68,68,.12)">● En vivo</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center text-white">
+            <div class="text-center" style="flex:1">
+              <div class="fw-semibold">Volcanes</div>
+              <div class="display-4 fw-bold">12</div>
+            </div>
+            <div class="text-center muted">
+              <div class="fs-5 fw-bold text-white">71:20</div>
+              <div class="tiny">a 13</div>
+            </div>
+            <div class="text-center" style="flex:1">
+              <div class="fw-semibold">Pujaguas</div>
+              <div class="display-4 fw-bold">11</div>
+            </div>
+          </div>
+          <div class="glass p-3 mt-3" style="background: rgba(255,255,255,.04);">
+            <div class="tiny muted">Último punto</div>
+            <div class="text-white">🥏 Gol de A. Mora · asistencia de B. Rojas</div>
+          </div>
+          <div class="row g-2 mt-1 tiny muted">
+            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">4/9</div>Breaks</div></div>
+            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">17</div>MVP</div></div>
+            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">16.4</div>Espíritu</div></div>
           </div>
         </div>
       </div>
@@ -510,6 +577,7 @@
         </div>
         <div class="col-md-auto d-flex flex-wrap gap-3">
           <a href="#features">Features</a>
+          <a href="/torneos/">Torneos</a>
           <a href="#pricing">Precios</a>
           <a href="/privacy">Privacidad</a>
           <a href="/contact">Contacto</a>
