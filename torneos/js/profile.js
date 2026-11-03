@@ -1,9 +1,10 @@
 // /torneos/js/profile.js
-// Perfil del jugador (?u=UID, o el propio). Foto, número, equipos e historial de estadísticas
-// en todos los torneos y partidos. El dueño del perfil lo edita.
+// Perfil del jugador (?u=UID, o el propio). Foto, número, F/M, equipos (con rol) e historial de
+// estadísticas en todos los torneos y partidos. El dueño del perfil lo edita.
 import { EX, exf } from "/torneos/js/strings.js";
 import { isPlatformAdmin } from "/torneos/js/services.js";
-import { ensureProfile, loadProfile, loadSquad, playerHistory, saveProfile, squadUrl } from "/torneos/js/squads.js";
+import { cropFromInput } from "/torneos/js/cropper.js";
+import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, playerHistory, profileUrl, saveProfile, squadUrl } from "/torneos/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -15,7 +16,6 @@ import {
   isGoogleUser,
   renderNav,
   showLoader,
-  shrinkImage,
   signInGoogle,
   teamBadge,
   waitForUser,
@@ -25,7 +25,7 @@ const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
 const PARAM_UID = new URLSearchParams(location.search).get("u") || "";
 
-const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false };
+const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false, editing: false };
 
 function alertBox(msg, kind = "success") {
   const el = document.getElementById("tnAlert");
@@ -35,75 +35,143 @@ function alertBox(msg, kind = "success") {
   if (msg && kind === "success") setTimeout(() => el.classList.add("d-none"), 2500);
 }
 
-const tile = (n, label) => `<div class="col-4 col-md-2"><div class="tn-stat-tile"><div class="tn-stat-tile__n">${esc(n)}</div><div class="tn-stat-tile__l">${esc(label)}</div></div></div>`;
+async function run(fn) {
+  showLoader();
+  try {
+    await fn();
+  } catch (err) {
+    console.error(err);
+    alertBox(`${EX.error} ${err?.code || err?.message || ""}`, "danger");
+  } finally {
+    hideLoader();
+  }
+}
 
-function hero() {
+const hasNumber = (p) => p.number !== null && p.number !== undefined && p.number !== "";
+const tile = (n, label, accent = false) => `
+  <div class="col-4">
+    <div class="tn-stat-tile ${accent ? "tn-stat-tile--accent" : ""}"><div class="tn-stat-tile__n">${esc(n)}</div><div class="tn-stat-tile__l">${esc(label)}</div></div>
+  </div>`;
+
+/* =========================
+   Secciones
+========================= */
+function banner() {
   const p = state.profile;
+  const avatar = state.own
+    ? `<label class="tn-photo-pick" for="pfPhoto" title="${esc(EX.pfPhotoTap)}">
+        ${avatarHtml(p, 112)}
+        <span class="tn-photo-pick__badge"><i class="bi bi-camera-fill"></i></span>
+        <input type="file" accept="image/*" id="pfPhoto" hidden />
+      </label>`
+    : avatarHtml(p, 112);
   return `
-    <section class="ev-card tn-profile-hero">
-      ${avatarHtml(p, 96)}
-      <div class="flex-grow-1 min-w-0">
-        <h1 class="h3 fw-bold mb-1">${esc(p.name || EX.sqUnnamed)}${p.number !== null && p.number !== undefined && p.number !== "" ? ` <span class="ev-muted">#${esc(p.number)}</span>` : ""}</h1>
+    <section class="tn-banner">
+      <div class="tn-banner__top"></div>
+      <div class="tn-banner__body">
+        <div class="d-flex align-items-end justify-content-between flex-wrap gap-2">
+          ${avatar}
+          <div class="d-flex gap-2 mb-1">
+            <button class="btn btn-sm btn-light" id="pfShare"><i class="bi bi-share me-1"></i>${esc(EX.pfShare)}</button>
+            ${state.own ? `<button class="btn btn-sm btn-primary" id="pfEditToggle"><i class="bi bi-pencil me-1"></i>${esc(EX.pfEdit)}</button>` : ""}
+          </div>
+        </div>
+        <h1 class="h3 fw-bold mt-2 mb-1">${esc(p.name || EX.sqUnnamed)}${hasNumber(p) ? ` <span class="ev-muted">#${esc(p.number)}</span>` : ""}</h1>
         <div class="d-flex flex-wrap gap-2 align-items-center">
           ${p.gender ? `<span class="ev-chip">${esc(p.gender)}</span>` : ""}
           ${state.squads.map((s) => `<a class="d-inline-flex align-items-center gap-1 text-decoration-none small fw-semibold" href="${esc(squadUrl(s.id))}">${teamBadge(s, 22)} ${esc(s.name)}</a>`).join("")}
         </div>
+        ${state.own && p.photoURL ? `<button class="btn btn-sm btn-link text-danger p-0 mt-2" id="pfPhotoDel">${esc(EX.pfPhotoRemove)}</button>` : ""}
       </div>
     </section>`;
 }
 
 function editForm() {
-  if (!state.own) return "";
+  if (!state.own || !state.editing) return "";
   const p = state.profile;
   return `
-    <details class="ev-card" ${p.gender ? "" : "open"}>
-      <summary class="fw-bold">${esc(EX.pfEdit)}</summary>
-      <form id="pfForm" class="row g-3 mt-1">
-        <div class="col-12 d-flex align-items-center gap-3">
-          <div id="pfPhotoPrev">${avatarHtml(p, 64)}</div>
-          <div>
-            <label class="btn btn-sm btn-outline-secondary mb-1"><i class="bi bi-camera me-1"></i>${esc(EX.pfPhoto)}<input type="file" accept="image/*" id="pfPhoto" hidden /></label>
-            <button type="button" class="btn btn-sm btn-link text-danger ${p.photoURL ? "" : "d-none"}" id="pfPhotoDel">${esc(EX.pfPhotoRemove)}</button>
-            <div class="form-text m-0">${esc(EX.pfPhotoHint)}</div>
-          </div>
-        </div>
-        <div class="col-12 col-md-6"><label class="form-label small" for="pfName">${esc(EX.pfName)}</label><input class="form-control" id="pfName" value="${esc(p.name || "")}" required /></div>
-        <div class="col-6 col-md-3"><label class="form-label small" for="pfNumber">${esc(EX.playerNumber)}</label><input class="form-control" id="pfNumber" type="number" min="0" max="999" value="${esc(p.number ?? "")}" /></div>
-        <div class="col-6 col-md-3">
-          <label class="form-label small" for="pfGender">${esc(EX.pfGender)}</label>
-          <select class="form-select" id="pfGender"><option value="">—</option><option ${p.gender === "F" ? "selected" : ""}>F</option><option ${p.gender === "M" ? "selected" : ""}>M</option></select>
-        </div>
-        <div class="col-12 d-flex justify-content-between align-items-center gap-2">
-          <div class="form-text m-0">${esc(EX.pfSyncHint)}</div>
+    <form id="pfForm" class="ev-card row g-3 m-0">
+      <h2 class="h6 fw-bold col-12 mb-0">${esc(EX.pfEdit)}</h2>
+      <div class="col-12 col-md-6"><label class="form-label small" for="pfName">${esc(EX.pfName)}</label><input class="form-control" id="pfName" value="${esc(p.name || "")}" required /></div>
+      <div class="col-6 col-md-3"><label class="form-label small" for="pfNumber">${esc(EX.playerNumber)}</label><input class="form-control" id="pfNumber" type="number" min="0" max="999" value="${esc(p.number ?? "")}" /></div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small" for="pfGender">${esc(EX.pfGender)}</label>
+        <select class="form-select" id="pfGender"><option value="">—</option><option ${p.gender === "F" ? "selected" : ""}>F</option><option ${p.gender === "M" ? "selected" : ""}>M</option></select>
+      </div>
+      <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="form-text m-0">${esc(EX.pfSyncHint)}</div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-light" type="button" id="pfCancel">${esc(EX.cancel)}</button>
           <button class="btn btn-primary" type="submit">${esc(EX.save)}</button>
         </div>
-      </form>
-    </details>`;
+      </div>
+    </form>`;
+}
+
+function teamsSection() {
+  return `
+    <section class="ev-card">
+      <h2 class="h6 fw-bold mb-3">${esc(EX.pfMyTeams)}</h2>
+      ${state.squads.length ? `<div class="row g-2">${state.squads.map((s) => `
+        <div class="col-12 col-md-6 col-lg-12">
+          <a class="tn-team-tile" href="${esc(squadUrl(s.id))}">
+            ${teamBadge(s, 44)}
+            <div class="flex-grow-1 min-w-0">
+              <div class="fw-bold text-truncate">${esc(s.name)}</div>
+              <div class="small ev-muted text-truncate">${esc(s.city || "")}</div>
+            </div>
+            <span class="ev-chip ${isSquadAdmin(s, state.uid) ? "ev-chip--ok" : ""}">${esc(isSquadAdmin(s, state.uid) ? EX.pfRoleAdmin : EX.pfRolePlayer)}</span>
+          </a>
+        </div>`).join("")}</div>` : `<div class="ev-muted small">${esc(EX.pfNoTeams)}</div>`}
+    </section>`;
+}
+
+function statsSection() {
+  const h = state.history;
+  if (!h) return `<section class="ev-card ev-muted small"><span class="spinner-border spinner-border-sm me-2"></span>${esc(EX.pfLoadingHistory)}</section>`;
+  const t = h.totals;
+  const per = (n) => (t.games ? (n / t.games).toFixed(1) : "0");
+  // mejor partido: más goles + asistencias
+  let best = null;
+  h.rows.forEach((r) => r.gameRows.forEach((gr) => {
+    const v = (gr.stats.goals || 0) + (gr.stats.assists || 0);
+    if (v > 0 && (!best || v > best.v)) best = { v, gr, row: r };
+  }));
+  const bestOpp = best ? (best.gr.side === "A" ? best.gr.game.teamB : best.gr.game.teamA) : null;
+  return `
+    <section class="ev-card">
+      <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+        <h2 class="h6 fw-bold mb-0">${esc(EX.pfStats)}</h2>
+        ${t.games ? `<span class="small ev-muted">${esc(exf(EX.pfPerGame, { g: per(t.goals), a: per(t.assists) }))}</span>` : ""}
+      </div>
+      <div class="row g-2">
+        ${tile(t.tournaments, EX.pfTournaments)}
+        ${tile(t.games, EX.pfGames)}
+        ${tile(t.goals, EX.pfGoals, true)}
+        ${tile(t.assists, EX.pfAssists, true)}
+        ${tile(t.blocks, EX.pfBlocks)}
+        ${tile(t.callahans, EX.pfCallahans)}
+      </div>
+      ${best ? `
+        <div class="mt-3 small">
+          <span class="ev-chip ev-chip--ok me-1"><i class="bi bi-star-fill me-1"></i>${esc(EX.pfBestGame)}</span>
+          <a class="text-decoration-none" href="${esc(gameUrl(best.row.event.id, best.gr.game.id))}">${esc(exf(EX.pfBestGameText, { g: best.gr.stats.goals || 0, a: best.gr.stats.assists || 0, team: bestOpp?.name || "—" }))}</a>
+          <span class="ev-muted"> · ${esc(best.row.event.name || "")}</span>
+        </div>` : ""}
+    </section>`;
 }
 
 function historySection() {
   const h = state.history;
-  if (!h) return `<section class="ev-card ev-muted small">${esc(EX.pfLoadingHistory)}</section>`;
-  const t = h.totals;
+  if (!h) return "";
   const stat = (r) => `<td class="num">${r.goals}</td><td class="num">${r.assists}</td><td class="num">${r.blocks}</td><td class="num">${r.turns}</td>`;
   return `
     <section class="ev-card">
-      <h2 class="h6 mb-3">${esc(EX.pfCareer)}</h2>
-      <div class="row g-2">
-        ${tile(t.tournaments, EX.pfTournaments)}
-        ${tile(t.games, EX.pfGames)}
-        ${tile(t.goals, EX.statGoals)}
-        ${tile(t.assists, EX.statAssists)}
-        ${tile(t.blocks, EX.statBlocks)}
-        ${tile(t.callahans, EX.pfCallahans)}
-      </div>
-    </section>
-    <section class="ev-card">
-      <h2 class="h6 mb-2">${esc(EX.pfByTournament)}</h2>
+      <h2 class="h6 fw-bold mb-2">${esc(EX.pfByTournament)}</h2>
       ${h.rows.length ? h.rows.map((r) => `
         <details class="border-bottom py-2">
           <summary class="d-flex align-items-center gap-2 flex-wrap">
-            ${teamBadge(r.team, 28)}
+            ${teamBadge(r.team, 30)}
             <div class="flex-grow-1 min-w-0">
               <a class="fw-semibold text-decoration-none" href="${esc(eventUrl(r.event))}">${esc(r.event.name || "—")}</a>
               <div class="small ev-muted">${esc([r.team.name, fmtDateRange(r.event.startDate, r.event.endDate)].filter(Boolean).join(" · "))}</div>
@@ -133,49 +201,75 @@ function historySection() {
 
 function render() {
   document.title = `${state.profile.name || EX.navProfile} · ClubStudioHQ`;
-  root.innerHTML = `<div class="d-grid gap-3">${hero()}${editForm()}${historySection()}</div>`;
+  root.innerHTML = `
+    <div class="d-grid gap-3">
+      ${banner()}
+      ${editForm()}
+      <div class="row g-3">
+        <div class="col-12 col-lg-7 d-grid gap-3 align-content-start">${statsSection()}${historySection()}</div>
+        <div class="col-12 col-lg-5">${teamsSection()}</div>
+      </div>
+    </div>`;
   bind();
 }
 
+/* =========================
+   Acciones
+========================= */
 function bind() {
-  if (!state.own) return;
-  $("#pfPhoto").onchange = async (ev) => {
-    const file = ev.target.files?.[0];
-    if (!file) return;
+  $("#pfShare").onclick = async () => {
+    const url = `${location.origin}${profileUrl(state.uid)}`;
     try {
-      const photo = await shrinkImage(file, 192);
-      if (photo.length > 200000) return alertBox(EX.teamLogoTooBig, "warning");
-      state.profile.photoURL = photo;
-      $("#pfPhotoPrev").innerHTML = avatarHtml(state.profile, 64);
-      $("#pfPhotoDel").classList.remove("d-none");
+      await navigator.clipboard.writeText(url);
+      alertBox(EX.pfLinkCopied);
     } catch {
-      alertBox(EX.teamLogoTooBig, "warning");
+      prompt(EX.pfShare, url);
     }
   };
-  $("#pfPhotoDel").onclick = () => {
-    state.profile.photoURL = "";
-    $("#pfPhotoPrev").innerHTML = avatarHtml(state.profile, 64);
-    $("#pfPhotoDel").classList.add("d-none");
+  if (!state.own) return;
+
+  $("#pfEditToggle").onclick = () => {
+    state.editing = !state.editing;
+    render();
+    $("#pfName")?.focus();
   };
-  $("#pfForm").onsubmit = async (ev) => {
+  $("#pfCancel")?.addEventListener("click", () => {
+    state.editing = false;
+    render();
+  });
+
+  // la foto se recorta y se guarda al momento (también en el roster de sus equipos)
+  const savePhoto = (photoURL) => run(async () => {
+    const p = state.profile;
+    await saveProfile(state.user, { name: p.name, number: p.number, gender: p.gender, photoURL });
+    state.profile.photoURL = photoURL;
+    alertBox(EX.saved);
+    render();
+  });
+  $("#pfPhoto").onchange = async (ev) => {
+    try {
+      const photo = await cropFromInput(ev.target, { aspect: 1, round: true, width: 256, maxChars: 120000, title: EX.cropPhoto });
+      if (photo) savePhoto(photo);
+    } catch {
+      alertBox(EX.imageBad, "warning");
+    }
+  };
+  $("#pfPhotoDel")?.addEventListener("click", () => savePhoto(""));
+
+  $("#pfForm")?.addEventListener("submit", (ev) => {
     ev.preventDefault();
     const name = $("#pfName").value.trim();
     if (!name) return;
     const num = $("#pfNumber").value;
-    showLoader();
-    try {
+    run(async () => {
       const data = { name, number: num === "" ? null : Number(num), gender: $("#pfGender").value, photoURL: state.profile.photoURL || "" };
       await saveProfile(state.user, data);
       Object.assign(state.profile, data);
+      state.editing = false;
       alertBox(EX.saved);
       render();
-    } catch (err) {
-      console.error(err);
-      alertBox(`${EX.error} ${err?.code || ""}`, "danger");
-    } finally {
-      hideLoader();
-    }
-  };
+    });
+  });
 }
 
 function renderSignIn() {
@@ -207,6 +301,8 @@ function renderSignIn() {
     if (!state.uid) return renderSignIn();
     state.profile = state.own ? await ensureProfile(state.user) : await loadProfile(state.uid);
     if (!state.profile) return alertBox(EX.pfNotFound, "warning");
+    // sin F/M todavía: abre la edición para completarlo
+    state.editing = state.own && !state.profile.gender;
     state.squads = (await Promise.all((state.profile.squadIds || []).map((id) => loadSquad(id).catch(() => null)))).filter(Boolean);
     render();
     hideLoader();

@@ -69,6 +69,7 @@ export function renderNav({ active = "", isAdmin = false, user = null } = {}) {
       <div class="d-flex gap-1 flex-grow-1 overflow-auto">
         ${link("dir", "/torneos/", EX.navTournaments)}
         ${link("team", "/torneos/equipo.html", EX.navTeam)}
+        ${google ? link("profile", "/torneos/perfil.html", EX.navProfile) : ""}
         ${link("org", "/torneos/organizar.html", EX.navOrganize)}
         ${isAdmin ? link("admin", "/torneos/admin.html", EX.navAdmin) : ""}
       </div>

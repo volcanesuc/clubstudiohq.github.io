@@ -30,11 +30,11 @@ import {
   regChip,
   renderNav,
   showLoader,
-  shrinkImage,
   teamBadge,
   waitForUser,
 } from "/torneos/js/ui.js";
 import { isPlatformAdmin } from "/torneos/js/services.js";
+import { cropFromInput } from "/torneos/js/cropper.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -385,25 +385,30 @@ root.addEventListener("click", (ev) => {
 
 root.addEventListener("change", async (ev) => {
   if (ev.target.id === "sqLogo") {
-    const file = ev.target.files?.[0];
-    if (!file) return;
+    let logo = null;
     try {
-      const logo = await shrinkImage(file);
-      if (logo.length > 300000) return alertBox(EX.teamLogoTooBig, "warning");
-      state.squad.logo = logo;
-      $("#sqLogoPrev").innerHTML = teamBadge(state.squad, 64);
-      $("#sqLogoDel").classList.remove("d-none");
+      logo = await cropFromInput(ev.target, { aspect: 1, width: 256, maxChars: 200000, title: EX.cropLogo });
     } catch {
-      alertBox(EX.teamLogoTooBig, "warning");
+      return alertBox(EX.imageBad, "warning");
     }
+    if (!logo) return;
+    // el logo se guarda al momento (no hace falta tocar Guardar)
+    run(async () => {
+      await saveSquad(SID, { logo });
+      state.squad.logo = logo;
+      alertBox(EX.saved);
+      render();
+    });
   }
 });
 
 root.addEventListener("click", (ev) => {
   if (ev.target.id !== "sqLogoDel") return;
-  state.squad.logo = "";
-  $("#sqLogoPrev").innerHTML = teamBadge(state.squad, 64);
-  ev.target.classList.add("d-none");
+  run(async () => {
+    await saveSquad(SID, { logo: "" });
+    state.squad.logo = "";
+    render();
+  });
 });
 
 /* =========================

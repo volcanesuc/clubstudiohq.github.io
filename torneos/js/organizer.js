@@ -13,6 +13,7 @@ import {
   slugify,
 } from "/torneos/js/model.js";
 import { GAME_MODES } from "/torneos/js/divisions-config.js";
+import { cropFromInput } from "/torneos/js/cropper.js";
 import { assignSlots, getFormat, listFormats } from "/torneos/js/formats.js";
 import {
   APPROVAL,
@@ -299,6 +300,19 @@ function renderInfo() {
     <form id="evInfoForm" class="mt-3">
       ${section("info-circle", EX.secInfo, `
         <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small">${esc(EX.eventImage)}</label>
+            <div class="d-flex flex-wrap gap-3 align-items-end">
+              ${e.image
+                ? `<img class="tn-cover-preview" src="${esc(e.image)}" alt="${esc(EX.eventImage)}" />`
+                : `<label class="tn-cover-empty" for="eImage" role="button"><i class="bi bi-image fs-3"></i><span class="small">${esc(EX.eventImageUpload)}</span></label>`}
+              <div class="d-flex flex-column gap-2">
+                <label class="btn btn-sm btn-outline-primary mb-0"><i class="bi bi-upload me-1"></i>${esc(e.image ? EX.eventImageChange : EX.eventImageUpload)}<input type="file" accept="image/*" id="eImage" hidden /></label>
+                ${e.image ? `<button type="button" class="btn btn-sm btn-light text-danger" id="eImageDel"><i class="bi bi-trash me-1"></i>${esc(EX.eventImageRemove)}</button>` : ""}
+              </div>
+            </div>
+            <div class="form-text">${esc(EX.eventImageHint)}</div>
+          </div>
           ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
           <div class="col-12 col-md-4">
             <label class="form-label small" for="eStatus">${esc(EX.eventStatus)}</label>
@@ -409,6 +423,28 @@ function renderInfo() {
     } catch {
       prompt(EX.regCopyLink, b.dataset.copyLink);
     }
+  }));
+
+  // imagen del torneo: se recorta y se guarda al momento
+  document.getElementById("eImage").onchange = async (ev) => {
+    let image = null;
+    try {
+      image = await cropFromInput(ev.target, { aspect: 2, width: 1000, maxChars: 260000, title: EX.cropCover });
+    } catch {
+      return alertBox(EX.imageBad, "warning");
+    }
+    if (!image) return;
+    run(async () => {
+      await saveEvent(e.id, { image });
+      state.event.image = image;
+      alertBox(EX.eventImageSaved);
+      renderInfo();
+    });
+  };
+  document.getElementById("eImageDel")?.addEventListener("click", () => run(async () => {
+    await saveEvent(e.id, { image: "" });
+    state.event.image = "";
+    renderInfo();
   }));
 
   // divisiones

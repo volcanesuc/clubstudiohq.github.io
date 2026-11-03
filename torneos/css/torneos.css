@@ -254,3 +254,37 @@ body.tn-busy::before {
 .sk-choice { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .sk-choice .btn { padding: .75rem .5rem; font-weight: 700; }
 .sk-point-info { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-top: .5rem; }
+
+/* ===== recorte de imágenes ===== */
+.tn-crop { position: relative; width: 100%; overflow: hidden; border-radius: 14px; touch-action: none; cursor: grab; user-select: none;
+  background: repeating-conic-gradient(#e9e7f1 0% 25%, #f8f7fc 0% 50%) 50% / 18px 18px; }
+.tn-crop:active { cursor: grabbing; }
+.tn-crop img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; pointer-events: none; }
+.tn-crop__frame { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .95);
+  background-image: linear-gradient(rgba(255, 255, 255, .35) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .35) 1px, transparent 1px);
+  background-size: 33.333% 33.333%; background-position: -1px -1px; }
+.tn-crop__frame.is-round { border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 10, 30, .5), inset 0 0 0 2px #fff; background-image: none; }
+
+/* ===== imagen del torneo ===== */
+.ev-hero--image { background-size: cover !important; background-position: center !important; min-height: 220px; display: flex; flex-direction: column; justify-content: flex-end; }
+.tn-cover-preview { width: 100%; max-width: 420px; aspect-ratio: 2 / 1; border-radius: 14px; object-fit: cover; display: block; border: 1px solid var(--ev-border); }
+.tn-cover-empty { width: 100%; max-width: 420px; aspect-ratio: 2 / 1; border-radius: 14px; border: 2px dashed var(--ev-border); display: flex; align-items: center; justify-content: center; color: var(--ev-muted); flex-direction: column; gap: .25rem; }
+.tn-event-card { overflow: hidden; }
+.tn-event-card__img { margin: -16px -16px 12px; aspect-ratio: 2 / 1; background-size: cover; background-position: center; }
+
+/* ===== foto de perfil (subir) ===== */
+.tn-photo-pick { position: relative; display: inline-block; cursor: pointer; border-radius: 50%; }
+.tn-photo-pick__badge { position: absolute; right: 2px; bottom: 2px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #7c3aed, #22d3ee); color: #fff; border: 3px solid #fff; font-size: .9rem; }
+.tn-photo-pick:hover .tn-avatar { filter: brightness(.92); }
+
+/* ===== perfil y unirme ===== */
+.tn-banner { border-radius: 22px; overflow: hidden; background: #fff; border: 1px solid var(--ev-border); }
+.tn-banner__top { height: 110px; background: radial-gradient(120% 140% at 100% 0%, rgba(34, 211, 238, .45) 0%, transparent 55%), linear-gradient(135deg, #2e1065, #7c3aed); }
+.tn-banner__body { padding: 0 1.25rem 1.25rem; margin-top: -56px; }
+.tn-banner__body .tn-avatar, .tn-banner__body .tn-team-logo { border: 4px solid #fff; box-shadow: 0 4px 14px rgba(20, 10, 50, .18); }
+.tn-team-tile { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border-radius: 16px; background: #fff; border: 1px solid var(--ev-border); text-decoration: none; color: inherit; height: 100%; }
+.tn-team-tile:hover { border-color: var(--ev-main); }
+.tn-stat-tile--accent { background: linear-gradient(135deg, rgba(124, 58, 237, .1), rgba(34, 211, 238, .1)); }
+.tn-stat-tile--accent .tn-stat-tile__n { color: var(--ev-main); }
+.tn-optional { font-size: .72rem; font-weight: 600; color: var(--ev-muted); background: rgba(0, 0, 0, .05); border-radius: 999px; padding: .05rem .5rem; margin-left: .35rem; }

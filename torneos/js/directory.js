@@ -11,6 +11,7 @@ function card(e) {
   return `
     <div class="col-12 col-md-6 col-lg-4">
       <a class="ev-card tn-event-card h-100" href="${esc(eventUrl(e))}">
+        ${e.image ? `<div class="tn-event-card__img" style="background-image:url('${esc(e.image)}')"></div>` : ""}
         <div class="fw-bold">${esc(e.name || "—")}</div>
         <div class="small ev-muted mt-1"><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</div>
         ${e.venue ? `<div class="small ev-muted"><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</div>` : ""}

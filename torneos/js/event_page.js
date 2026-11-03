@@ -250,7 +250,7 @@ function render() {
   const tab = TABS.find((t) => t[0] === state.tab) || TABS[0];
   document.title = e.name || EX.appTitle;
   $("tnRoot").innerHTML = `
-    <section class="ev-hero mb-3">
+    <section class="ev-hero mb-3 ${e.image ? "ev-hero--image" : ""}" ${e.image ? `style="background: linear-gradient(to top, rgba(20, 8, 45, .92) 0%, rgba(20, 8, 45, .35) 55%, rgba(20, 8, 45, .1) 100%), url('${esc(e.image)}')"` : ""}>
       <h1>${esc(e.name || "")}</h1>
       <div class="ev-hero__meta">
         ${e.startDate ? `<span><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</span>` : ""}
