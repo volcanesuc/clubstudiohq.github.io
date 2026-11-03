@@ -3,599 +3,485 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ClubStudioHQ — Administra tu club sin caos</title>
+  <title>ClubStudioHQ — Torneos en vivo y gestión de equipos de ultimate</title>
+  <meta name="description" content="Dos herramientas en una plataforma: organizá torneos con planillaje en vivo y estadísticas públicas, y manejá tu equipo o club (roster, asistencia, membresías y más)." />
+  <meta property="og:title" content="ClubStudioHQ — Torneos en vivo y gestión de equipos" />
+  <meta property="og:description" content="Torneos con marcador en vivo, posiciones y estadísticas públicas. Equipos y clubes organizados en un solo lugar." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://www.clubstudiohq.com/" />
+  <meta name="theme-color" content="#07080b" />
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-
-  <style>
-    :root{
-      --bg:#07080b;
-      --card: rgba(255,255,255,.06);
-      --border: rgba(255,255,255,.12);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.68);
-      --accent:#7c3aed;  /* violeta */
-      --accent2:#22d3ee; /* cyan */
-      --good:#22c55e;
-    }
-    body{
-      color: var(--text);
-      background:
-        radial-gradient(900px 450px at 10% 10%, rgba(124,58,237,.22), transparent 60%),
-        radial-gradient(850px 420px at 90% 0%, rgba(34,211,238,.16), transparent 60%),
-        radial-gradient(700px 380px at 50% 110%, rgba(34,197,94,.10), transparent 60%),
-        var(--bg);
-    }
-    .nav-blur{
-      background: rgba(7,8,11,.55);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-    }
-    .glass{
-      border: 1px solid var(--border);
-      background: var(--card);
-      border-radius: 18px;
-      box-shadow: 0 20px 70px rgba(0,0,0,.45);
-    }
-    .hero-kicker{
-      display:inline-flex; align-items:center; gap:.55rem;
-      padding:.35rem .7rem;
-      border:1px solid var(--border);
-      border-radius:999px;
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
-      font-size:.9rem;
-    }
-    .hero-title{
-      font-weight: 850;
-      letter-spacing: -.03em;
-      line-height: 1.05;
-    }
-    .muted{ color: var(--muted); }
-    .brand-hq{ background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .btn-primary-soft{
-      border: none;
-      color: #0b0b10;
-      font-weight: 750;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 14px 35px rgba(124,58,237,.25);
-    }
-    .btn-primary-soft:hover{ filter: brightness(1.03); }
-    .btn-outline-light{
-      border-color: rgba(255,255,255,.22);
-    }
-    .badge-soft{
-      display:inline-block;
-      padding:.25rem .55rem;
-      border-radius:999px;
-      font-size:.78rem;
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.12);
-      color: var(--muted);
-    }
-    .feature-icon{
-      width:44px; height:44px; border-radius:12px;
-      display:grid; place-items:center;
-      border: 1px solid rgba(255,255,255,.16);
-      background: rgba(255,255,255,.06);
-      font-size: 20px;
-    }
-    .divider{
-      height:1px;
-      background: rgba(255,255,255,.10);
-      margin: 3.25rem 0;
-    }
-    .list-check li{
-      margin-bottom:.55rem;
-    }
-    .tiny{
-      font-size:.9rem;
-    }
-    footer a{ color: rgba(255,255,255,.74); text-decoration:none; }
-    footer a:hover{ color: #fff; text-decoration:underline; }
-    code{ color: rgba(255,255,255,.75); }
-  </style>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="/assets/landing.css" />
+  <script>document.documentElement.classList.add("js");</script>
 </head>
+<body class="lp">
 
-<body>
-  <!-- NAV -->
-  <nav class="navbar navbar-expand-lg nav-blur sticky-top">
-    <div class="container py-2">
-      <a class="navbar-brand text-white fw-bold d-flex align-items-center gap-2" href="#">
+  <!-- ===== NAV ===== -->
+  <nav class="navbar navbar-expand-lg navbar-dark lp-nav sticky-top">
+    <div class="container py-1">
+      <a class="lp-brand" href="#top">
         <img src="/assets/favicon.svg" width="34" height="34" alt="" />
-        <span>ClubStudio<span class="brand-hq">HQ</span></span>
+        <span>ClubStudio<span class="lp-grad-text">HQ</span></span>
       </a>
-
-      <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#lpNav" aria-label="Menú">
         <span class="navbar-toggler-icon"></span>
       </button>
-
-      <div class="collapse navbar-collapse" id="nav">
-        <ul class="navbar-nav ms-auto gap-2">
-          <li class="nav-item"><a class="nav-link text-white-50" href="#features">Features</a></li>
-          <li class="nav-item"><a class="nav-link text-white-50" href="#torneos">Torneos</a></li>
-          <li class="nav-item"><a class="nav-link text-white-50" href="#how">Cómo funciona</a></li>
-          <li class="nav-item"><a class="nav-link text-white-50" href="#pricing">Precios</a></li>
-          <li class="nav-item"><a class="nav-link text-white-50" href="#faq">FAQ</a></li>
+      <div class="collapse navbar-collapse" id="lpNav">
+        <ul class="navbar-nav mx-auto gap-lg-2">
+          <li class="nav-item"><a class="nav-link lp-live-link" href="#en-vivo"><span class="lp-dot"></span>Torneos en vivo</a></li>
+          <li class="nav-item"><a class="nav-link" href="#torneos" data-view-link="torneos">Para torneos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#equipos" data-view-link="equipos">Para equipos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#precios" data-goto-pricing>Precios</a></li>
         </ul>
-
-        <div class="d-flex ms-lg-3 gap-2">
-          <a class="btn btn-outline-light btn-sm" href="/login">Entrar</a>
-          <a class="btn btn-primary-soft btn-sm" href="/signup">Empezar</a>
+        <div class="d-flex gap-2 py-2 py-lg-0">
+          <a class="btn btn-lp-ghost btn-sm px-3" href="/torneos/">Ver torneos</a>
+          <a class="btn btn-wa btn-sm px-3" data-wa="Hola! Quiero información sobre ClubStudioHQ." href="https://wa.me/50670567463"><i class="bi bi-whatsapp me-1"></i>Hablemos</a>
         </div>
       </div>
     </div>
   </nav>
 
-  <!-- HERO -->
-  <header class="container py-5">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-6">
-        <div class="hero-kicker mb-3">
-          <span class="badge-soft">Nuevo</span>
-          <span>De caos a control en una semana</span>
+  <main id="top">
+    <!-- ===== HERO: los dos productos ===== -->
+    <section class="lp-hero">
+      <div class="container">
+        <div class="text-center mx-auto mb-5" style="max-width:860px">
+          <span class="lp-eyebrow"><i class="bi bi-lightning-charge-fill"></i>Hecho para ultimate</span>
+          <h1 class="mt-3 mb-3">Tus torneos <span class="lp-grad-text">en vivo</span>.<br />Tu equipo <span class="lp-grad-text">en orden</span>.</h1>
+          <p class="lp-lead mx-auto">ClubStudioHQ son dos herramientas en una sola plataforma. Usá una, la otra o las dos: los jugadores tienen un solo perfil y sus estadísticas los acompañan de torneo en torneo.</p>
         </div>
 
-        <h1 class="hero-title display-5 text-white mb-3">
-          La plataforma para administrar tu club
-          <span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent;">
-            sin chats eternos
-          </span>.
-        </h1>
-
-        <p class="lead muted mb-4">
-          Centralizá roster, entrenamientos, asistencia, torneos, playbook y comunicación.
-          Diseñado para coaches y managers que quieren menos coordinación y más cancha.
-        </p>
-
-        <div class="d-flex flex-wrap gap-2">
-          <a class="btn btn-primary-soft btn-lg" href="/signup">Probar gratis</a>
-          <a class="btn btn-outline-light btn-lg" href="/demo">Ver demo</a>
-        </div>
-        <a class="d-inline-block mt-3 tiny" style="color:rgba(34,211,238,.95);text-decoration:none;" href="/torneos/">
-          🏆 ¿Organizás un torneo? Planillaje en vivo y estadísticas →
-        </a>
-
-        <div class="mt-4 d-flex flex-wrap gap-2 tiny muted">
-          <span class="badge-soft">✅ Mobile-first</span>
-          <span class="badge-soft">🔒 Roles & permisos</span>
-          <span class="badge-soft">⚡ Setup rápido</span>
-          <span class="badge-soft">📊 Reportes</span>
+        <div class="row g-4">
+          <div class="col-12 col-lg-6">
+            <article class="lp-product lp-product--torneos">
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="lp-product__icon"><i class="bi bi-trophy-fill"></i></span>
+                <span class="lp-chip lp-chip--soon">Organizadores</span>
+              </div>
+              <div class="lp-product__name">ClubStudio Torneos</div>
+              <div class="lp-product__tag">Del calendario al marcador final, todo en vivo y público.</div>
+              <ul>
+                <li><i class="bi bi-check-circle-fill"></i>Inscripción de equipos con un link y aprobación en un clic</li>
+                <li><i class="bi bi-check-circle-fill"></i>Calendario automático por grupos, canchas y horarios</li>
+                <li><i class="bi bi-check-circle-fill"></i>Planillaje desde el celular: goles, asistencias, bloqueos, reloj</li>
+                <li><i class="bi bi-check-circle-fill"></i>Posiciones, líderes y espíritu WFDF públicos al instante</li>
+              </ul>
+              <div class="lp-product__ctas">
+                <a class="btn btn-lp" href="#torneos" data-view-link="torneos">Conocer Torneos</a>
+                <a class="btn btn-lp-ghost" data-wa="Hola! Quiero una demo gratis de ClubStudio Torneos para mi torneo." href="https://wa.me/50670567463"><i class="bi bi-gift me-1"></i>Demo gratis</a>
+              </div>
+            </article>
+          </div>
+          <div class="col-12 col-lg-6">
+            <article class="lp-product lp-product--equipos">
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="lp-product__icon"><i class="bi bi-people-fill"></i></span>
+                <span class="lp-chip">Equipos y clubes</span>
+              </div>
+              <div class="lp-product__name">ClubStudio Equipos</div>
+              <div class="lp-product__tag">Roster, entrenos, membresías y comunicación sin chats eternos.</div>
+              <ul>
+                <li><i class="bi bi-check-circle-fill"></i>Roster con links de invitación y perfiles con foto</li>
+                <li><i class="bi bi-check-circle-fill"></i>Asistencia a entrenos y pickups con confirmación</li>
+                <li><i class="bi bi-check-circle-fill"></i>Membresías y pagos al día, sin hojas de cálculo</li>
+                <li><i class="bi bi-check-circle-fill"></i>Sitio propio del club: <span class="text-white">tuclub.clubstudiohq.com</span></li>
+              </ul>
+              <div class="lp-product__ctas">
+                <a class="btn btn-lp" href="#equipos" data-view-link="equipos">Conocer Equipos</a>
+                <a class="btn btn-lp-ghost" href="/torneos/equipo.html"><i class="bi bi-plus-lg me-1"></i>Crear mi equipo</a>
+              </div>
+            </article>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="col-lg-6">
-        <!-- “Mock” de UI -->
-        <div class="glass p-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="fw-bold text-white">Tu club, en un dashboard</div>
-            <span class="badge-soft">Vista admin</span>
+    <!-- ===== EN VIVO: datos reales de la plataforma ===== -->
+    <section class="lp-section--tight" id="en-vivo">
+      <div class="container">
+        <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-3">
+          <div>
+            <span class="lp-eyebrow"><span class="lp-dot"></span>En vivo en ClubStudioHQ</span>
+            <h2 class="lp-h2 mb-1">Torneos en la plataforma</h2>
+            <div class="muted">Marcadores, posiciones y estadísticas son públicos: cualquiera los sigue desde el celular.</div>
           </div>
+          <a class="btn btn-lp-ghost" href="/torneos/">Ver todos los torneos <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
 
+        <div id="lpFeatured"><div class="lp-skel"></div></div>
+
+        <div class="lp-block-title mt-4"><i class="bi bi-collection"></i>Todos los torneos</div>
+        <div class="lp-carousel">
+          <button class="lp-arrow lp-arrow--prev" type="button" data-scroll="-1" aria-label="Anteriores"><i class="bi bi-chevron-left"></i></button>
+          <div class="lp-track" id="lpTrack"></div>
+          <button class="lp-arrow lp-arrow--next" type="button" data-scroll="1" aria-label="Siguientes"><i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SELECTOR: Torneos / Equipos ===== -->
+    <div class="lp-switch" id="producto">
+      <div class="lp-switch__inner" role="tablist">
+        <button type="button" class="is-active" data-view-btn="torneos" role="tab"><i class="bi bi-trophy-fill"></i>Para torneos</button>
+        <button type="button" data-view-btn="equipos" role="tab"><i class="bi bi-people-fill"></i>Para equipos</button>
+      </div>
+    </div>
+
+    <!-- ===== VISTA: TORNEOS ===== -->
+    <section class="lp-view lp-view--torneos is-active" id="torneos" data-view="torneos">
+      <div class="container lp-section pt-4">
+        <span class="lp-eyebrow"><i class="bi bi-trophy-fill"></i>ClubStudio Torneos</span>
+        <h2 class="lp-h2">Organizá un torneo que se vea profesional</h2>
+        <p class="lp-lead">Todo lo que pasa en la cancha se ve en vivo: los equipos, el público y los jugadores siguen el torneo desde un link, sin apps que instalar.</p>
+
+        <div class="row g-3 mt-3">
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-person-plus"></i></span><h3>Inscripciones online</h3><p>Compartís un link, cada equipo carga su roster (F/M, números, capitanes) y vos aprobás o rechazás en un clic.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-calendar3"></i></span><h3>Calendario automático</h3><p>Round robin por grupos sin choques de canchas ni equipos. Si se suma un equipo, regenerás y listo.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-phone"></i></span><h3>Planillaje desde el celular</h3><p>Un link por partido: goles, asistencias, bloqueos, turnovers, timeouts, medio tiempo y reloj en cuenta regresiva.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-bar-chart-line"></i></span><h3>Estadísticas públicas</h3><p>Posiciones con desempates, líderes, MVP y perfiles de jugador con historial de todos sus torneos.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-gender-ambiguous"></i></span><h3>Mixto y modalidades</h3><p>7v7, 5v5, 4v4 o 3v3. En mixto la app indica FMP/MMP de cada punto (regla ABBA) y quién tiene el disco.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-heart"></i></span><h3>Espíritu WFDF</h3><p>Cada equipo califica al rival en las 5 categorías al terminar; la tabla de espíritu se arma sola.</p></div></div>
+        </div>
+
+        <div class="row g-4 mt-4 align-items-center">
+          <div class="col-12 col-lg-5">
+            <h3 class="fw-bold mb-3">Cómo funciona</h3>
+            <div class="d-grid gap-3">
+              <div class="lp-step"><span class="lp-step__n">1</span><div><div class="fw-bold">Creá el torneo</div><div class="muted tiny">Fechas, sede con mapa, divisiones, reglas del partido e imagen.</div></div></div>
+              <div class="lp-step"><span class="lp-step__n">2</span><div><div class="fw-bold">Abrí inscripciones</div><div class="muted tiny">Los equipos se inscriben con su roster; vos aprobás.</div></div></div>
+              <div class="lp-step"><span class="lp-step__n">3</span><div><div class="fw-bold">Generá el calendario</div><div class="muted tiny">Y repartí un link de planillero por partido por WhatsApp.</div></div></div>
+              <div class="lp-step"><span class="lp-step__n">4</span><div><div class="fw-bold">Jugá en vivo</div><div class="muted tiny">Marcadores, posiciones y estadísticas se actualizan solos.</div></div></div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-7">
+            <div class="lp-cta text-start p-4">
+              <div class="d-flex align-items-center gap-2 mb-2"><span class="lp-badge">Demo gratis</span><span class="muted tiny">sin tarjeta</span></div>
+              <h3 class="fw-bold">Probalo con tu próximo torneo</h3>
+              <p class="muted">Te activamos un torneo de prueba con todas las funciones y te acompañamos a armarlo. Escribinos y en minutos lo tenés listo.</p>
+              <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-wa" data-wa="Hola! Quiero una demo gratis de ClubStudio Torneos. Mi torneo es: " href="https://wa.me/50670567463"><i class="bi bi-whatsapp me-1"></i>Pedir demo gratis</a>
+                <a class="btn btn-lp-ghost" href="/torneos/organizar.html">Crear torneo ahora</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- precios: torneos -->
+        <div class="mt-5 pt-3" id="precios-torneos">
+          <span class="lp-eyebrow"><i class="bi bi-tag-fill"></i>Precios por torneo</span>
+          <h2 class="lp-h2">Pagás solo cuando organizás</h2>
+          <p class="lp-lead mb-4">Sin mensualidades: cada torneo se activa por separado. Las inscripciones y la página pública son siempre gratis para los equipos.</p>
           <div class="row g-3">
-            <div class="col-6">
-              <div class="glass p-3" style="background: rgba(255,255,255,.04);">
-                <div class="muted tiny">Jugadores activos</div>
-                <div class="fs-3 fw-bold text-white">24</div>
-                <div class="muted tiny">Roles · edades · estado</div>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price">
+                <div class="lp-price__name">Demo</div>
+                <div class="muted tiny">Para probar sin compromiso</div>
+                <div class="lp-price__amount">$0</div>
+                <div class="lp-price__per">un torneo de prueba</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Hasta 6 equipos</li>
+                  <li><i class="bi bi-check2"></i>Todas las funciones de un torneo</li>
+                  <li><i class="bi bi-check2"></i>Planillaje y estadísticas en vivo</li>
+                  <li><i class="bi bi-check2"></i>Te ayudamos a configurarlo</li>
+                </ul>
+                <a class="btn btn-lp-ghost w-100" data-wa="Hola! Quiero pedir la demo gratis de ClubStudio Torneos." href="https://wa.me/50670567463">Pedir demo gratis</a>
               </div>
             </div>
-            <div class="col-6">
-              <div class="glass p-3" style="background: rgba(255,255,255,.04);">
-                <div class="muted tiny">Asistencia entreno</div>
-                <div class="fs-3 fw-bold text-white">18</div>
-                <div class="muted tiny">Confirmados / dudosos</div>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price lp-price--hot">
+                <div class="d-flex justify-content-between align-items-center"><div class="lp-price__name">Torneo</div><span class="lp-badge">Más elegido</span></div>
+                <div class="muted tiny">Para torneos y ligas locales</div>
+                <div class="lp-price__amount">$25</div>
+                <div class="lp-price__per">por torneo</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Hasta 16 equipos y 2 divisiones</li>
+                  <li><i class="bi bi-check2"></i>Inscripciones online con roster</li>
+                  <li><i class="bi bi-check2"></i>Calendario automático</li>
+                  <li><i class="bi bi-check2"></i>Planilleros ilimitados</li>
+                  <li><i class="bi bi-check2"></i>Página pública con posiciones, líderes y espíritu</li>
+                </ul>
+                <a class="btn btn-lp w-100" data-wa="Hola! Quiero activar un torneo en ClubStudioHQ (plan Torneo)." href="https://wa.me/50670567463">Activar mi torneo</a>
               </div>
             </div>
-            <div class="col-12">
-              <div class="glass p-3" style="background: rgba(255,255,255,.04);">
-                <div class="muted tiny">Próximo entrenamiento</div>
-                <div class="fw-semibold text-white">Martes · 7:00pm</div>
-                <div class="muted tiny">Drills · objetivos · lista jugadores</div>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price">
+                <div class="lp-price__name">Torneo Pro</div>
+                <div class="muted tiny">Para nacionales e internacionales</div>
+                <div class="lp-price__amount">$49</div>
+                <div class="lp-price__per">por torneo</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Equipos y divisiones ilimitados</li>
+                  <li><i class="bi bi-check2"></i>Co-organizadores</li>
+                  <li><i class="bi bi-check2"></i>Destacado en la portada de ClubStudioHQ</li>
+                  <li><i class="bi bi-check2"></i>Soporte por WhatsApp durante el torneo</li>
+                </ul>
+                <a class="btn btn-lp-ghost w-100" data-wa="Hola! Me interesa el plan Torneo Pro de ClubStudioHQ." href="https://wa.me/50670567463">Hablar con nosotros</a>
               </div>
             </div>
-            <div class="col-12">
-              <div class="glass p-3 d-flex align-items-center justify-content-between" style="background: rgba(255,255,255,.04);">
-                <div>
-                  <div class="fw-semibold text-white">Torneo: Regional</div>
-                  <div class="muted tiny">Roster + disponibilidad + notas</div>
+          </div>
+          <div class="muted tiny mt-3">Precios de lanzamiento en USD. ¿Una liga o temporada completa? <a class="text-white" data-wa="Hola! Quiero cotizar una liga/temporada en ClubStudioHQ." href="https://wa.me/50670567463">Escribinos</a> y armamos un paquete.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VISTA: EQUIPOS ===== -->
+    <section class="lp-view lp-view--equipos" id="equipos" data-view="equipos">
+      <div class="container lp-section pt-4">
+        <span class="lp-eyebrow" style="color:#c4b5fd"><i class="bi bi-people-fill"></i>ClubStudio Equipos</span>
+        <h2 class="lp-h2">Tu equipo, tu club, en un solo lugar</h2>
+        <p class="lp-lead">Dejá atrás los chats eternos y las hojas de cálculo. Así se ve el panel de un club real que ya usa ClubStudioHQ:</p>
+
+        <!-- dashboard de ejemplo: Volcanes Ultimate (datos de muestra, estáticos) -->
+        <div class="lp-dash mt-4" aria-label="Panel de ejemplo del club Volcanes Ultimate">
+          <div class="lp-dash__bar">
+            <img src="/assets/showcase/volcanes-logo-256.png" alt="Volcanes Ultimate" />
+            <div>
+              <div class="fw-bold">Volcanes Ultimate</div>
+              <div class="small opacity-75">Panel del club · Temporada 2024</div>
+            </div>
+            <a class="lp-dash__url text-decoration-none" href="https://volcanes.clubstudiohq.com" target="_blank" rel="noopener"><i class="bi bi-globe2 me-1"></i>volcanes.clubstudiohq.com</a>
+          </div>
+          <div class="lp-dash__body">
+            <div class="row g-3">
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Jugadores activos</div><div class="lp-dcard__n">49</div><div class="lp-dcard__s">12 F · 37 M</div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Asistencia promedio</div><div class="lp-dcard__n">78%</div><div class="lp-dcard__s">últimas 8 semanas</div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Membresías al día</div><div class="lp-dcard__n">41<span class="fs-6 text-secondary">/49</span></div><div class="lp-dcard__s">8 por cobrar</div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Próximo entreno</div><div class="lp-dcard__n" style="font-size:1.25rem">Martes 7:00 pm</div><div class="lp-dcard__s"><span class="lp-pill-y">23 confirmados</span></div></div></div>
+
+              <div class="col-12 col-lg-5">
+                <div class="lp-dcard">
+                  <div class="d-flex justify-content-between"><div class="lp-dcard__l">Asistencia por semana</div><div class="lp-dcard__s">%</div></div>
+                  <div class="lp-bars" aria-hidden="true">
+                    <i style="height:62%"></i><i style="height:70%"></i><i style="height:75%"></i><i style="height:81%"></i><i style="height:77%"></i><i style="height:84%"></i><i style="height:79%"></i><i style="height:86%"></i>
+                  </div>
+                  <div class="d-flex justify-content-between lp-dcard__s mt-1"><span>Sem 1</span><span>Esta semana</span></div>
                 </div>
-                <span class="badge-soft" style="border-color:rgba(34,197,94,.35);color:rgba(187,255,214,.9);background:rgba(34,197,94,.10)">
-                  Listo
-                </span>
+              </div>
+              <div class="col-12 col-md-6 col-lg-3">
+                <div class="lp-dcard d-flex flex-column">
+                  <div class="lp-dcard__l mb-2">Pagos del mes</div>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="lp-donut"><span>84%</span></div>
+                    <div class="lp-dcard__s">41 al día<br />5 pendientes<br />3 en revisión</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="lp-dcard">
+                  <div class="lp-dcard__l mb-1">Líderes de la temporada</div>
+                  <div class="lp-leader"><span class="lp-leader__av">PV</span><div><div class="fw-semibold">Pablo V.</div><div class="lp-dcard__s">5 G · 8 A</div></div><span class="lp-leader__v">13 pts</span></div>
+                  <div class="lp-leader"><span class="lp-leader__av">AA</span><div><div class="fw-semibold">Alberto A.</div><div class="lp-dcard__s">2 G · 6 A</div></div><span class="lp-leader__v">8 pts</span></div>
+                  <div class="lp-leader"><span class="lp-leader__av">EP</span><div><div class="fw-semibold">Esteban P.</div><div class="lp-dcard__s">0 G · 7 A</div></div><span class="lp-leader__v">7 pts</span></div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="lp-dcard d-flex align-items-center gap-3">
+                  <span class="fs-3">🥏</span>
+                  <div><div class="fw-bold">Pickup del jueves · 6:30 pm</div><div class="lp-dcard__s">18 confirmados · 3 invitados · cupo 24</div></div>
+                  <span class="lp-pill-y ms-auto">Abierto</span>
+                </div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="lp-dcard d-flex align-items-center gap-3">
+                  <span class="fs-3">🏆</span>
+                  <div><div class="fw-bold">Gran Copa Nacional</div><div class="lp-dcard__s">Roster 14/18 · 9 F · 5 M · inscrito</div></div>
+                  <span class="lp-pill-y ms-auto">Inscrito</span>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div class="mt-3 muted tiny">
-            *Esto es un mock visual. Conectá tus datos y se llena solo.
+            <div class="small text-secondary mt-3">Panel real con datos de muestra de la temporada 2024 de Volcanes Ultimate.</div>
           </div>
         </div>
-      </div>
-    </div>
-  </header>
 
-  <div class="container"><div class="divider"></div></div>
-
-  <!-- FEATURES -->
-  <section id="features" class="container pb-4">
-    <div class="row mb-4">
-      <div class="col-lg-7">
-        <div class="text-uppercase fw-bold tiny" style="color:rgba(34,211,238,.9);letter-spacing:.08em;">
-          Features
+        <div class="row g-3 mt-4">
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-link-45deg"></i></span><h3>Roster con invitaciones</h3><p>Un link para jugadores y otro para co-capitanes. Cada quien entra con su cuenta, foto y número.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-calendar-check"></i></span><h3>Entrenos y asistencia</h3><p>Planes de entreno, asistencia y pickups con confirmación: sabés quién viene antes de llegar a la cancha.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-wallet2"></i></span><h3>Membresías y pagos</h3><p>Cuotas, comprobantes y estado de cada miembro. Se acabó perseguir pagos por chat.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-journal-richtext"></i></span><h3>Playbook y gimnasio</h3><p>Jugadas, sistemas y rutinas de gimnasio en un solo lugar, siempre a mano en el celular.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-trophy"></i></span><h3>Torneos en un clic</h3><p>Inscribí al equipo en cualquier torneo de la plataforma eligiendo quién juega; el roster se mantiene al día.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-globe2"></i></span><h3>Sitio propio del club</h3><p>Tu club en <span class="text-white">tuclub.clubstudiohq.com</span> con tus colores, logo, calendario y galería.</p></div></div>
         </div>
-        <h2 class="text-white fw-bold mt-2">Todo lo esencial para operar un club</h2>
-        <p class="muted mb-0">
-          No es un “grupo de WhatsApp con esteroides”. Es una suite completa para equipos reales.
-        </p>
-      </div>
-    </div>
 
-    <div class="row g-3">
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">👥</div>
-            <div>
-              <div class="fw-bold text-white">Roster inteligente</div>
-              <div class="muted">Altas/bajas, roles, #, datos clave, filtros y stats automáticos.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">🏃</div>
-            <div>
-              <div class="fw-bold text-white">Entrenamientos</div>
-              <div class="muted">Agenda, contenido, drills, objetivos y seguimiento sin fricción.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">✅</div>
-            <div>
-              <div class="fw-bold text-white">Asistencia & reportes</div>
-              <div class="muted">Confirmaciones rápidas, historial y resúmenes por período.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">🏆</div>
-            <div>
-              <div class="fw-bold text-white">Torneos</div>
-              <div class="muted">Roster por torneo, disponibilidad, logística y notas internas. Y si organizás uno: <a href="#torneos" style="color:rgba(34,211,238,.95)">planillaje en vivo</a>.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">📘</div>
-            <div>
-              <div class="fw-bold text-white">Playbook</div>
-              <div class="muted">Drills, sistemas, recursos y documentación siempre ordenada.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="d-flex gap-3">
-            <div class="feature-icon">🔒</div>
-            <div>
-              <div class="fw-bold text-white">Roles & permisos</div>
-              <div class="muted">Admins editan. Jugadores ven. Control real sin complicarte.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="container"><div class="divider"></div></div>
-
-  <!-- TORNEOS -->
-  <section id="torneos" class="container pb-4">
-    <div class="row g-4 align-items-center">
-      <div class="col-lg-6">
-        <div class="text-uppercase fw-bold tiny" style="color:rgba(34,211,238,.9);letter-spacing:.08em;">
-          Torneos
-        </div>
-        <h2 class="text-white fw-bold mt-2">Organizá tu torneo con resultados en vivo</h2>
-        <p class="muted">
-          Para cualquier organizador, tengas o no un club en ClubStudioHQ. Armá equipos y calendario,
-          compartí un link de planillero por partido y seguí cada punto en tiempo real.
-        </p>
-        <ul class="muted list-check">
-          <li>📋 Equipos, rosters y calendario round robin automático (más formatos pronto)</li>
-          <li>⏱️ Planillaje desde el celular: goles, asistencias, bloqueos, turnovers, timeouts y reloj</li>
-          <li>📊 Posiciones, MVP, goleadores, asistencias y breaks al instante</li>
-          <li>🤝 Espíritu de juego WFDF por partido y promedios por equipo</li>
-          <li>🔗 Página pública del torneo para jugadores y familias</li>
-        </ul>
-        <div class="d-flex flex-wrap gap-2 mt-3">
-          <a class="btn btn-primary-soft" href="/torneos/organizar.html">Organizar un torneo</a>
-          <a class="btn btn-outline-light" href="/torneos/">Ver torneos</a>
-        </div>
-        <div class="muted tiny mt-2">Creás el torneo gratis; para publicarlo y planillar en vivo se activa con prueba gratis o plan pago.</div>
-      </div>
-
-      <div class="col-lg-6">
-        <!-- Mock del marcador en vivo -->
-        <div class="glass p-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="fw-bold text-white">Final · Cancha 1</div>
-            <span class="badge-soft" style="border-color:rgba(239,68,68,.45);color:#fecaca;background:rgba(239,68,68,.12)">● En vivo</span>
-          </div>
-          <div class="d-flex justify-content-between align-items-center text-white">
-            <div class="text-center" style="flex:1">
-              <div class="fw-semibold">Volcanes</div>
-              <div class="display-4 fw-bold">12</div>
-            </div>
-            <div class="text-center muted">
-              <div class="fs-5 fw-bold text-white">71:20</div>
-              <div class="tiny">a 13</div>
-            </div>
-            <div class="text-center" style="flex:1">
-              <div class="fw-semibold">Pujaguas</div>
-              <div class="display-4 fw-bold">11</div>
-            </div>
-          </div>
-          <div class="glass p-3 mt-3" style="background: rgba(255,255,255,.04);">
-            <div class="tiny muted">Último punto</div>
-            <div class="text-white">🥏 Gol de A. Mora · asistencia de B. Rojas</div>
-          </div>
-          <div class="row g-2 mt-1 tiny muted">
-            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">4/9</div>Breaks</div></div>
-            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">17</div>MVP</div></div>
-            <div class="col-4"><div class="glass p-2 text-center" style="background: rgba(255,255,255,.04);"><div class="text-white fw-bold">16.4</div>Espíritu</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="container"><div class="divider"></div></div>
-
-  <!-- HOW -->
-  <section id="how" class="container pb-4">
-    <div class="row g-3 align-items-stretch">
-      <div class="col-lg-5">
-        <div class="glass p-4 h-100">
-          <div class="text-uppercase fw-bold tiny" style="color:rgba(124,58,237,.95);letter-spacing:.08em;">
-            Cómo funciona
-          </div>
-          <h3 class="text-white fw-bold mt-2">Setup simple, impacto inmediato</h3>
-          <p class="muted mb-3">
-            En vez de armar “sistemas” con herramientas sueltas, lo tenés integrado.
-          </p>
-
-          <ol class="muted">
-            <li class="mb-2">Creás tu club y elegís módulos.</li>
-            <li class="mb-2">Importás o registrás jugadores.</li>
-            <li class="mb-2">Publicás entrenos, torneos y playbook.</li>
-            <li class="mb-2">El equipo confirma y vos ves todo en un tablero.</li>
-          </ol>
-
-          <div class="d-grid gap-2 mt-3">
-            <a class="btn btn-primary-soft" href="/demo">Ver demo</a>
-            <a class="btn btn-outline-light" href="/signup">Probar gratis</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-7">
-        <div class="glass p-4 h-100">
-          <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge-soft">Menos coordinación</span>
-            <span class="badge-soft">Más claridad</span>
-            <span class="badge-soft">Historial y trazabilidad</span>
-            <span class="badge-soft">Todo en un lugar</span>
-          </div>
-
+        <!-- precios: equipos -->
+        <div class="mt-5 pt-3" id="precios-equipos">
+          <span class="lp-eyebrow" style="color:#c4b5fd"><i class="bi bi-tag-fill"></i>Precios para equipos</span>
+          <h2 class="lp-h2">Empezá gratis, crecé con tu club</h2>
+          <p class="lp-lead mb-4">Armar el equipo y jugar torneos es gratis. El panel completo del club es una mensualidad simple.</p>
           <div class="row g-3">
-            <div class="col-md-6">
-              <div class="glass p-3" style="background: rgba(255,255,255,.04);">
-                <div class="fw-semibold text-white">Antes</div>
-                <ul class="muted list-check mt-2 mb-0">
-                  <li>Listas duplicadas</li>
-                  <li>Asistencia “a mano”</li>
-                  <li>Info perdida en chats</li>
-                  <li>Planificación dispersa</li>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price">
+                <div class="lp-price__name">Equipo</div>
+                <div class="muted tiny">Para jugar torneos</div>
+                <div class="lp-price__amount">$0</div>
+                <div class="lp-price__per">siempre</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Página del equipo con logo</li>
+                  <li><i class="bi bi-check2"></i>Roster con links de invitación</li>
+                  <li><i class="bi bi-check2"></i>Perfiles de jugador con estadísticas</li>
+                  <li><i class="bi bi-check2"></i>Inscripción a torneos de la plataforma</li>
                 </ul>
+                <a class="btn btn-lp-ghost w-100" href="/torneos/equipo.html">Crear mi equipo</a>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="glass p-3" style="background: rgba(255,255,255,.04); border-color: rgba(34,197,94,.25);">
-                <div class="fw-semibold text-white">Después</div>
-                <ul class="muted list-check mt-2 mb-0">
-                  <li>Roster único</li>
-                  <li>Asistencia en 1 clic</li>
-                  <li>Playbook centralizado</li>
-                  <li>Reportes automáticos</li>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price lp-price--hot">
+                <div class="d-flex justify-content-between align-items-center"><div class="lp-price__name">Club</div><span class="lp-badge">Más popular</span></div>
+                <div class="muted tiny">Para clubes activos</div>
+                <div class="lp-price__amount">$10</div>
+                <div class="lp-price__per">por mes</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Todo lo de Equipo</li>
+                  <li><i class="bi bi-check2"></i>Sitio propio tuclub.clubstudiohq.com</li>
+                  <li><i class="bi bi-check2"></i>Asistencia, entrenos y pickups</li>
+                  <li><i class="bi bi-check2"></i>Membresías y pagos</li>
+                  <li><i class="bi bi-check2"></i>Playbook, gimnasio y panel del club</li>
                 </ul>
+                <a class="btn btn-lp w-100" data-wa="Hola! Quiero el plan Club de ClubStudioHQ para mi equipo." href="https://wa.me/50670567463">Quiero el plan Club</a>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="lp-price">
+                <div class="lp-price__name">Club+</div>
+                <div class="muted tiny">Para organizaciones y federaciones</div>
+                <div class="lp-price__amount" style="font-size:2rem">A medida</div>
+                <div class="lp-price__per">según tu organización</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Varios equipos y categorías</li>
+                  <li><i class="bi bi-check2"></i>Dominio propio</li>
+                  <li><i class="bi bi-check2"></i>Migración de datos y capacitación</li>
+                  <li><i class="bi bi-check2"></i>Soporte prioritario</li>
+                </ul>
+                <a class="btn btn-lp-ghost w-100" data-wa="Hola! Quiero cotizar Club+ de ClubStudioHQ para mi organización." href="https://wa.me/50670567463">Cotizar</a>
               </div>
             </div>
           </div>
+          <div class="muted tiny mt-3">Precios de lanzamiento en USD.</div>
+        </div>
+      </div>
+    </section>
+    <span id="precios"></span>
 
-          <div class="mt-3 muted tiny">
-            *Compatible con cualquier deporte: ultimate, fútbol, volley, basket, etc.
+    <!-- ===== FAQ ===== -->
+    <section class="lp-section pt-2" id="faq">
+      <div class="container" style="max-width:880px">
+        <span class="lp-eyebrow"><i class="bi bi-question-circle"></i>Preguntas frecuentes</span>
+        <h2 class="lp-h2 mb-4">Lo que nos preguntan</h2>
+        <div class="accordion" id="lpFaq">
+          <div class="accordion-item">
+            <h3 class="accordion-header"><button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q1">¿Necesito instalar una app?</button></h3>
+            <div id="q1" class="accordion-collapse collapse" data-bs-parent="#lpFaq"><div class="accordion-body">No. Todo funciona desde el navegador del celular o la computadora. Los planilleros entran con un link y los jugadores con su cuenta de Google.</div></div>
+          </div>
+          <div class="accordion-item">
+            <h3 class="accordion-header"><button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q2">¿Puedo usar solo Torneos o solo Equipos?</button></h3>
+            <div id="q2" class="accordion-collapse collapse" data-bs-parent="#lpFaq"><div class="accordion-body">Sí, son independientes. Si usás las dos, los equipos se inscriben a tus torneos con su roster y los jugadores suman estadísticas a su perfil.</div></div>
+          </div>
+          <div class="accordion-item">
+            <h3 class="accordion-header"><button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q3">¿Las estadísticas son públicas?</button></h3>
+            <div id="q3" class="accordion-collapse collapse" data-bs-parent="#lpFaq"><div class="accordion-body">Las de los torneos publicados sí: marcadores, posiciones, líderes y espíritu. Los datos internos del club (pagos, asistencia, contactos) son privados.</div></div>
+          </div>
+          <div class="accordion-item">
+            <h3 class="accordion-header"><button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q4">¿Qué pasa si se cae la señal en la cancha?</button></h3>
+            <div id="q4" class="accordion-collapse collapse" data-bs-parent="#lpFaq"><div class="accordion-body">El planillero sigue anotando; las jugadas se guardan en el celular y se envían solas cuando vuelve la conexión.</div></div>
+          </div>
+          <div class="accordion-item">
+            <h3 class="accordion-header"><button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q5">¿Cómo pago?</button></h3>
+            <div id="q5" class="accordion-collapse collapse" data-bs-parent="#lpFaq"><div class="accordion-body">Escribinos por WhatsApp y te contamos las opciones. La demo de torneo es gratis y sin tarjeta.</div></div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <div class="container"><div class="divider"></div></div>
-
-  <!-- PRICING -->
-  <section id="pricing" class="container pb-4">
-    <div class="row mb-4">
-      <div class="col-lg-7">
-        <div class="text-uppercase fw-bold tiny" style="color:rgba(34,197,94,.95);letter-spacing:.08em;">
-          Precios
-        </div>
-        <h2 class="text-white fw-bold mt-2">Planes simples</h2>
-        <p class="muted mb-0">Elegí un plan y escalá con tu club. Sin letras pequeñas.</p>
-      </div>
-    </div>
-
-    <div class="row g-3">
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="fw-bold text-white">Starter</div>
-          <div class="muted tiny">Para clubes nuevos</div>
-          <div class="display-6 fw-bold text-white mt-2">$0</div>
-          <div class="muted">por mes</div>
-          <ul class="muted mt-3 mb-4">
-            <li>Roster hasta de 5 personas</li>
-            <li>Entrenos + asistencia</li>
-            <li>1 admin</li>
-          </ul>
-          <div class="d-grid">
-            <a class="btn btn-outline-light" href="/signup">Empezar</a>
+    <!-- ===== CIERRE ===== -->
+    <section class="pb-5">
+      <div class="container">
+        <div class="lp-cta">
+          <h2 class="lp-h2">¿Arrancamos?</h2>
+          <p class="lp-lead mx-auto mb-4">Contanos de tu torneo o de tu club y te ayudamos a ponerlo en marcha hoy mismo.</p>
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <a class="btn btn-wa btn-lg" data-wa="Hola! Quiero empezar con ClubStudioHQ." href="https://wa.me/50670567463"><i class="bi bi-whatsapp me-1"></i>Escribinos por WhatsApp</a>
+            <a class="btn btn-lp-ghost btn-lg" href="/torneos/">Ver torneos en vivo</a>
           </div>
         </div>
       </div>
+    </section>
+  </main>
 
-      <div class="col-md-6 col-lg-4">
-        <div class="glass p-4 h-100" style="border-color:rgba(124,58,237,.35);">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-bold text-white">Pro</div>
-            <span class="badge-soft" style="border-color:rgba(124,58,237,.35);">Más popular</span>
-          </div>
-          <div class="muted tiny">Para clubes activos</div>
-          <div class="display-6 fw-bold text-white mt-2">$10</div>
-          <div class="muted">por mes</div>
-          <ul class="muted mt-3 mb-4">
-            <li>Todo Starter</li>
-            <li>Torneos + playbook</li>
-            <li>Roles & permisos</li>
-            <li>Reportes</li>
-          </ul>
-          <div class="d-grid">
-            <a class="btn btn-primary-soft" href="/signup">Probar Pro</a>
-          </div>
+  <footer class="lp-footer">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <img src="/assets/logo-mark.svg" width="40" height="40" alt="" />
+        <div>
+          <div class="fw-bold">ClubStudio<span class="lp-grad-text">HQ</span></div>
+          <div class="muted tiny">Torneos en vivo y equipos en orden.</div>
         </div>
       </div>
-
-      <div class="col-md-12 col-lg-4">
-        <div class="glass p-4 h-100">
-          <div class="fw-bold text-white">Club+</div>
-          <div class="muted tiny">Para organizaciones</div>
-          <div class="display-6 fw-bold text-white mt-2">Custom</div>
-          <div class="muted">según necesidad</div>
-          <ul class="muted mt-3 mb-4">
-            <li>Múltiples equipos/categorías</li>
-            <li>Onboarding & soporte</li>
-            <li>Integraciones</li>
-          </ul>
-          <div class="d-grid">
-            <a class="btn btn-outline-light" href="/contact">Hablar con ventas</a>
-          </div>
-        </div>
+      <div class="d-flex flex-wrap gap-3 tiny">
+        <a href="/torneos/">Torneos</a>
+        <a href="/torneos/organizar.html">Organizar</a>
+        <a href="/torneos/equipo.html">Mi equipo</a>
+        <a href="#precios" data-goto-pricing>Precios</a>
+        <a data-wa="Hola! Tengo una consulta sobre ClubStudioHQ." href="https://wa.me/50670567463">WhatsApp</a>
       </div>
-    </div>
-
-    <div class="mt-3 muted tiny">
-      *Los precios son placeholders. Ajustalos a tu modelo real.
-    </div>
-  </section>
-
-  <div class="container"><div class="divider"></div></div>
-
-  <!-- FAQ -->
-  <section id="faq" class="container pb-5">
-    <div class="row mb-4">
-      <div class="col-lg-7">
-        <div class="text-uppercase fw-bold tiny" style="color:rgba(255,255,255,.65);letter-spacing:.08em;">
-          FAQ
-        </div>
-        <h2 class="text-white fw-bold mt-2">Preguntas frecuentes</h2>
-      </div>
-    </div>
-
-    <div class="row g-3">
-      <div class="col-lg-6">
-        <div class="glass p-4 h-100">
-          <div class="fw-semibold text-white">¿Sirve para cualquier deporte?</div>
-          <div class="muted mt-2">Sí. La estructura es para “clubes”: roster, sesiones, asistencia, torneos y recursos.</div>
-        </div>
-      </div>
-      <div class="col-lg-6">
-        <div class="glass p-4 h-100">
-          <div class="fw-semibold text-white">¿Los jugadores pueden editar?</div>
-          <div class="muted mt-2">No si no querés. Podés dar acceso “viewer” para ver info y bloquear edición.</div>
-        </div>
-      </div>
-      <div class="col-lg-6">
-        <div class="glass p-4 h-100">
-          <div class="fw-semibold text-white">¿Cuánto toma empezar?</div>
-          <div class="muted mt-2">Podés estar operativo el mismo día. Importás roster y creás tu primer entreno.</div>
-        </div>
-      </div>
-      <div class="col-lg-6">
-        <div class="glass p-4 h-100">
-          <div class="fw-semibold text-white">¿Puedo pedir una demo?</div>
-          <div class="muted mt-2">Sí: armamos una demo con tu caso y te guiamos por el setup.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="glass p-4 mt-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-      <div>
-        <div class="fw-bold text-white fs-4">Listo para ordenar tu club?</div>
-        <div class="muted">Probalo gratis o pedí una demo.</div>
-      </div>
-      <div class="d-flex gap-2">
-        <a class="btn btn-outline-light" href="/demo">Ver demo</a>
-        <a class="btn btn-primary-soft" href="/signup">Empezar</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="container pb-5">
-    <div class="glass p-4">
-      <div class="row g-3 align-items-center">
-        <div class="col-md">
-          <div class="d-flex align-items-center gap-2 mb-1">
-            <img src="/assets/logo-mark.svg" width="44" height="44" alt="" />
-            <div class="fw-bold text-white">ClubStudio<span class="brand-hq">HQ</span></div>
-          </div>
-          <div class="muted tiny">La plataforma para operar clubes deportivos sin caos.</div>
-        </div>
-        <div class="col-md-auto d-flex flex-wrap gap-3">
-          <a href="#features">Features</a>
-          <a href="/torneos/">Torneos</a>
-          <a href="#pricing">Precios</a>
-          <a href="/privacy">Privacidad</a>
-          <a href="/contact">Contacto</a>
-        </div>
-      </div>
-      <div class="mt-3 muted tiny">© <span id="year"></span> ClubStudioHQ</div>
+      <div class="muted tiny w-100">© <span id="lpYear"></span> ClubStudioHQ</div>
     </div>
   </footer>
 
-  <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
+  <a class="lp-fab" data-wa="Hola! Quiero información sobre ClubStudioHQ." href="https://wa.me/50670567463" aria-label="Escribinos por WhatsApp"><i class="bi bi-whatsapp"></i></a>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // WhatsApp: todos los contactos van al mismo número con un mensaje según el botón
+    (function () {
+      var WA = "50670567463";
+      document.querySelectorAll("[data-wa]").forEach(function (a) {
+        a.href = "https://wa.me/" + WA + "?text=" + encodeURIComponent(a.getAttribute("data-wa"));
+        a.target = "_blank";
+        a.rel = "noopener";
+      });
+      document.getElementById("lpYear").textContent = new Date().getFullYear();
+
+      // Selector Torneos / Equipos (cada producto tiene su propia vista y sus precios)
+      var views = ["torneos", "equipos"];
+      function show(view, scrollTo) {
+        document.querySelectorAll("[data-view]").forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === view); });
+        document.querySelectorAll("[data-view-btn]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.viewBtn === view); });
+        if (scrollTo) {
+          var el = document.getElementById(scrollTo);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+      var current = function () { return document.querySelector("[data-view].is-active").dataset.view; };
+      document.querySelectorAll("[data-view-btn]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          show(b.dataset.viewBtn, "producto");
+          history.replaceState(null, "", "#" + b.dataset.viewBtn);
+        });
+      });
+      document.querySelectorAll("[data-view-link]").forEach(function (a) {
+        a.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          show(a.dataset.viewLink, "producto");
+          history.replaceState(null, "", "#" + a.dataset.viewLink);
+          bootstrap.Collapse.getInstance(document.getElementById("lpNav"))?.hide();
+        });
+      });
+      // "Precios" lleva a los precios del producto que se está viendo
+      document.querySelectorAll("[data-goto-pricing]").forEach(function (a) {
+        a.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          show(current(), "precios-" + current());
+          bootstrap.Collapse.getInstance(document.getElementById("lpNav"))?.hide();
+        });
+      });
+      // entrar directo con #equipos, #precios-equipos, etc.
+      var h = location.hash.replace("#", "");
+      if (h === "equipos" || h === "precios-equipos") show("equipos", h);
+      else if (h === "precios") show("torneos", "precios-torneos");
+      else if (h === "torneos" || h === "precios-torneos") show("torneos", h);
+    })();
+  </script>
+  <script type="module" src="/assets/landing.js"></script>
 </body>
 </html>
