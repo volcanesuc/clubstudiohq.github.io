@@ -5,6 +5,7 @@ import { EX, exf } from "/torneos/js/strings.js";
 import { REG, isApproved, listPublicEvents, loadRegistration } from "/torneos/js/services.js";
 import {
   INVITE_ROLE,
+  addSelfToRoster,
   deleteMember,
   getInvites,
   isSquadAdmin,
@@ -185,6 +186,11 @@ function rosterSection() {
         <h2 class="h6 mb-0">${esc(EX.regSectionPlayers)}</h2>
         ${isMember() ? `<a class="small" href="/torneos/perfil.html">${esc(EX.sqEditMyProfile)}</a>` : ""}
       </div>
+      ${admin() && !isMember() ? `
+        <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 py-2 my-2">
+          <span class="small">${esc(EX.sqNotInRoster)}</span>
+          <button class="btn btn-sm btn-primary" id="sqAddSelf"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddSelf)}</button>
+        </div>` : ""}
       ${state.members.length ? state.members.map(rosterRow).join("") : `<div class="ev-muted small py-2">${esc(EX.sqNoPlayers)}</div>`}
       ${admin() ? `
         <form id="sqAddMember" class="d-flex gap-2 mt-2 flex-wrap">
@@ -379,6 +385,13 @@ root.addEventListener("click", (ev) => {
     return run(async () => {
       await leaveSquad(state.user, state.squad);
       location.href = "/torneos/equipo.html";
+    });
+  }
+  if (t.closest("#sqAddSelf")) {
+    return run(async () => {
+      await addSelfToRoster(state.user, SID);
+      await load();
+      render();
     });
   }
 });

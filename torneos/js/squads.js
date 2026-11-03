@@ -106,9 +106,25 @@ export async function createSquad(user, data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  await ensureProfile(user);
   await getInvites(id, user);
+  // quien crea el equipo queda en el roster (sin tener que usar su propio link)
+  await addSelfToRoster(user, id);
   return id;
+}
+
+// Un admin se agrega al roster con los datos de su perfil (id = su uid, como al unirse por link)
+export async function addSelfToRoster(user, sid) {
+  const prof = await ensureProfile(user);
+  await setDoc(doc(membersCol(sid), user.uid), {
+    uid: user.uid,
+    name: prof.name || user.displayName || "",
+    number: prof.number ?? null,
+    gender: prof.gender || "",
+    photoURL: prof.photoURL || "",
+    joinedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  await addSquadToProfile(user, sid);
 }
 
 export async function saveSquad(sid, data) {
