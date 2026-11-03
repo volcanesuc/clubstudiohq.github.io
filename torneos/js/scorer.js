@@ -36,7 +36,7 @@ import {
   updateGame,
   updatePlay,
 } from "/torneos/js/services.js";
-import { esc, feedItemHtml, playerLabel } from "/torneos/js/ui.js";
+import { discIcon, esc, feedItemHtml, playerLabel } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -296,7 +296,7 @@ function scoreHeader() {
       <div class="ev-score__name"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
       <div class="ev-score__pts">${s[k]}</div>
       <div class="small opacity-75">${esc(exf(EX.skTimeoutsLeft, { n: state.calc.timeoutsLeft[k] }))}</div>
-      ${isLive() && off === k ? `<div class="ev-score__disc" title="${esc(EX.skOffense)}">🥏</div>` : ""}
+      ${isLive() ? `<div class="ev-score__disc" title="${esc(off === k ? EX.skOffense : EX.skNoDisc)}">${discIcon(36, off === k)}</div>` : ""}
     </div>`;
   return `
     <div class="ev-score">
@@ -304,7 +304,7 @@ function scoreHeader() {
       <div class="ev-score__mid">
         <div class="ev-score__clock" id="skClock">${view.text}</div>
         ${clock.pausedAt && !clock.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
-        ${caps.map((c) => `<div class="ev-chip mt-1">${esc(c)}</div>`).join("")}
+        ${caps.map((c) => `<div class="ev-chip mt-1 ${c === EX.skTimeUp || c === EX.skCapHard ? "ev-chip--alert" : ""}">${esc(c)}</div>`).join("")}
         ${isFinal() ? `<div class="ev-chip ev-chip--final mt-1">${esc(EX.gameFinal)}</div>` : ""}
       </div>
       ${side("B")}
@@ -317,7 +317,7 @@ function renderPreGame() {
   return `
     ${scoreHeader()}
     <div class="ev-card mt-3">
-      <div class="fw-bold">🥏 ${esc(EX.skWhoStarts)}</div>
+      <div class="fw-bold d-flex align-items-center gap-2">${discIcon(24, true)} ${esc(EX.skWhoStarts)}</div>
       <div class="small ev-muted mb-2">${esc(EX.skWhoStartsHint)}</div>
       <div class="sk-choice mb-3">
         ${["A", "B"].map((k) => `<button type="button" class="btn ${state.offenseChoice === k ? "btn-primary" : "btn-outline-primary"}" data-offense="${k}"><span class="ev-team-dot me-1" style="background:${esc(teamColor(k))}"></span>${esc(teamName(k))}</button>`).join("")}
@@ -340,7 +340,7 @@ function pointInfo() {
     <div class="sk-point-info">
       <span class="ev-chip">${esc(exf(EX.skPointN, { n: n + 1 }))}</span>
       ${letter ? `<span class="ev-chip ev-chip--ok">${esc(ratioText(letter))}</span>` : ""}
-      <span class="ev-chip">🥏 ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</span>
+      <span class="ev-chip">${discIcon(18, true)} ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</span>
     </div>`;
 }
 
@@ -368,7 +368,7 @@ function breakBanner() {
       <div>
         <div class="sk-break__label">${esc(label)}</div>
         ${state.game.clock?.break?.stopsClock ? `<div class="small opacity-75">${esc(EX.skClockStopped)}</div>` : ""}
-        <div class="small fw-bold">🥏 ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</div>
+        <div class="small fw-bold d-flex align-items-center gap-1">${discIcon(18, true)} ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</div>
       </div>
       <div class="sk-break__time" id="skBreakClock">${view.brk.text}</div>
       <button class="btn btn-sm btn-light" data-act="break-end">${esc(EX.skBreakEnd)}</button>
@@ -482,6 +482,7 @@ $("tnRoot").addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-act]");
   if (!btn) return;
   const side = btn.dataset.side;
+  if (btn.hasAttribute("data-dim") && !confirm(exf(btn.dataset.act === "block" ? EX.skDimBlock : EX.skDimTurn, { team: teamName(side) }))) return;
   switch (btn.dataset.act) {
     case "goal": return onGoal(side);
     case "drop": return onTurn(side, PLAY.DROP);

@@ -59,6 +59,12 @@ service cloud.firestore {
       );
     }
 
+    // admin del equipo del torneo o su capitán(a) de espíritu
+    function ratesSpiritFor(eventId, teamId) {
+      let t = get(/databases/$(database)/documents/events/$(eventId)/teams/$(teamId)).data;
+      return managesEntry(t) || (isGoogle() && t.get("spiritCaptainId", "") == request.auth.uid);
+    }
+
     function inviteFor(token, squadId) {
       let inv = get(/databases/$(database)/documents/squad_invites/$(token));
       return inv != null && inv.data.squadId == squadId;
@@ -179,6 +185,17 @@ service cloud.firestore {
           ])
           // ajustar el reloj es solo del organizador
           && request.resource.data.get("clock", {}).get("offsetMs", 0) == resource.data.get("clock", {}).get("offsetMs", 0)
+        ) || (
+          // al terminar, cada equipo (admin o capitán de espíritu) evalúa al rival: solo su lado (A o B)
+          isGoogle()
+          && resource.data.status == "final"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["spirit", "updatedAt"])
+          && (
+            (ratesSpiritFor(eventId, resource.data.teamA.id)
+              && request.resource.data.spirit.diff(resource.data.get("spirit", {})).affectedKeys().hasOnly(["A"]))
+            || (ratesSpiritFor(eventId, resource.data.teamB.id)
+              && request.resource.data.spirit.diff(resource.data.get("spirit", {})).affectedKeys().hasOnly(["B"]))
+          )
         );
 
         match /plays/{playId} {

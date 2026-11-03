@@ -22,6 +22,8 @@ import {
 import { GAME_STATUS, randomId, spiritTable, standings } from "/torneos/js/model.js";
 import { listGames, listTeams, loadEvent, loadRegistration } from "/torneos/js/services.js";
 
+const SPIRIT_WINDOW_DAYS = 21; // después de esto ya no se recuerda la evaluación pendiente
+
 export const INVITE_ROLE = { PLAYER: "player", ADMIN: "admin" };
 
 const list = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -337,6 +339,50 @@ export async function squadResults(sid, pointers) {
       divisionName: (event.divisions || []).length > 1 ? event.divisions.find((d) => d.id === div)?.name || "" : "",
     };
   }));
+}
+
+// ¿Esta cuenta evalúa el espíritu por este equipo del torneo? (admin del equipo o capitán(a) de espíritu)
+export async function canRateSpirit(user, team) {
+  if (!user || !team) return false;
+  if (team.managerUid === user.uid || team.spiritCaptainId === user.uid) return true;
+  if (!team.squadId) return false;
+  return isSquadAdmin(await loadSquad(team.squadId).catch(() => null), user.uid);
+}
+
+/**
+ * Partidos terminados donde un equipo mío todavía no evaluó el espíritu del rival.
+ * Cuenta para admins del equipo y para quien sea capitán(a) de espíritu en ese torneo.
+ * @returns {Promise<{ eventId, eventName, game, side, team, opp }[]>}
+ */
+export async function pendingSpirit(user, { squadId = "" } = {}) {
+  if (!user) return [];
+  const d = new Date(Date.now() - SPIRIT_WINDOW_DAYS * 86400000);
+  const cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const squads = (await listMySquads(user)).filter((s) => !squadId || s.id === squadId);
+  const lists = await Promise.all(squads.map(async (squad) => {
+    const ptrs = (await listSquadTournaments(squad.id).catch(() => [])).filter((p) => (p.endDate || p.startDate || "9999") >= cutoff);
+    const perEvent = await Promise.all(ptrs.map(async (ptr) => {
+      const teams = await listTeams(ptr.eventId).catch(() => []);
+      const team = teams.find((t) => t.squadId === squad.id);
+      if (!team) return [];
+      const allowed = isSquadAdmin(squad, user.uid) || team.managerUid === user.uid || team.spiritCaptainId === user.uid;
+      if (!allowed) return [];
+      const games = await listGames(ptr.eventId).catch(() => []);
+      return games
+        .filter((g) => g.status === GAME_STATUS.FINAL && (g.teamA?.id === team.id || g.teamB?.id === team.id))
+        .map((g) => {
+          const side = g.teamA?.id === team.id ? "A" : "B";
+          const oppRef = side === "A" ? g.teamB : g.teamA;
+          return { eventId: ptr.eventId, eventName: ptr.eventName || "", game: g, side, team, opp: teams.find((t) => t.id === oppRef?.id) || oppRef || {} };
+        })
+        .filter((x) => !x.game.spirit?.[x.side]);
+    }));
+    return perEvent.flat();
+  }));
+  const seen = new Set();
+  return lists.flat()
+    .filter((x) => !seen.has(`${x.eventId}/${x.game.id}/${x.side}`) && seen.add(`${x.eventId}/${x.game.id}/${x.side}`))
+    .sort((a, b) => (b.game.finishedAt?.toMillis?.() || 0) - (a.game.finishedAt?.toMillis?.() || 0));
 }
 
 export async function listSquadTournaments(sid) {

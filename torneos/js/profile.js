@@ -4,7 +4,7 @@
 import { EX, exf } from "/torneos/js/strings.js";
 import { isPlatformAdmin } from "/torneos/js/services.js";
 import { cropFromInput } from "/torneos/js/cropper.js";
-import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, playerHistory, profileUrl, saveProfile, squadUrl } from "/torneos/js/squads.js";
+import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, pendingSpirit, playerHistory, profileUrl, saveProfile, squadUrl } from "/torneos/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -17,6 +17,7 @@ import {
   renderNav,
   showLoader,
   signInGoogle,
+  spiritPendingHtml,
   teamBadge,
   waitForUser,
 } from "/torneos/js/ui.js";
@@ -25,7 +26,7 @@ const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
 const PARAM_UID = new URLSearchParams(location.search).get("u") || "";
 
-const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false, editing: false };
+const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false, editing: false, spirit: [] };
 
 function alertBox(msg, kind = "success") {
   const el = document.getElementById("tnAlert");
@@ -204,6 +205,7 @@ function render() {
   root.innerHTML = `
     <div class="d-grid gap-3">
       ${banner()}
+      ${state.own ? spiritPendingHtml(state.spirit) : ""}
       ${editForm()}
       <div class="row g-3">
         <div class="col-12 col-lg-7 d-grid gap-3 align-content-start">${statsSection()}${historySection()}</div>
@@ -307,6 +309,10 @@ function renderSignIn() {
     render();
     hideLoader();
     // el historial puede tardar (lee los partidos de cada torneo)
+    if (state.own) pendingSpirit(state.user).then((list) => {
+      state.spirit = list;
+      if (list.length) render();
+    }).catch(() => {});
     state.history = await playerHistory(state.uid, state.profile.squadIds || []);
     render();
   } catch (err) {

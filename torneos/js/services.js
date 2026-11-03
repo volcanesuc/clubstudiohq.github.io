@@ -22,6 +22,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -324,6 +325,11 @@ export async function createGames(eid, games) {
 
 export async function updateGame(eid, gid, patch) {
   await setDoc(doc(gamesCol(eid), gid), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// Evaluación de espíritu de un equipo (A = lo que A le da a B). Solo toca su lado: no pisa la del rival.
+export async function saveTeamSpirit(eid, gid, side, card) {
+  await updateDoc(doc(gamesCol(eid), gid), { [`spirit.${side}`]: card, updatedAt: serverTimestamp() });
 }
 
 export async function deleteGame(eid, gid) {

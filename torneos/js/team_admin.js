@@ -16,7 +16,7 @@ import {
   saveRegistration,
   withdrawRegistration,
 } from "/torneos/js/services.js";
-import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, squadUrl } from "/torneos/js/squads.js";
+import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/torneos/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -28,6 +28,7 @@ import {
   renderNav,
   showLoader,
   signInGoogle,
+  spiritPendingHtml,
   teamBadge,
   waitForUser,
 } from "/torneos/js/ui.js";
@@ -88,6 +89,7 @@ async function renderList() {
       </div>
       <a class="btn btn-outline-secondary btn-sm" href="/torneos/perfil.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>
     </div>
+    <div id="spPending"></div>
     ${squads.length ? squads.map((s) => `
       <a class="ev-card ev-event-item" href="${esc(squadUrl(s.id))}">
         ${teamBadge(s, 40)}
@@ -122,6 +124,12 @@ async function renderList() {
           : ""}
       </div>`;
     }).join("") : `<div class="ev-card ev-muted">${esc(EX.noOpenRegistrations)}</div>`}`;
+
+  // evaluaciones de espíritu pendientes (no bloquea la lista)
+  pendingSpirit(state.user).then((list) => {
+    const el = document.getElementById("spPending");
+    if (el) el.innerHTML = spiritPendingHtml(list);
+  }).catch(() => {});
 
   $("#sqCreate").onsubmit = (ev) => {
     ev.preventDefault();

@@ -12,7 +12,7 @@ import {
   ratioLabel,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser } from "/torneos/js/ui.js";
+import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, discIcon } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -86,7 +86,7 @@ function render() {
       <div class="d-flex justify-content-center mb-1">${teamBadge({ ...(teamDoc(k) || {}), name: teamName(k), color: teamColor(k) }, 44)}</div>
       <div class="ev-score__name">${esc(teamName(k))}</div>
       <div class="ev-score__pts">${score[k]}</div>
-      ${live && calc.possession === k ? `<div class="ev-score__disc">🥏</div>` : ""}
+      ${live ? `<div class="ev-score__disc">${discIcon(32, calc.possession === k)}</div>` : ""}
     </div>`;
   const ctx = { playersById: state.playersById, teamName };
   const feed = feedPlays(state.plays, state.rules).reverse();

@@ -18,6 +18,7 @@ import {
   profileUrl,
   regenerateInvite,
   repairMemberLinks,
+  pendingSpirit,
   squadResults,
   squadUrl,
   syncSquadRegistrations,
@@ -35,6 +36,7 @@ import {
   regChip,
   renderNav,
   showLoader,
+  spiritPendingHtml,
   teamBadge,
   waitForUser,
 } from "/torneos/js/ui.js";
@@ -58,6 +60,7 @@ const state = {
   editing: "", // id del jugador en edición
   tab: new URLSearchParams(location.search).get("tab") || "torneos",
   results: null, // resultado del equipo en cada torneo (se carga aparte)
+  spirit: [], // evaluaciones de espíritu que me tocan en este equipo
 };
 
 const admin = () => isSquadAdmin(state.squad, state.user?.uid);
@@ -231,6 +234,7 @@ function tournamentsTab() {
         </div>`).join("")}
     </div>` : "";
   return `
+    ${spiritPendingHtml(state.spirit)}
     <div class="tp-list-title">${esc(exf(EX.tpEventsShown, { n: state.tournaments.length }))}</div>
     ${list ? `<div class="tp-list">${list}</div>` : `<div class="tp-empty">${esc(EX.sqNoTournaments)}</div>`}
     ${open}`;
@@ -403,6 +407,12 @@ function render() {
 
 async function loadResults() {
   if (!state.tournaments.length) return;
+  if (state.user) {
+    pendingSpirit(state.user, { squadId: SID }).then((list) => {
+      state.spirit = list;
+      if (list.length) render();
+    }).catch(() => {});
+  }
   state.results = await squadResults(SID, state.tournaments).catch((err) => {
     console.warn("[equipo] resultados:", err?.code || err);
     return [];

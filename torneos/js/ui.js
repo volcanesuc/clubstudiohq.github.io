@@ -150,6 +150,49 @@ export function regChip(status) {
   return `<span class="ev-chip ev-chip--wait">${esc(EX.regPending)}</span>`;
 }
 
+// Aviso: partidos terminados donde mi equipo tiene que evaluar el espíritu del rival
+export function spiritPendingHtml(list = []) {
+  if (!list.length) return "";
+  return `
+    <section class="sp-pending">
+      <div class="sp-pending__head">
+        <span class="sp-pending__icon"><i class="bi bi-heart-fill"></i></span>
+        <div>
+          <div class="fw-bold">${esc(exf(EX.spPendingTitle, { n: list.length }))}</div>
+          <div class="small opacity-75">${esc(EX.spPendingSub)}</div>
+        </div>
+      </div>
+      ${list.map((x) => {
+        const g = x.game;
+        const us = x.side === "A" ? g.scoreA || 0 : g.scoreB || 0;
+        const them = x.side === "A" ? g.scoreB || 0 : g.scoreA || 0;
+        return `
+          <a class="sp-pending__row" href="/torneos/espiritu.html?${new URLSearchParams({ event: x.eventId, game: g.id, side: x.side })}">
+            ${teamBadge(x.opp, 34)}
+            <div class="flex-grow-1 min-w-0">
+              <div class="fw-semibold text-truncate">${esc(exf(EX.spVs, { team: x.opp?.name || "—" }))}</div>
+              <div class="small ev-muted text-truncate">${esc([x.team?.name, `${us}–${them}`, x.eventName].filter(Boolean).join(" · "))}</div>
+            </div>
+            <span class="btn btn-sm sp-btn">${esc(EX.spRate)} <i class="bi bi-chevron-right"></i></span>
+          </a>`;
+      }).join("")}
+    </section>`;
+}
+
+// Disco (frisbee): brillante para el equipo con el disco, apagado para el otro
+export function discIcon(size = 28, active = true) {
+  const h = Math.round(size * 0.62);
+  const g = active ? "tnDiscOn" : "tnDiscOff";
+  return `<svg class="tn-disc ${active ? "is-on" : "is-off"}" width="${size}" height="${h}" viewBox="0 0 40 25" aria-hidden="true">
+    <defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${active ? "#ffffff" : "#d4d4d8"}"/><stop offset="1" stop-color="${active ? "#a5f3fc" : "#a1a1aa"}"/>
+    </linearGradient></defs>
+    <ellipse cx="20" cy="13.5" rx="18.5" ry="9.5" fill="url(#${g})" stroke="${active ? "#22d3ee" : "#71717a"}" stroke-width="1.6"/>
+    <ellipse cx="20" cy="12" rx="12.5" ry="5.4" fill="none" stroke="${active ? "#67e8f9" : "#a1a1aa"}" stroke-width="1.4" opacity=".9"/>
+    <ellipse cx="14" cy="9.5" rx="5" ry="1.6" fill="#fff" opacity="${active ? ".8" : ".35"}"/>
+  </svg>`;
+}
+
 // Foto del jugador, o un círculo con sus iniciales
 export function avatarHtml(person = {}, size = 32) {
   const style = `width:${size}px;height:${size}px`;
