@@ -7,10 +7,12 @@ import {
   GAME_STATUS,
   PLAY,
   SPIRIT_KEYS,
+  clockView,
   computeGameState,
+  endBreak,
   eventRules,
+  startBreak,
   sortPlays,
-  fmtClock,
   gameElapsedMs,
   gameSummary,
   other,
@@ -158,6 +160,23 @@ async function onBlock(side) {
 function onTimeout(side) {
   if ((state.calc.timeoutsLeft[side] ?? 0) <= 0) return alert(EX.skNoTimeouts);
   record({ type: PLAY.TIMEOUT, team: side });
+  beginBreak({ type: "timeout", team: side, seconds: state.rules.timeoutSeconds });
+}
+
+function onHalftime() {
+  record({ type: PLAY.HALFTIME });
+  beginBreak({ type: "halftime", seconds: state.rules.halftimeMinutes * 60 });
+}
+
+function beginBreak(opts) {
+  const clock = state.game.clock || {};
+  // si ya había un descanso, se cierra primero
+  setClock(startBreak(clock.break ? endBreak(clock) : clock, opts, state.rules), { replace: true });
+}
+
+function finishBreak() {
+  if (!state.game?.clock?.break) return;
+  setClock(endBreak(state.game.clock), { replace: true });
 }
 
 /* =========================
@@ -175,8 +194,8 @@ async function startGame() {
   record({ type: PLAY.START, team: state.offenseChoice });
 }
 
-function setClock(patch) {
-  const clock = { ...(state.game.clock || {}), ...patch };
+function setClock(patch, { replace = false } = {}) {
+  const clock = replace ? patch : { ...(state.game.clock || {}), ...patch };
   state.game.clock = clock;
   updateGame(EID, GID, { clock }).catch((err) => console.warn("[score] reloj:", err?.code || err));
   render();
@@ -199,6 +218,8 @@ function undoLast() {
 }
 
 function removePlay(id) {
+  const play = state.plays.find((p) => p.id === id);
+  if (play && (play.type === PLAY.TIMEOUT || play.type === PLAY.HALFTIME)) finishBreak();
   updatePlay(EID, GID, id, { deleted: true });
   state.plays = state.plays.map((p) => (p.id === id ? { ...p, deleted: true } : p));
   recompute();
@@ -209,7 +230,7 @@ function removePlay(id) {
 async function finishGame() {
   if (!confirm(exf(EX.skFinishConfirm, { a: state.calc.score.A, b: state.calc.score.B }))) return;
   record({ type: PLAY.END });
-  const clock = { ...(state.game.clock || {}), endedAt: Date.now() };
+  const clock = { ...endBreak(state.game.clock || {}), endedAt: Date.now() };
   await updateGame(EID, GID, { status: GAME_STATUS.FINAL, finishedAt: new Date(), clock });
   state.game = { ...state.game, status: GAME_STATUS.FINAL, clock };
   render();
@@ -230,11 +251,13 @@ function scoreHeader() {
   const s = state.calc.score;
   const off = state.calc.possession;
   const clock = state.game.clock || {};
-  const elapsed = gameElapsedMs(clock);
+  const view = clockView(clock, state.rules);
+  const elapsed = view.elapsedMs;
   const r = state.rules;
   const caps = [];
   if (r.softCapMin && elapsed >= r.softCapMin * 60000) caps.push(EX.skCapSoft);
   if (r.hardCapMin && elapsed >= r.hardCapMin * 60000) caps.push(EX.skCapHard);
+  if (view.timeUp) caps.push(EX.skTimeUp);
   const side = (k) => `
     <div class="ev-score__team">
       <div class="ev-score__name"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
@@ -246,8 +269,8 @@ function scoreHeader() {
     <div class="ev-score">
       ${side("A")}
       <div class="ev-score__mid">
-        <div class="ev-score__clock" id="skClock">${fmtClock(elapsed)}</div>
-        ${clock.pausedAt ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
+        <div class="ev-score__clock" id="skClock">${view.text}</div>
+        ${clock.pausedAt && !clock.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
         ${caps.map((c) => `<div class="ev-chip mt-1">${esc(c)}</div>`).join("")}
         ${isFinal() ? `<div class="ev-chip ev-chip--final mt-1">${esc(EX.gameFinal)}</div>` : ""}
       </div>
@@ -282,17 +305,33 @@ function sideButtons(k) {
     </div>`;
 }
 
+function breakBanner() {
+  const view = clockView(state.game.clock || {}, state.rules);
+  if (!view.brk) return "";
+  const label = view.brk.type === "halftime" ? EX.skBreakHalftime : exf(EX.skBreakTimeout, { team: teamName(view.brk.team) });
+  return `
+    <div class="sk-break mt-2">
+      <div>
+        <div class="sk-break__label">${esc(label)}</div>
+        ${state.game.clock?.break?.stopsClock ? `<div class="small opacity-75">${esc(EX.skClockStopped)}</div>` : ""}
+      </div>
+      <div class="sk-break__time" id="skBreakClock">${view.brk.text}</div>
+      <button class="btn btn-sm btn-light" data-act="break-end">${esc(EX.skBreakEnd)}</button>
+    </div>`;
+}
+
 function renderLive() {
   const paused = !!state.game.clock?.pausedAt;
   const feed = [...state.calc.feed].reverse().slice(0, 40);
   const ctx = { playersById: state.playersById, teamName };
   return `
     ${scoreHeader()}
-    ${state.calc.suggestHalftime ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
+    ${breakBanner()}
+    ${state.calc.suggestHalftime && !state.game.clock?.break ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
     <div class="sk-actions">${sideButtons("A")}${sideButtons("B")}</div>
     <div class="sk-bar">
       <button class="btn btn-outline-secondary" data-act="undo"><i class="bi bi-arrow-counterclockwise me-1"></i>${esc(EX.skUndo)}</button>
-      <button class="btn btn-outline-secondary" data-act="pause"><i class="bi ${paused ? "bi-play" : "bi-pause"} me-1"></i>${esc(paused ? EX.skResume : EX.skPause)}</button>
+      <button class="btn btn-outline-secondary" data-act="pause" ${state.game.clock?.break ? "disabled" : ""}><i class="bi ${paused ? "bi-play" : "bi-pause"} me-1"></i>${esc(paused ? EX.skResume : EX.skPause)}</button>
       ${state.calc.halftimeDone ? "" : `<button class="btn btn-outline-secondary" data-act="halftime">${esc(EX.skHalftime)}</button>`}
       <button class="btn btn-outline-danger" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button>
     </div>
@@ -385,7 +424,8 @@ $("tnRoot").addEventListener("click", (ev) => {
     case "throwaway": return onTurn(side, PLAY.THROWAWAY);
     case "block": return onBlock(side);
     case "timeout": return onTimeout(side);
-    case "halftime": return record({ type: PLAY.HALFTIME });
+    case "halftime": return onHalftime();
+    case "break-end": return finishBreak();
     case "pause": return togglePause();
     case "undo": return undoLast();
     case "finish": return finishGame();
@@ -426,9 +466,15 @@ function readSpirit(form) {
 
 // reloj en vivo
 setInterval(() => {
+  if (!state.game) return;
+  const view = clockView(state.game.clock || {}, state.rules);
   const el = $("skClock");
-  if (el && state.game) el.textContent = fmtClock(gameElapsedMs(state.game.clock));
-}, 1000);
+  if (el) el.textContent = view.text;
+  const brkEl = $("skBreakClock");
+  if (brkEl && view.brk) brkEl.textContent = view.brk.text;
+  // el descanso llegó a 0: se reanuda el reloj solo
+  if (view.brk?.done && isLive()) finishBreak();
+}, 500);
 
 // sin señal
 function updateOnline() {

@@ -189,3 +189,13 @@ body.tn-busy::before {
 .tn-approval { border-left: 4px solid var(--ev-accent); }
 .tn-approval.is-approved { border-left-color: #22c55e; }
 .tn-approval.is-rejected { border-left-color: #dc3545; }
+
+/* descanso (timeout / medio tiempo) con cuenta regresiva */
+.sk-break {
+  display: grid; grid-template-columns: 1fr auto auto; gap: .75rem; align-items: center;
+  padding: 12px 14px; border-radius: 16px; color: #fff;
+  background: linear-gradient(135deg, #0e7490, #22d3ee);
+  box-shadow: 0 8px 20px rgba(34, 211, 238, .25);
+}
+.sk-break__label { font-weight: 800; }
+.sk-break__time { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }

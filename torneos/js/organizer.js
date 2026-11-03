@@ -246,13 +246,21 @@ function renderInfo() {
         </div>
 
         <div class="col-12"><hr class="my-1" /><h2 class="h6 mt-2 mb-0">${esc(EX.rulesTitle)}</h2></div>
+        ${f("rGameMin", EX.ruleGameMinutes, r.gameMinutes, { type: "number", col: "col-12 col-md-6", attrs: 'min="0" step="any"' })}
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="rStopBreaks" ${r.stopClockOnBreaks ? "checked" : ""} />
+            <label class="form-check-label" for="rStopBreaks">${esc(EX.ruleStopOnBreaks)}</label>
+          </div>
+        </div>
+        <div class="col-12 mt-0"><div class="form-text">${esc(EX.ruleGameMinutesHint)} ${esc(EX.ruleStopOnBreaksHint)}</div></div>
         ${f("rGameTo", EX.ruleGameTo, r.gameTo, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
         ${f("rHalf", EX.ruleHalftimeAt, r.halftimeAt, { type: "number", col: "col-6 col-md-3", attrs: 'min="1"' })}
         ${f("rSoft", EX.ruleSoftCap, r.softCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
         ${f("rHard", EX.ruleHardCap, r.hardCapMin || "", { type: "number", col: "col-6 col-md-3", attrs: 'min="0"' })}
         ${f("rTo", EX.ruleTimeouts, r.timeoutsPerHalf, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
         ${f("rToSec", EX.ruleTimeoutSeconds, r.timeoutSeconds, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
-        ${f("rHalfMin", EX.ruleHalftimeMinutes, r.halftimeMinutes, { type: "number", col: "col-6 col-md-4", attrs: 'min="0"' })}
+        ${f("rHalfMin", EX.ruleHalftimeMinutes, r.halftimeMinutes, { type: "number", col: "col-6 col-md-4", attrs: 'min="0" step="any"' })}
 
         <div class="col-12"><h2 class="h6 mt-2 mb-0">${esc(EX.mvpTitle)}</h2><div class="form-text mt-0">${esc(EX.mvpHint)}</div></div>
         ${f("mG", EX.mvpGoals, r.mvp.goals, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
@@ -292,6 +300,8 @@ function renderInfo() {
         divisions: (divs.length ? divs : ["Open"]).map((name) => ({ id: slugify(name) || "open", name })),
         fields: v("eFields").split(/\n+/).map((s) => s.trim()).filter(Boolean),
         rules: {
+          gameMinutes: num("rGameMin"),
+          stopClockOnBreaks: document.getElementById("rStopBreaks").checked,
           gameTo: num("rGameTo") || 13,
           halftimeAt: num("rHalf") || 7,
           softCapMin: num("rSoft"),

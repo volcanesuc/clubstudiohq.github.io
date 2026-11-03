@@ -65,6 +65,10 @@ export const EX = {
   ruleTimeouts: "Timeouts por mitad (por equipo)",
   ruleTimeoutSeconds: "Duración del timeout (s)",
   ruleHalftimeMinutes: "Duración del medio tiempo (min)",
+  ruleGameMinutes: "Duración del partido (min)",
+  ruleGameMinutesHint: "El reloj cuenta hacia atrás desde aquí hasta 0. Poné 0 para que cuente hacia arriba.",
+  ruleStopOnBreaks: "Detener el reloj en timeouts y medio tiempo",
+  ruleStopOnBreaksHint: "Si lo apagás, el reloj sigue corriendo como en reglas WFDF.",
   mvpTitle: "Fórmula MVP",
   mvpHint: "MVP = goles × peso + asistencias × peso + bloqueos × peso − turnovers × peso.",
   mvpGoals: "Goles",
@@ -145,6 +149,11 @@ export const EX = {
   skCapSoft: "Soft cap",
   skCapHard: "Hard cap",
   skClockAdjust: "Ajustar reloj",
+  skTimeUp: "Tiempo cumplido",
+  skBreakTimeout: "Timeout · {team}",
+  skBreakHalftime: "Medio tiempo",
+  skBreakEnd: "Terminar",
+  skClockStopped: "Reloj detenido",
   skFeed: "Jugadas",
 
   // espíritu

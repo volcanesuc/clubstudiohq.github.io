@@ -3,10 +3,9 @@
 import { EX, exf } from "/torneos/js/strings.js";
 import {
   GAME_STATUS,
+  clockView,
   computeGameState,
   eventRules,
-  fmtClock,
-  gameElapsedMs,
   mvpScore,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
@@ -94,8 +93,9 @@ function render() {
     <div class="ev-score">
       ${side("A")}
       <div class="ev-score__mid">
-        <div class="ev-score__clock" id="gvClock">${started ? fmtClock(gameElapsedMs(g.clock)) : esc(fmtWhen(g.startAt, { hour: "2-digit", minute: "2-digit" }) || EX.vs)}</div>
-        ${live && g.clock?.pausedAt ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
+        <div class="ev-score__clock" id="gvClock">${started ? clockView(g.clock || {}, state.rules).text : esc(fmtWhen(g.startAt, { hour: "2-digit", minute: "2-digit" }) || EX.vs)}</div>
+        ${live && g.clock?.pausedAt && !g.clock?.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
+        ${live && g.clock?.break ? `<div class="ev-chip mt-1" id="gvBreak">${esc(g.clock.break.type === "halftime" ? EX.skBreakHalftime : exf(EX.skBreakTimeout, { team: teamName(g.clock.break.team) }))} · <span id="gvBreakClock">${clockView(g.clock, state.rules).brk?.text || ""}</span></div>` : ""}
       </div>
       ${side("B")}
     </div>
@@ -119,9 +119,13 @@ function render() {
 }
 
 setInterval(() => {
+  if (state.game?.status !== GAME_STATUS.LIVE) return;
+  const view = clockView(state.game.clock || {}, state.rules);
   const el = $("gvClock");
-  if (el && state.game?.status === GAME_STATUS.LIVE) el.textContent = fmtClock(gameElapsedMs(state.game.clock));
-}, 1000);
+  if (el) el.textContent = view.text;
+  const b = $("gvBreakClock");
+  if (b && view.brk) b.textContent = view.brk.text;
+}, 500);
 
 (async function init() {
   showLoader();

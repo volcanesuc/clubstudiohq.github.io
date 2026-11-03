@@ -22,6 +22,8 @@ export const PLAY = {
 export const SPIRIT_KEYS = ["rules", "fouls", "fair", "attitude", "comm"];
 
 export const DEFAULT_RULES = {
+  gameMinutes: 90, // el reloj cuenta hacia atrás desde aquí (0 = hacia arriba)
+  stopClockOnBreaks: true, // el reloj se detiene en timeouts y medio tiempo
   gameTo: 13,
   halftimeAt: 7,
   softCapMin: 0,
@@ -36,6 +38,8 @@ export function eventRules(event = {}) {
   const r = event.rules || {};
   const n = (v, d) => (Number.isFinite(Number(v)) && v !== "" && v !== null ? Number(v) : d);
   return {
+    gameMinutes: n(r.gameMinutes, DEFAULT_RULES.gameMinutes),
+    stopClockOnBreaks: typeof r.stopClockOnBreaks === "boolean" ? r.stopClockOnBreaks : DEFAULT_RULES.stopClockOnBreaks,
     gameTo: n(r.gameTo, DEFAULT_RULES.gameTo),
     halftimeAt: n(r.halftimeAt, DEFAULT_RULES.halftimeAt),
     softCapMin: n(r.softCapMin, 0),
@@ -97,7 +101,8 @@ export function rosterToText(players = []) {
 /* =========================
    Reloj
 ========================= */
-// clock = { startedAt (ms), pausedMs, pausedAt (ms|null), offsetMs }
+// clock = { startedAt (ms), pausedMs, pausedAt (ms|null), offsetMs, endedAt,
+//           break: { type: "timeout"|"halftime", team, endsAt (ms), stopsClock } | null }
 export function gameElapsedMs(clock = {}, now = Date.now()) {
   if (!clock.startedAt) return 0;
   const end = clock.pausedAt || clock.endedAt || now;
@@ -107,6 +112,57 @@ export function gameElapsedMs(clock = {}, now = Date.now()) {
 export function fmtClock(ms) {
   const s = Math.floor(Math.max(0, ms) / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// Cuenta regresiva: redondea hacia arriba para que muestre 0:00 solo al terminar.
+export function fmtCountdown(ms) {
+  return fmtClock(Math.ceil(Math.max(0, ms) / 1000) * 1000);
+}
+
+/**
+ * Lo que muestra el reloj del partido.
+ * @returns {{ text, countdown, elapsedMs, remainingMs, timeUp, paused, brk: null|{ type, team, remainingMs, text, done } }}
+ */
+export function clockView(clock = {}, rules = DEFAULT_RULES, now = Date.now()) {
+  const elapsedMs = gameElapsedMs(clock, now);
+  const totalMs = (Number(rules.gameMinutes) || 0) * 60000;
+  const countdown = totalMs > 0;
+  const remainingMs = countdown ? Math.max(0, totalMs - elapsedMs) : 0;
+  const b = clock.break;
+  const brk = b && b.endsAt
+    ? { type: b.type, team: b.team || "", remainingMs: Math.max(0, b.endsAt - now), text: fmtCountdown(b.endsAt - now), done: now >= b.endsAt }
+    : null;
+  return {
+    text: countdown ? fmtCountdown(remainingMs) : fmtClock(elapsedMs),
+    countdown,
+    elapsedMs,
+    remainingMs,
+    timeUp: countdown && remainingMs <= 0 && !!clock.startedAt,
+    paused: !!clock.pausedAt && !clock.endedAt,
+    brk,
+  };
+}
+
+// Empieza un timeout / medio tiempo: cuenta regresiva propia y (según reglas) detiene el reloj del partido.
+export function startBreak(clock = {}, { type, team = "", seconds }, rules = DEFAULT_RULES, now = Date.now()) {
+  const stopsClock = !!rules.stopClockOnBreaks && !clock.pausedAt;
+  return {
+    ...clock,
+    ...(stopsClock ? { pausedAt: now } : {}),
+    break: { type, team, endsAt: now + Math.max(0, Number(seconds) || 0) * 1000, stopsClock },
+  };
+}
+
+// Termina el descanso (al llegar a 0 o antes) y reanuda el reloj si lo había detenido.
+export function endBreak(clock = {}, now = Date.now()) {
+  const b = clock.break;
+  if (!b) return clock;
+  const next = { ...clock, break: null };
+  if (b.stopsClock && clock.pausedAt) {
+    next.pausedMs = (clock.pausedMs || 0) + (now - clock.pausedAt);
+    next.pausedAt = null;
+  }
+  return next;
 }
 
 /* =========================
