@@ -19,7 +19,7 @@ import {
   setDoc,
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { GAME_STATUS, randomId } from "/torneos/js/model.js";
+import { GAME_STATUS, randomId, spiritTable, standings } from "/torneos/js/model.js";
 import { listGames, listTeams, loadEvent, loadRegistration } from "/torneos/js/services.js";
 
 export const INVITE_ROLE = { PLAYER: "player", ADMIN: "admin" };
@@ -296,6 +296,47 @@ export async function syncSquadRegistrations(sid, members, { addIds = [], onlyEv
     return { eventId: ptr.eventId, reg: { ...reg, players }, missing: members.filter((m) => !inReg.has(m.id)) };
   }));
   return out.filter(Boolean);
+}
+
+/**
+ * Resultado del equipo en cada torneo donde se inscribió: puesto en su división (tabla de la fase de grupos),
+ * récord, si terminó y si ganó el espíritu. Lee datos públicos del torneo.
+ * @returns {Promise<object[]>} por torneo: { ptr, event, team, rank, total, w, l, played, finished, spiritFirst, divisionName }
+ */
+export async function squadResults(sid, pointers) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return Promise.all(pointers.map(async (ptr) => {
+    const [event, teams, games] = await Promise.all([
+      loadEvent(ptr.eventId).catch(() => null),
+      listTeams(ptr.eventId).catch(() => []),
+      listGames(ptr.eventId).catch(() => []),
+    ]);
+    const end = event?.endDate || event?.startDate || ptr.endDate || ptr.startDate || "";
+    const start = event?.startDate || ptr.startDate || "";
+    const base = { ptr, event, finished: event?.status === "finished" || (!!end && end < today), live: !!start && start <= today && today <= end };
+    const team = teams.find((t) => t.squadId === sid);
+    if (!event || !team) return { ...base, team: null };
+    const div = team.divisionId || "";
+    const divTeams = teams.filter((t) => (t.divisionId || "") === div);
+    const ids = new Set(divTeams.map((t) => t.id));
+    const divGames = games.filter((g) => !g.phase && ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
+    const table = standings(divTeams, divGames);
+    const rank = table.findIndex((r) => r.team.id === team.id) + 1;
+    const me = table[rank - 1] || { w: 0, l: 0, played: 0 };
+    const spirit = spiritTable(divTeams, games.filter((g) => ids.has(g.teamA?.id) || ids.has(g.teamB?.id)));
+    return {
+      ...base,
+      team,
+      rank,
+      total: divTeams.length,
+      w: me.w,
+      l: me.l,
+      played: me.played,
+      spiritFirst: base.finished && spirit[0]?.team.id === team.id && spirit[0].count > 0,
+      divisionName: (event.divisions || []).length > 1 ? event.divisions.find((d) => d.id === div)?.name || "" : "",
+    };
+  }));
 }
 
 export async function listSquadTournaments(sid) {

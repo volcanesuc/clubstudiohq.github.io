@@ -18,6 +18,8 @@ import {
   profileUrl,
   regenerateInvite,
   repairMemberLinks,
+  squadResults,
+  squadUrl,
   syncSquadRegistrations,
   saveMember,
   saveSquad,
@@ -54,6 +56,8 @@ const state = {
   owners: [], // perfiles de los admins
   openEvents: [],
   editing: "", // id del jugador en edición
+  tab: new URLSearchParams(location.search).get("tab") || "torneos",
+  results: null, // resultado del equipo en cada torneo (se carga aparte)
 };
 
 const admin = () => isSquadAdmin(state.squad, state.user?.uid);
@@ -118,28 +122,194 @@ function header() {
   const s = state.squad;
   const n = state.members.length;
   const f = state.members.filter((m) => m.gender === "F").length;
+  const color = s.color || "#19473f";
+  const playerLink = admin() && state.invites?.player ? joinUrl(state.invites.player) : "";
   return `
-    <section class="ev-card d-flex align-items-center gap-3 flex-wrap">
-      ${teamBadge(s, 72)}
-      <div class="flex-grow-1 min-w-0">
-        <h1 class="h3 fw-bold mb-0">${esc(s.name)}</h1>
-        <div class="ev-muted small">${esc([s.city, exf(EX.playersSummary, { n, f, m: state.members.filter((m) => m.gender === "M").length })].filter(Boolean).join(" · "))}</div>
+    <section class="tp-hero">
+      <div class="tp-hero__banner" style="background: radial-gradient(120% 140% at 100% 0%, rgba(34, 211, 238, .35) 0%, transparent 55%), linear-gradient(135deg, ${esc(color)}, #2e1065)"></div>
+      <div class="tp-hero__body">
+        <div class="tp-hero__logo">${teamBadge(s, 112)}</div>
+        <h1 class="tp-hero__name">${esc(s.name)}</h1>
+        ${s.city ? `<div class="tp-hero__city"><i class="bi bi-geo-alt me-1"></i>${esc(s.city)}</div>` : ""}
+        <div class="tp-hero__chips">
+          <span class="ev-chip"><i class="bi bi-people me-1"></i>${esc(exf(EX.playersCount, { n }))}</span>
+          <span class="ev-chip">${f} F · ${n - f - state.members.filter((m) => !m.gender).length} M</span>
+          ${admin() ? `<span class="ev-chip ev-chip--ok"><i class="bi bi-shield-check me-1"></i>${esc(EX.sqAdminBadge)}</span>` : isMember() ? `<span class="ev-chip"><i class="bi bi-person-check me-1"></i>${esc(EX.sqMemberBadge)}</span>` : ""}
+        </div>
+        <div class="tp-hero__actions">
+          ${playerLink ? `<button class="btn tn-btn-grad" data-copy="${esc(playerLink)}"><i class="bi bi-link-45deg me-1"></i>${esc(EX.sqInvitePlayers)}</button>` : ""}
+          ${isMember() ? `<a class="btn btn-light" href="/torneos/perfil.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>` : ""}
+          <button class="btn btn-light" data-copy="${esc(location.origin + squadUrl(SID))}"><i class="bi bi-share me-1"></i>${esc(EX.tpShare)}</button>
+        </div>
       </div>
-      ${admin() ? `<span class="ev-chip ev-chip--ok"><i class="bi bi-shield-check me-1"></i>${esc(EX.sqAdminBadge)}</span>` : isMember() ? `<span class="ev-chip">${esc(EX.sqMemberBadge)}</span>` : ""}
     </section>`;
+}
+
+// Vitrina: podios y espíritu en torneos terminados, más el récord total
+function honorsShelf() {
+  const r = state.results;
+  if (!state.tournaments.length) return "";
+  if (!r) return `<section class="tp-shelf"><div class="tp-skel"></div></section>`;
+  const done = r.filter((x) => x.team && x.finished && x.played);
+  const count = (rank) => done.filter((x) => x.rank === rank).length;
+  const spirit = r.filter((x) => x.spiritFirst).length;
+  const w = r.reduce((s, x) => s + (x.w || 0), 0);
+  const l = r.reduce((s, x) => s + (x.l || 0), 0);
+  const medal = (icon, n, label, cls) => `
+    <div class="tp-medal ${n ? "" : "is-empty"}">
+      <div class="tp-medal__icon ${cls}">${icon}${n ? `<span class="tp-medal__n">${n}</span>` : ""}</div>
+      <div class="tp-medal__l">${esc(label)}</div>
+    </div>`;
+  return `
+    <section class="tp-shelf">
+      <div class="tp-medals">
+        ${medal("1", count(1), EX.tpFirst, "is-gold")}
+        ${medal("2", count(2), EX.tpSecond, "is-silver")}
+        ${medal("3", count(3), EX.tpThird, "is-bronze")}
+        ${medal("<i class=\"bi bi-heart-fill\"></i>", spirit, EX.tpSpirit, "is-spirit")}
+      </div>
+      <div class="tp-record">
+        <div><b>${r.filter((x) => x.team).length}</b><span>${esc(EX.pfTournaments)}</span></div>
+        <div><b>${w}-${l}</b><span>${esc(EX.tpRecord)}</span></div>
+        <div><b>${w + l ? Math.round((w / (w + l)) * 100) : 0}%</b><span>${esc(EX.tpWinPct)}</span></div>
+      </div>
+    </section>`;
+}
+
+const ordinal = (n) => `${n}º`;
+
+function resultChip(x) {
+  if (!x?.team) return "";
+  if (x.finished && x.played) {
+    if (x.rank <= 3) return `<span class="tp-place tp-place--${x.rank}">${["", "🥇", "🥈", "🥉"][x.rank]} ${esc(exf(EX.tpPlace, { n: ordinal(x.rank) }))}</span>`;
+    return `<span class="tp-place">${esc(exf(EX.tpPlaceOf, { n: ordinal(x.rank), total: x.total }))}</span>`;
+  }
+  if (x.live) return `<span class="tp-place tp-place--live"><span class="sb-live-dot"></span> ${esc(EX.tpLive)}${x.played ? ` · ${esc(ordinal(x.rank))}` : ""}</span>`;
+  return `<span class="tp-place">${esc(EX.tpUpcoming)}</span>`;
+}
+
+function tournamentsTab() {
+  const byEvent = new Map((state.results || []).map((x) => [x.ptr.eventId, x]));
+  const list = state.tournaments.map((t) => {
+    const x = byEvent.get(t.eventId);
+    const e = x?.event || {};
+    const reg = state.regs.get(t.eventId);
+    const missing = admin() ? state.missing.get(t.eventId) || [] : [];
+    const thumb = e.image
+      ? `<div class="tp-ev__img" style="background-image:url('${esc(e.image)}')"></div>`
+      : `<div class="tp-ev__img tp-ev__img--plain">🥏</div>`;
+    return `
+      <div class="tp-ev">
+        <a class="tp-ev__main" href="${esc(eventUrl({ id: t.eventId, slug: e.slug || t.eventSlug }))}">
+          ${thumb}
+          <div class="flex-grow-1 min-w-0">
+            <div class="tp-ev__name">${esc(e.name || t.eventName || "—")}</div>
+            <div class="tp-ev__meta">${esc([fmtDateRange(e.startDate || t.startDate, e.endDate || t.endDate), x?.divisionName].filter(Boolean).join(" · "))}</div>
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+              ${resultChip(x)}
+              ${x?.team && x.played ? `<span class="tp-ev__rec">${x.w}-${x.l}</span>` : ""}
+              ${admin() && reg ? regChip(reg.status) : ""}
+            </div>
+          </div>
+          <i class="bi bi-chevron-right ev-muted"></i>
+        </a>
+        ${admin() && reg ? `<div class="tp-ev__admin"><a class="small" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a><span class="small ev-muted">${esc(exf(EX.playersCount, { n: (reg.players || []).length }))}</span></div>` : ""}
+        ${missing.length ? `
+          <div class="alert alert-warning py-2 px-3 mb-0 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="small">${esc(exf(EX.sqMissingInReg, { n: missing.length, names: missing.map((m) => m.name).join(", ") }))}</span>
+            <button class="btn btn-sm btn-warning" data-reg-add="${esc(t.eventId)}"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddToReg)}</button>
+          </div>` : ""}
+      </div>`;
+  }).join("");
+  const open = admin() && state.openEvents.length ? `
+    <div class="tp-list-title mt-4">${esc(EX.openRegistrations)}</div>
+    <div class="tp-list">
+      ${state.openEvents.map((e) => `
+        <div class="tp-row">
+          <div class="flex-grow-1 min-w-0"><div class="fw-semibold">${esc(e.name)}</div><div class="small ev-muted">${esc(fmtDateRange(e.startDate, e.endDate))}</div></div>
+          <a class="btn btn-sm tn-btn-grad" href="/torneos/equipo.html?${new URLSearchParams({ e: e.id, s: SID })}">${esc(EX.registerTeam)}</a>
+        </div>`).join("")}
+    </div>` : "";
+  return `
+    <div class="tp-list-title">${esc(exf(EX.tpEventsShown, { n: state.tournaments.length }))}</div>
+    ${list ? `<div class="tp-list">${list}</div>` : `<div class="tp-empty">${esc(EX.sqNoTournaments)}</div>`}
+    ${open}`;
 }
 
 function captainOptions(selected) {
   return `<option value="">—</option>${state.members.map((m) => `<option value="${esc(m.id)}" ${m.id === selected ? "selected" : ""}>${esc(m.name)}${m.number !== null && m.number !== undefined ? ` #${esc(m.number)}` : ""}</option>`).join("")}`;
 }
 
+function rosterRow(m) {
+  const s = state.squad;
+  if (admin() && state.editing === m.id) {
+    return `
+      <form class="tp-row" data-member-form="${esc(m.id)}">
+        <input class="form-control form-control-sm" style="width:4.5rem" data-m="number" type="number" min="0" max="999" value="${esc(m.number ?? "")}" aria-label="${esc(EX.playerNumber)}" />
+        <input class="form-control form-control-sm" data-m="name" value="${esc(m.name)}" required aria-label="${esc(EX.playerName)}" />
+        <select class="form-select form-select-sm" style="width:5rem" data-m="gender" aria-label="${esc(EX.playerGender)}">
+          <option value="">—</option><option ${m.gender === "F" ? "selected" : ""}>F</option><option ${m.gender === "M" ? "selected" : ""}>M</option>
+        </select>
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-check-lg"></i></button>
+        <button class="btn btn-sm btn-light" type="button" data-cancel-edit><i class="bi bi-x-lg"></i></button>
+      </form>`;
+  }
+  const roles = [];
+  if (m.id === s.captainId) roles.push(`<span class="tp-role tp-role--cap" title="${esc(EX.captain)}"><i class="bi bi-star-fill"></i> ${esc(EX.tpCaptain)}</span>`);
+  if (m.id === s.spiritCaptainId) roles.push(`<span class="tp-role tp-role--spirit" title="${esc(EX.spiritCaptain)}"><i class="bi bi-heart-fill"></i> ${esc(EX.tpSpiritCaptain)}</span>`);
+  if (m.uid && (s.ownerUids || []).includes(m.uid)) roles.push(`<span class="tp-role"><i class="bi bi-shield-check"></i> ${esc(EX.sqAdminBadge)}</span>`);
+  const sub = [m.number !== null && m.number !== undefined && m.number !== "" ? `#${m.number}` : "", m.gender || "", m.uid ? "" : EX.tpNoAccount].filter(Boolean).join(" · ");
+  const inner = `
+    <span class="tp-row__av">${avatarHtml(m, 46)}${m.id === s.captainId ? `<span class="tp-crown" title="${esc(EX.captain)}"><i class="bi bi-star-fill"></i></span>` : ""}</span>
+    <div class="flex-grow-1 min-w-0">
+      <div class="tp-row__name">${esc(m.name)}</div>
+      <div class="tp-row__sub">${esc(sub || EX.pfRolePlayer)}</div>
+    </div>
+    <div class="tp-row__roles">${roles.join("")}</div>`;
+  return `
+    <div class="tp-row ${m.gender === "" ? "is-incomplete" : ""}">
+      ${m.uid ? `<a class="tp-row__link" href="${esc(profileUrl(m.uid))}">${inner}</a>` : `<div class="tp-row__link">${inner}</div>`}
+      ${admin() ? `
+        <div class="tp-row__tools">
+          <button class="btn btn-sm btn-light" data-edit-member="${esc(m.id)}" title="${esc(EX.edit)}"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm btn-light text-danger" data-del-member="${esc(m.id)}" title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>
+        </div>` : ""}
+    </div>`;
+}
+
+function playersTab() {
+  // capitanes primero, luego por número
+  const s = state.squad;
+  const weight = (m) => (m.id === s.captainId ? 0 : m.id === s.spiritCaptainId ? 1 : 2);
+  const members = state.members.slice().sort((a, b) => weight(a) - weight(b) || (a.number ?? 999) - (b.number ?? 999) || String(a.name).localeCompare(String(b.name)));
+  return `
+    ${admin() && !isMember() ? `
+      <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
+        <span class="small">${esc(EX.sqNotInRoster)}</span>
+        <button class="btn btn-sm btn-primary" id="sqAddSelf"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddSelf)}</button>
+      </div>` : ""}
+    <div class="tp-list-title">${esc(exf(EX.tpPlayersShown, { n: members.length }))}</div>
+    ${members.length ? `<div class="tp-list">${members.map(rosterRow).join("")}</div>` : `<div class="tp-empty">${esc(EX.sqNoPlayers)}</div>`}
+    ${admin() ? `
+      <form id="sqAddMember" class="tp-add">
+        <div class="small fw-bold mb-2">${esc(EX.addPlayer)}</div>
+        <div class="d-flex gap-2 flex-wrap">
+          <input class="form-control form-control-sm" style="width:4.5rem" id="amNumber" type="number" min="0" max="999" placeholder="#" aria-label="${esc(EX.playerNumber)}" />
+          <input class="form-control form-control-sm flex-grow-1" style="min-width:10rem;width:auto" id="amName" placeholder="${esc(EX.playerName)}" required />
+          <select class="form-select form-select-sm" style="width:5rem" id="amGender" aria-label="${esc(EX.playerGender)}"><option value="">F/M</option><option>F</option><option>M</option></select>
+          <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.add)}</button>
+        </div>
+        <div class="form-text">${esc(EX.sqManualHint)}</div>
+      </form>` : ""}
+    ${isMember() && !admin() ? `<div class="text-center mt-4"><button class="btn btn-sm btn-outline-danger" id="sqLeave">${esc(EX.sqLeave)}</button></div>` : ""}`;
+}
+
 function editSection() {
-  if (!admin()) return "";
   const s = state.squad;
   return `
-    <details class="ev-card" ${state.members.length ? "" : "open"}>
-      <summary class="fw-bold">${esc(EX.sqEditTeam)}</summary>
-      <form id="sqForm" class="row g-3 mt-1">
+    <section class="ev-card">
+      <h2 class="h6 fw-bold mb-3">${esc(EX.sqEditTeam)}</h2>
+      <form id="sqForm" class="row g-3">
         <div class="col-12 col-md-auto d-flex align-items-center gap-3">
           <div id="sqLogoPrev">${teamBadge(s, 64)}</div>
           <div>
@@ -158,60 +328,6 @@ function editSection() {
         </div>
         <div class="col-12 text-end"><button class="btn btn-primary" type="submit">${esc(EX.save)}</button></div>
       </form>
-    </details>`;
-}
-
-function rosterRow(m) {
-  const s = state.squad;
-  const tags = `${m.id === s.captainId ? `<span class="tn-cap tn-cap--c" title="${esc(EX.captain)}">C</span>` : ""}${m.id === s.spiritCaptainId ? `<span class="tn-cap tn-cap--s" title="${esc(EX.spiritCaptain)}">E</span>` : ""}`;
-  if (admin() && state.editing === m.id) {
-    return `
-      <form class="tn-roster-row" data-member-form="${esc(m.id)}">
-        <input class="form-control form-control-sm" style="width:4.5rem" data-m="number" type="number" min="0" max="999" value="${esc(m.number ?? "")}" aria-label="${esc(EX.playerNumber)}" />
-        <input class="form-control form-control-sm" data-m="name" value="${esc(m.name)}" required aria-label="${esc(EX.playerName)}" />
-        <select class="form-select form-select-sm" style="width:5rem" data-m="gender" aria-label="${esc(EX.playerGender)}">
-          <option value="">—</option><option ${m.gender === "F" ? "selected" : ""}>F</option><option ${m.gender === "M" ? "selected" : ""}>M</option>
-        </select>
-        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-check-lg"></i></button>
-        <button class="btn btn-sm btn-light" type="button" data-cancel-edit><i class="bi bi-x-lg"></i></button>
-      </form>`;
-  }
-  const name = m.uid ? `<a class="fw-semibold text-decoration-none" href="${esc(profileUrl(m.uid))}">${esc(m.name)}</a>` : `<span class="fw-semibold">${esc(m.name)}</span>`;
-  return `
-    <div class="tn-roster-row">
-      <div class="tn-roster-num">${esc(m.number ?? "–")}</div>
-      ${avatarHtml(m, 36)}
-      <div class="flex-grow-1 min-w-0 text-truncate">${name}${tags}
-        ${m.uid ? "" : `<div class="small ev-muted">${esc(EX.sqNoAccount)}</div>`}
-      </div>
-      ${m.gender ? `<span class="ev-chip">${esc(m.gender)}</span>` : `<span class="ev-chip ev-chip--wait" title="${esc(EX.sqMissingGender)}">?</span>`}
-      ${admin() ? `
-        <button class="btn btn-sm btn-light" data-edit-member="${esc(m.id)}" title="${esc(EX.edit)}"><i class="bi bi-pencil"></i></button>
-        <button class="btn btn-sm btn-light text-danger" data-del-member="${esc(m.id)}" title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>` : ""}
-    </div>`;
-}
-
-function rosterSection() {
-  return `
-    <section class="ev-card">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <h2 class="h6 mb-0">${esc(EX.regSectionPlayers)}</h2>
-        ${isMember() ? `<a class="small" href="/torneos/perfil.html">${esc(EX.sqEditMyProfile)}</a>` : ""}
-      </div>
-      ${admin() && !isMember() ? `
-        <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 py-2 my-2">
-          <span class="small">${esc(EX.sqNotInRoster)}</span>
-          <button class="btn btn-sm btn-primary" id="sqAddSelf"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddSelf)}</button>
-        </div>` : ""}
-      ${state.members.length ? state.members.map(rosterRow).join("") : `<div class="ev-muted small py-2">${esc(EX.sqNoPlayers)}</div>`}
-      ${admin() ? `
-        <form id="sqAddMember" class="d-flex gap-2 mt-2 flex-wrap">
-          <input class="form-control form-control-sm" style="width:4.5rem" id="amNumber" type="number" min="0" max="999" placeholder="#" aria-label="${esc(EX.playerNumber)}" />
-          <input class="form-control form-control-sm flex-grow-1" style="min-width:10rem;width:auto" id="amName" placeholder="${esc(EX.playerName)}" required />
-          <select class="form-select form-select-sm" style="width:5rem" id="amGender" aria-label="${esc(EX.playerGender)}"><option value="">F/M</option><option>F</option><option>M</option></select>
-          <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.addPlayer)}</button>
-        </form>
-        <div class="form-text">${esc(EX.sqManualHint)}</div>` : ""}
     </section>`;
 }
 
@@ -225,16 +341,16 @@ function inviteBlock(role, title, text) {
       <div class="input-group input-group-sm">
         <input class="form-control" readonly value="${esc(url)}" aria-label="${esc(title)}" />
         <button class="btn tn-btn-grad" type="button" data-copy="${esc(url)}"><i class="bi bi-link-45deg me-1"></i>${esc(EX.sqCopyInvite)}</button>
+        <a class="btn btn-outline-success" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(exf(EX.tpWaInvite, { team: state.squad.name, url }))}" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>
         <button class="btn btn-outline-secondary" type="button" data-regen="${role}" title="${esc(EX.sqRegenerate)}"><i class="bi bi-arrow-repeat"></i></button>
       </div>
     </div>`;
 }
 
 function inviteSection() {
-  if (!admin()) return "";
   return `
     <section class="ev-card d-grid gap-3">
-      <h2 class="h6 mb-0">${esc(EX.sqInviteTitle)}</h2>
+      <h2 class="h6 fw-bold mb-0">${esc(EX.sqInviteTitle)}</h2>
       ${inviteBlock(INVITE_ROLE.PLAYER, EX.sqInvitePlayers, EX.sqInvitePlayersText)}
       ${inviteBlock(INVITE_ROLE.ADMIN, EX.sqInviteAdmins, EX.sqInviteAdminsText)}
       <div class="form-text m-0">${esc(EX.sqRegenerateHint)}</div>
@@ -242,68 +358,56 @@ function inviteSection() {
 }
 
 function ownersSection() {
-  if (!admin()) return "";
   const solo = state.owners.length <= 1;
   return `
     <section class="ev-card">
-      <h2 class="h6 mb-2">${esc(EX.sqAdmins)}</h2>
+      <h2 class="h6 fw-bold mb-2">${esc(EX.sqAdmins)}</h2>
       ${state.owners.map((o) => `
         <div class="tn-roster-row">
-          ${avatarHtml(o, 32)}
+          ${avatarHtml(o, 36)}
           <div class="flex-grow-1 min-w-0 text-truncate">${esc(o.name || EX.sqUnnamed)}${o.uid === state.user.uid ? ` <span class="small ev-muted">(${esc(EX.sqYou)})</span>` : ""}</div>
           ${solo ? "" : `<button class="btn btn-sm btn-light text-danger" data-del-owner="${esc(o.uid)}">${esc(o.uid === state.user.uid ? EX.sqLeaveAdmin : EX.sqRemoveAdmin)}</button>`}
         </div>`).join("")}
     </section>`;
 }
 
-function tournamentsSection() {
-  const rows = state.tournaments.map((t) => {
-    const reg = state.regs.get(t.eventId);
-    const missing = admin() ? state.missing.get(t.eventId) || [] : [];
-    return `
-      <div class="tn-roster-row flex-wrap">
-        <div class="flex-grow-1 min-w-0">
-          <a class="fw-semibold text-decoration-none" href="${esc(eventUrl({ id: t.eventId, slug: t.eventSlug }))}">${esc(t.eventName || "—")}</a>
-          <div class="small ev-muted">${esc([fmtDateRange(t.startDate, t.endDate), reg ? exf(EX.playersCount, { n: (reg.players || []).length }) : ""].filter(Boolean).join(" · "))}</div>
-        </div>
-        ${reg ? regChip(reg.status) : ""}
-        ${admin() && reg ? `<a class="btn btn-sm btn-light" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}">${esc(EX.edit)}</a>` : ""}
-        ${missing.length ? `
-          <div class="alert alert-warning w-100 py-2 px-3 mb-0 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span class="small">${esc(exf(EX.sqMissingInReg, { n: missing.length, names: missing.map((m) => m.name).join(", ") }))}</span>
-            <button class="btn btn-sm btn-warning" data-reg-add="${esc(t.eventId)}"><i class="bi bi-person-plus me-1"></i>${esc(EX.sqAddToReg)}</button>
-          </div>` : ""}
-      </div>`;
-  }).join("");
-  const open = admin() && state.openEvents.length ? `
-    <div class="mt-3 small fw-bold">${esc(EX.openRegistrations)}</div>
-    ${state.openEvents.map((e) => `
-      <div class="tn-roster-row">
-        <div class="flex-grow-1 min-w-0"><div class="fw-semibold">${esc(e.name)}</div><div class="small ev-muted">${esc(fmtDateRange(e.startDate, e.endDate))}</div></div>
-        <a class="btn btn-sm tn-btn-grad" href="/torneos/equipo.html?${new URLSearchParams({ e: e.id, s: SID })}">${esc(EX.registerTeam)}</a>
-      </div>`).join("")}` : "";
+function adminTab() {
   return `
-    <section class="ev-card">
-      <h2 class="h6 mb-1">${esc(EX.sqTournaments)}</h2>
-      ${rows || `<div class="ev-muted small py-1">${esc(EX.sqNoTournaments)}</div>`}
-      ${open}
-    </section>`;
+    <div class="d-grid gap-3">
+      ${inviteSection()}
+      ${editSection()}
+      ${ownersSection()}
+      <div class="text-center"><button class="btn btn-sm btn-outline-danger" id="sqLeave">${esc(EX.sqLeave)}</button></div>
+    </div>`;
 }
 
 function render() {
   document.title = `${state.squad.name} · ClubStudioHQ`;
+  const tabs = [
+    ["torneos", `<i class="bi bi-trophy"></i> ${esc(EX.tpTabEvents)}`],
+    ["jugadores", `<i class="bi bi-people"></i> ${esc(EX.tpTabPlayers)}`],
+    ...(admin() ? [["admin", `<i class="bi bi-gear"></i> ${esc(EX.tpTabAdmin)}`]] : []),
+  ];
+  if (!tabs.some(([id]) => id === state.tab)) state.tab = "torneos";
   root.innerHTML = `
-    ${state.user ? `<a class="small ev-muted text-decoration-none" href="/torneos/equipo.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>` : ""}
-    <div class="d-grid gap-3 mt-1">
+    <div class="tp-wrap">
+      ${state.user ? `<a class="small ev-muted text-decoration-none" href="/torneos/equipo.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>` : ""}
       ${header()}
-      ${editSection()}
-      ${inviteSection()}
-      <div class="row g-3">
-        <div class="col-12 col-lg-7">${rosterSection()}</div>
-        <div class="col-12 col-lg-5 d-grid gap-3 align-content-start">${tournamentsSection()}${ownersSection()}</div>
-      </div>
-      ${isMember() || admin() ? `<div class="text-end"><button class="btn btn-sm btn-outline-danger" id="sqLeave">${esc(EX.sqLeave)}</button></div>` : ""}
+      ${honorsShelf()}
+      <nav class="tp-tabs" role="tablist">
+        ${tabs.map(([id, label]) => `<button class="tp-tab ${state.tab === id ? "is-active" : ""}" data-tp-tab="${id}" role="tab">${label}</button>`).join("")}
+      </nav>
+      <div class="tp-panel">${state.tab === "jugadores" ? playersTab() : state.tab === "admin" ? adminTab() : tournamentsTab()}</div>
     </div>`;
+}
+
+async function loadResults() {
+  if (!state.tournaments.length) return;
+  state.results = await squadResults(SID, state.tournaments).catch((err) => {
+    console.warn("[equipo] resultados:", err?.code || err);
+    return [];
+  });
+  render();
 }
 
 /* =========================
@@ -353,6 +457,11 @@ root.addEventListener("submit", (ev) => {
 
 root.addEventListener("click", (ev) => {
   const t = ev.target;
+  const tab = t.closest("[data-tp-tab]");
+  if (tab) {
+    state.tab = tab.dataset.tpTab;
+    return render();
+  }
   const copy = t.closest("[data-copy]");
   if (copy) {
     const url = copy.dataset.copy;
@@ -467,6 +576,7 @@ root.addEventListener("click", (ev) => {
       return;
     }
     render();
+    loadResults();
   } catch (err) {
     console.error(err);
     alertBox(`${EX.error} ${err?.code || err?.message || ""}`, "danger");
