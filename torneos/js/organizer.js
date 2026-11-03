@@ -212,7 +212,7 @@ function renderInfo() {
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label small" for="eSlug">${esc(EX.eventSlug)}</label>
-          <div class="input-group"><span class="input-group-text small">/public/event.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
+          <div class="input-group"><span class="input-group-text small">/torneos/evento.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
         </div>
         ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
         ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
@@ -600,7 +600,19 @@ function approvalCard(e) {
   if (st === APPROVAL.APPROVED) {
     const plan = a.plan === "paid" ? EX.planPaid : EX.planTrial;
     const until = a.expiresAt ? ` ${exf(EX.approvalExpires, { date: fmtWhen(a.expiresAt, { day: "numeric", month: "short", year: "numeric" }) })}` : "";
-    return `<div class="ev-card tn-approval is-approved mb-3 small"><i class="bi bi-check-circle me-1"></i>${esc(exf(EX.approvalApproved, { plan }))}${esc(until)}${a.adminNote ? ` · ${esc(a.adminNote)}` : ""}</div>`;
+    const status = `<div class="small"><i class="bi bi-check-circle me-1"></i>${esc(exf(EX.approvalApproved, { plan }))}${esc(until)}${a.adminNote ? ` · ${esc(a.adminNote)}` : ""}</div>`;
+    // activo pero sin publicar: que se note y sea un clic
+    if (!e.isPublic || e.status !== EVENT_STATUS.PUBLISHED) {
+      return `
+        <div class="ev-card tn-approval is-approved mb-3">
+          ${status}
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+            <div class="small ev-muted">${esc(EX.publishHint)}</div>
+            <button class="btn btn-sm tn-btn-grad" type="button" id="tnPublishNow"><i class="bi bi-megaphone me-1"></i>${esc(EX.publishNow)}</button>
+          </div>
+        </div>`;
+    }
+    return `<div class="ev-card tn-approval is-approved mb-3">${status}</div>`;
   }
   if (st === APPROVAL.REQUESTED) {
     return `<div class="ev-card tn-approval mb-3 small"><i class="bi bi-hourglass-split me-1"></i>${esc(EX.approvalPending)}</div>`;
@@ -617,6 +629,16 @@ function approvalCard(e) {
 }
 
 function bindApprovalCard() {
+  const publish = document.getElementById("tnPublishNow");
+  if (publish) {
+    publish.onclick = () => run(async () => {
+      await saveEvent(state.event.id, { isPublic: true, status: EVENT_STATUS.PUBLISHED });
+      state.event.isPublic = true;
+      state.event.status = EVENT_STATUS.PUBLISHED;
+      alertBox(EX.published);
+      renderEvent();
+    });
+  }
   const form = document.getElementById("tnApprovalForm");
   if (!form) return;
   form.onsubmit = (ev) => {

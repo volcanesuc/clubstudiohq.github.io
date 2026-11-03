@@ -258,6 +258,9 @@ export const EX = {
   planTrial: "Prueba gratis",
   planPaid: "Pagado",
   approvalExpires: "hasta {date}",
+  publishHint: "Ya está activo, pero todavía no es visible: publicalo para que aparezca en Torneos y cualquiera vea la página.",
+  publishNow: "Publicar ahora",
+  published: "¡Publicado! Ya aparece en Torneos.",
 
   // admin de la plataforma
   adminTitle: "Aprobaciones de torneos",
