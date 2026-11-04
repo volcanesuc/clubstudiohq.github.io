@@ -43,6 +43,19 @@ service cloud.firestore {
         && (e.get("registrationDeadlineAt", null) == null || request.time <= e.registrationDeadlineAt);
     }
 
+    // roster cerrado (rosterDeadlineAt = fin de ese día): los equipos ya no cambian jugadores
+    function rosterLockedNow(eventId) {
+      let e = eventData(eventId);
+      return e.get("rosterDeadlineAt", null) != null && request.time > e.rosterDeadlineAt;
+    }
+
+    // tamaño del roster según las reglas del torneo (rosterMax 0 = sin máximo)
+    function rosterSizeOk(eventId, players) {
+      let r = eventData(eventId).get("rules", {});
+      return players.size() >= r.get("rosterMin", 0)
+        && (r.get("rosterMax", 0) == 0 || players.size() <= r.get("rosterMax", 0));
+    }
+
     function isActive(eventId) {
       return eventData(eventId).approval.status == "approved";
     }
@@ -141,7 +154,8 @@ service cloud.firestore {
         allow update: if managesEntry(resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             "city", "logo", "players", "captainId", "spiritCaptainId", "updatedAt"
-          ]);
+          ])
+          && (!rosterLockedNow(eventId) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["players"]));
       }
 
       // inscripciones: las manda cualquier cuenta de Google si el torneo está activo y con inscripciones abiertas
@@ -154,7 +168,8 @@ service cloud.firestore {
           && request.resource.data.status == "pending"
           && !("teamId" in request.resource.data)
           && isActive(eventId)
-          && registrationOpenNow(eventId);
+          && registrationOpenNow(eventId)
+          && rosterSizeOk(eventId, request.resource.data.get("players", []));
 
         allow update: if isPlatformAdmin() || isOrganizer(eventId) || (
           managesEntry(resource.data)
@@ -173,6 +188,10 @@ service cloud.firestore {
               || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["name", "color", "divisionId", "squadId"]))
           // si cambia de equipo, tiene que ser uno que administra
           && (request.resource.data.get("squadId", "") == "" || isSquadAdmin(request.resource.data.squadId))
+          // con el roster cerrado no se cambian jugadores; si cambian, tiene que cumplir el mínimo y máximo
+          && (!rosterLockedNow(eventId) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["players"]))
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["players"])
+              || rosterSizeOk(eventId, request.resource.data.get("players", [])))
         );
 
         allow delete: if isPlatformAdmin() || isOrganizer(eventId)

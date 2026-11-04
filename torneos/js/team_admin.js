@@ -5,10 +5,12 @@
 //   /torneos/equipo.html?e=EVENTO[&s=EQUIPO] nueva inscripción
 //   /torneos/equipo.html?e=EVENTO&r=ID       editar una inscripción
 import { EX, exf } from "/torneos/js/strings.js";
+import { eventRules, rosterProblem } from "/torneos/js/model.js";
 import {
   REG,
   isApproved,
   registrationIsOpen,
+  rosterLocked,
   isPlatformAdmin,
   listPublicEvents,
   loadEvent,
@@ -158,6 +160,10 @@ async function renderList() {
    Inscripción
 ========================= */
 const divisions = () => (state.event.divisions?.length ? state.event.divisions : [{ id: "open", name: "Open" }]);
+// "7–15 jugadores" / "mínimo 7"
+const rosterRangeText = (r) => (r.rosterMin && r.rosterMax ? exf(EX.regRosterRange, { min: r.rosterMin, max: r.rosterMax })
+  : r.rosterMin ? exf(EX.regRosterAtLeast, { n: r.rosterMin }) : r.rosterMax ? exf(EX.regRosterAtMost, { n: r.rosterMax }) : "");
+
 const chosen = () => state.members.filter((m) => state.selected.has(m.id));
 
 function statusBanner(reg) {
@@ -185,6 +191,8 @@ function renderNoSquad() {
 }
 
 function renderForm() {
+  // ya inscrito y pasó la fecha de rosters: los jugadores quedan fijos
+  const lockRoster = !!state.reg?.id && rosterLocked(state.event);
   const e = state.event;
   const r = state.reg;
   const s = state.squad;
@@ -226,17 +234,18 @@ function renderForm() {
 
       <section class="ev-card">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-          <h2 class="h6 mb-0">${esc(EX.regPickPlayers)}</h2>
+          <h2 class="h6 mb-0">${esc(EX.regPickPlayers)} <span class="small ev-muted fw-normal">${esc(rosterRangeText(eventRules(state.event)))}</span></h2>
           <span class="small ev-muted" id="regSummary"></span>
         </div>
+        ${lockRoster ? `<div class="alert alert-secondary py-2 small d-flex gap-2 align-items-start"><i class="bi bi-lock-fill mt-1"></i><span>${esc(exf(EX.rosterLockedMsg, { date: state.event.rosterDeadline || "" }))}</span></div>` : ""}
         ${state.members.length ? `
           <div class="form-check mb-1">
-            <input class="form-check-input" type="checkbox" id="regAll" ${state.selected.size === state.members.length ? "checked" : ""} />
+            <input class="form-check-input" type="checkbox" id="regAll" ${state.selected.size === state.members.length ? "checked" : ""} ${lockRoster ? "disabled" : ""} />
             <label class="form-check-label small" for="regAll">${esc(EX.regSelectAll)}</label>
           </div>
           ${state.members.map((m) => `
             <label class="tn-roster-row" for="pk_${esc(m.id)}">
-              <input class="form-check-input m-0" type="checkbox" id="pk_${esc(m.id)}" data-pick="${esc(m.id)}" ${state.selected.has(m.id) ? "checked" : ""} />
+              <input class="form-check-input m-0" type="checkbox" id="pk_${esc(m.id)}" data-pick="${esc(m.id)}" ${state.selected.has(m.id) ? "checked" : ""} ${lockRoster ? "disabled" : ""} />
               <div class="tn-roster-num">${esc(m.number ?? "–")}</div>
               ${avatarHtml(m, 32)}
               <div class="flex-grow-1 min-w-0 text-truncate">${esc(m.name)}</div>
@@ -312,11 +321,18 @@ function bindForm() {
     ev.preventDefault();
     const r = state.reg;
     const s = state.squad;
-    const players = chosen().map((m) => ({ id: m.id, uid: m.uid || null, name: m.name, number: m.number ?? null, gender: m.gender || "" }));
+    const locked = !!r.id && rosterLocked(state.event);
+    // roster cerrado: se guardan los mismos jugadores inscritos (las reglas no dejan cambiarlos)
+    const players = locked ? (r.players || []) : chosen().map((m) => ({ id: m.id, uid: m.uid || null, name: m.name, number: m.number ?? null, gender: m.gender || "" }));
     const captainId = $("#regCaptain").value;
     const spiritCaptainId = $("#regSpirit").value;
 
     if (!players.length) return alertBox(EX.regNeedPlayers, "warning");
+    // tamaño del roster según las reglas del torneo (con el roster cerrado ya no se valida: no cambia)
+    const rr = eventRules(state.event);
+    const bad = locked ? "" : rosterProblem(players.length, rr);
+    if (bad === "min") return alertBox(exf(EX.regRosterMin, { n: rr.rosterMin }), "warning");
+    if (bad === "max") return alertBox(exf(EX.regRosterMax, { n: rr.rosterMax }), "warning");
     if (players.some((p) => !p.gender)) return alertBox(EX.regPlayerNoGender, "warning");
     const nums = players.map((p) => p.number).filter((n) => n !== null);
     const dups = [...new Set(nums.filter((n, i) => nums.indexOf(n) !== i))];

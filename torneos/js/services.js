@@ -49,6 +49,12 @@ export const registrationExpired = (event, now = new Date()) => {
   const end = event?.registrationDeadlineAt ? new Date(toMillis(event.registrationDeadlineAt)) : deadlineEnd(event?.registrationDeadline);
   return !!end && now > end;
 };
+// Roster cerrado: después de rosterDeadline los equipos ya no suman ni sacan jugadores (el organizador sí).
+export const rosterLocked = (event, now = new Date()) => {
+  const end = event?.rosterDeadlineAt ? new Date(toMillis(event.rosterDeadlineAt)) : deadlineEnd(event?.rosterDeadline);
+  return !!end && now > end;
+};
+
 // Inscripciones abiertas: el interruptor del organizador y que no haya pasado la fecha límite
 export const registrationIsOpen = (event, now = new Date()) => event?.registrationOpen === true && !registrationExpired(event, now);
 
@@ -185,9 +191,29 @@ export async function setApproval(eid, { status, plan = "", expiresAt = null, ad
 /* =========================
    Equipos
 ========================= */
+// Datos del club (squads/{id}) por id, una lectura por página aunque varios torneos lo pidan.
+const squadCache = new Map();
+function squadInfo(sid) {
+  if (!squadCache.has(sid)) {
+    squadCache.set(sid, getDoc(doc(db, COL.squads, sid)).then((d) => (d.exists() ? d.data() : null)).catch(() => null));
+  }
+  return squadCache.get(sid);
+}
+
+// Equipos del torneo. Los que vienen de un club muestran el logo, color y ciudad actuales del club
+// (al inscribirse se guarda una copia que no se actualiza si el club cambia su logo).
+// El nombre queda el del torneo: ese lo controla el organizador.
 export async function listTeams(eid) {
   const snap = await getDocs(teamsCol(eid));
-  return list(snap).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const teams = list(snap);
+  await Promise.all(teams.filter((t) => t.squadId).map(async (t) => {
+    const sq = await squadInfo(t.squadId);
+    if (!sq) return;
+    if (sq.logo) t.logo = sq.logo;
+    if (sq.color) t.color = sq.color;
+    if (sq.city) t.city = sq.city;
+  }));
+  return teams.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 }
 
 export async function saveTeam(eid, team) {
@@ -232,7 +258,9 @@ export async function loadRegistration(eid, rid) {
 export async function saveRegistration(user, event, reg) {
   const eid = event.id;
   const approved = reg.status === REG.APPROVED;
-  const fields = pick(reg, approved ? REG_FIELDS.filter((k) => !REG_LOCKED_WHEN_APPROVED.includes(k)) : REG_FIELDS);
+  // roster cerrado: la inscripción ya hecha no toca los jugadores (solo contacto, capitanes, etc.)
+  const lockPlayers = !!reg.id && rosterLocked(event);
+  const fields = pick(reg, (approved ? REG_FIELDS.filter((k) => !REG_LOCKED_WHEN_APPROVED.includes(k)) : REG_FIELDS).filter((k) => !(lockPlayers && k === "players")));
   let id = reg.id;
   if (!id) {
     id = randomId("rg");
@@ -252,7 +280,7 @@ export async function saveRegistration(user, event, reg) {
     const resubmit = reg.status === REG.REJECTED ? { status: REG.PENDING } : {};
     await setDoc(doc(regsCol(eid), id), { ...fields, ...resubmit, eventName: event.name || "", updatedAt: serverTimestamp() }, { merge: true });
     if (approved && reg.teamId) {
-      await setDoc(doc(teamsCol(eid), reg.teamId), { ...pick(reg, TEAM_MANAGER_FIELDS), updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(doc(teamsCol(eid), reg.teamId), { ...pick(reg, TEAM_MANAGER_FIELDS.filter((k) => !(lockPlayers && k === "players"))), updatedAt: serverTimestamp() }, { merge: true });
     }
   }
   const sid = reg.squadId;

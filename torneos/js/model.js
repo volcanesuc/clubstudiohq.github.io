@@ -52,6 +52,8 @@ export const DEFAULT_RULES = {
   timeoutsPerHalf: 1,
   timeoutSeconds: 75,
   halftimeMinutes: 7,
+  rosterMin: 7, // jugadores mínimos por equipo (por defecto, los que van en cancha)
+  rosterMax: 0, // 0 = sin máximo
   ratioRule: "abba", // mixto: ver RATIO_RULES
   ratioFixed: "M", // con ratioRule "fixed": mayoría de hombres (M) o mujeres (F)
   mvp: { goals: 1, assists: 1, blocks: 1, turns: 0 },
@@ -74,6 +76,9 @@ export function eventRules(event = {}) {
     timeoutsPerHalf: n(r.timeoutsPerHalf, DEFAULT_RULES.timeoutsPerHalf),
     timeoutSeconds: n(r.timeoutSeconds, DEFAULT_RULES.timeoutSeconds),
     halftimeMinutes: n(r.halftimeMinutes, DEFAULT_RULES.halftimeMinutes),
+    // torneos viejos sin el dato: 0 (sin mínimo), igual que las reglas de Firestore
+    rosterMin: n(r.rosterMin, 0),
+    rosterMax: n(r.rosterMax, 0),
     ratioRule: RATIO_RULES.includes(r.ratioRule) ? r.ratioRule : DEFAULT_RULES.ratioRule,
     ratioFixed: r.ratioFixed === "F" ? "F" : "M",
     mvp: {
@@ -88,6 +93,13 @@ export function eventRules(event = {}) {
 // Tipo de campo del torneo
 export const SURFACES = ["grass", "turf", "indoor", "beach", "other"];
 export const SURFACE_ICONS = { grass: "bi-tree", turf: "bi-grid-3x3", indoor: "bi-house", beach: "bi-sun", other: "bi-geo" };
+
+// ¿el roster cumple el mínimo y máximo del torneo? "" si sí, o "min" / "max".
+export function rosterProblem(count, rules = DEFAULT_RULES) {
+  if (rules.rosterMin && count < rules.rosterMin) return "min";
+  if (rules.rosterMax && count > rules.rosterMax) return "max";
+  return "";
+}
 
 export const other = (side) => (side === "A" ? "B" : "A");
 

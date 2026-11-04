@@ -409,7 +409,7 @@ export const eventUrl = (event) => `/torneos/evento.html?e=${encodeURIComponent(
  * @param {{ title?: string, ok?: string, cancel?: string|false, danger?: boolean, html?: string }} opts
  * @returns {Promise<boolean>} true si tocaron el botón principal
  */
-export function askConfirm(message, { title = "", ok = EX.ok || "OK", cancel = EX.cancel || "Cancelar", danger = false, html = "" } = {}) {
+export function askConfirm(message, { title = "", ok = EX.ok || "OK", cancel = EX.cancel || "Cancelar", danger = false, html = "", onOpen = null, read = null } = {}) {
   return new Promise((resolve) => {
     const wrap = document.createElement("div");
     wrap.className = "tn-dialog";
@@ -424,6 +424,8 @@ export function askConfirm(message, { title = "", ok = EX.ok || "OK", cancel = E
         </div>
       </div>`;
     const close = (val) => {
+      // con read(): devuelve los datos del formulario del diálogo (o false si cancelaron)
+      if (val && read) val = read(wrap) || false;
       wrap.remove();
       document.removeEventListener("keydown", onKey);
       resolve(val);
@@ -437,6 +439,7 @@ export function askConfirm(message, { title = "", ok = EX.ok || "OK", cancel = E
     document.addEventListener("keydown", onKey);
     document.body.appendChild(wrap);
     wrap.querySelector('[data-dlg="yes"]').focus();
+    onOpen?.(wrap);
   });
 }
 

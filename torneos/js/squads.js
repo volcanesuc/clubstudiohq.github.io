@@ -20,7 +20,7 @@ import {
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId, spiritTable, standings } from "/torneos/js/model.js";
-import { listGames, listTeams, loadEvent, loadRegistration } from "/torneos/js/services.js";
+import { listGames, listTeams, loadEvent, loadRegistration, rosterLocked } from "/torneos/js/services.js";
 
 const SPIRIT_WINDOW_DAYS = 21; // después de esto ya no se recuerda la evaluación pendiente
 
@@ -284,11 +284,16 @@ export async function syncSquadRegistrations(sid, members, { addIds = [], onlyEv
   const byId = new Map(members.map((m) => [m.id, m]));
   const ptrs = (await listSquadTournaments(sid)).filter((p) => !onlyEventId || p.eventId === onlyEventId);
   const out = await Promise.all(ptrs.map(async (ptr) => {
-    const reg = await loadRegistration(ptr.eventId, ptr.regId).catch(() => null);
+    const [reg, event] = await Promise.all([loadRegistration(ptr.eventId, ptr.regId).catch(() => null), loadEvent(ptr.eventId).catch(() => null)]);
     if (!reg) return null;
+    // roster cerrado: no se toca (ni datos ni jugadores) y no se ofrece sumar a los que faltan
+    if (rosterLocked(event)) return { eventId: ptr.eventId, reg, missing: [], locked: true };
     const before = (reg.players || []).map(tournamentPlayer);
     const players = before.map((p) => (byId.has(p.id) ? tournamentPlayer(byId.get(p.id)) : p));
-    addIds.filter((id) => byId.has(id) && !players.some((p) => p.id === id)).forEach((id) => players.push(tournamentPlayer(byId.get(id))));
+    // sumar a los que faltan sin pasar el máximo del torneo
+    const max = Number(event?.rules?.rosterMax) || 0;
+    addIds.filter((id) => byId.has(id) && !players.some((p) => p.id === id))
+      .forEach((id) => { if (!max || players.length < max) players.push(tournamentPlayer(byId.get(id))); });
     if (JSON.stringify(players) !== JSON.stringify(before)) {
       await setDoc(doc(db, COL.events, ptr.eventId, "registrations", reg.id), { players, updatedAt: serverTimestamp() }, { merge: true });
       if (reg.status === "approved" && reg.teamId) {

@@ -23,6 +23,7 @@ import {
   approveRegistration,
   deadlineEnd,
   registrationExpired,
+  rosterLocked,
   createEvent,
   createGameKey,
   createGames,
@@ -47,7 +48,7 @@ import {
   scorekeeperUrl,
   updateGame,
 } from "/torneos/js/services.js";
-import {
+import { askConfirm,
   esc,
   eventUrl,
   fmtDateRange,
@@ -132,6 +133,8 @@ async function renderList() {
         <i class="bi bi-chevron-right ev-muted"></i>
       </a>`).join("") : `<div class="ev-card ev-muted">${esc(EX.noEvents)}</div>`}`;
 
+  // Nuevo torneo: se crea con las reglas por defecto (7v7, roster mínimo 7) y abre el editor completo,
+  // donde se ajusta todo: fechas, sede, divisiones, tiempos, medio tiempo, caps, roster, proporción…
   $("#evNew").onclick = () => run(async () => {
     const id = await createEvent(state.user, {
       name: EX.newEvent,
@@ -139,7 +142,7 @@ async function renderList() {
       status: EVENT_STATUS.DRAFT,
       divisions: [{ id: "open", name: "Open" }],
       fields: ["Cancha 1"],
-      rules: DEFAULT_RULES,
+      rules: { ...DEFAULT_RULES },
       format: "round_robin",
     });
     await openEvent(id);
@@ -289,6 +292,12 @@ function publishSection(e) {
           ${e.registrationOpen && registrationExpired(e) ? `<span class="ev-chip ev-chip--alert">${esc(EX.regClosedByDate)}</span>` : ""}
         </div>
         <div class="form-text">${esc(EX.regDeadlineHint)}</div>
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+          <label class="form-label small mb-0" for="eRosterDeadline">${esc(EX.rosterDeadline)}</label>
+          <input class="form-control form-control-sm" style="max-width:11rem" type="date" id="eRosterDeadline" value="${esc(e.rosterDeadline || "")}" />
+          ${rosterLocked(e) ? `<span class="ev-chip"><i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)}</span>` : ""}
+        </div>
+        <div class="form-text">${esc(EX.rosterDeadlineHint)}</div>
         ${e.registrationOpen ? linkBox("reg", registerLink(), exf(EX.waRegister, { event: e.name, url: registerLink() })) : ""}
       </div>
     </div>`, "tn-section--highlight");
@@ -369,6 +378,11 @@ function renderInfo() {
               <input class="form-control ${mode.id === "other" ? "" : "d-none"}" style="max-width:7rem" id="rPlayers" type="number" min="1" max="15" value="${esc(r.playersOnField)}" aria-label="${esc(EX.rulePlayers)}" placeholder="${esc(EX.rulePlayers)}" />
             </div>
             <div class="form-text">${esc(EX.ruleModeHint)}</div>
+            <div class="row g-2 mt-1">
+              <div class="col-6"><label class="form-label small" for="rRosterMin">${esc(EX.ruleRosterMin)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMin" value="${esc(r.rosterMin)}" /></div>
+              <div class="col-6"><label class="form-label small" for="rRosterMax">${esc(EX.ruleRosterMax)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMax" value="${esc(r.rosterMax || "")}" placeholder="${esc(EX.ruleRosterNoMax)}" /></div>
+            </div>
+            <div class="form-text">${esc(EX.ruleRosterHint)}</div>
             <label class="form-label small mt-3" for="rRatioRule">${esc(EX.ruleRatio)}</label>
             <select class="form-select" id="rRatioRule">${RATIO_RULES.map((id) => `<option value="${id}" ${r.ratioRule === id ? "selected" : ""}>${esc(EX[`ruleRatio_${id}`])}</option>`).join("")}</select>
             <select class="form-select mt-2 ${r.ratioRule === "fixed" ? "" : "d-none"}" id="rRatioFixed" aria-label="${esc(EX.ruleRatio_fixed)}">
@@ -441,6 +455,10 @@ function renderInfo() {
   document.getElementById("ePublic").onchange = (ev) => quickSave({ isPublic: isApproved(e) && ev.target.checked });
   document.getElementById("eRegOpen").onchange = (ev) => quickSave({ registrationOpen: ev.target.checked });
   // se guarda la fecha y el momento exacto de cierre (fin de ese día): las reglas de Firestore usan el segundo
+  document.getElementById("eRosterDeadline").onchange = (ev) => {
+    const day = ev.target.value;
+    quickSave({ rosterDeadline: day || "", rosterDeadlineAt: deadlineEnd(day) });
+  };
   document.getElementById("eRegDeadline").onchange = (ev) => {
     const day = ev.target.value;
     quickSave({ registrationDeadline: day || "", registrationDeadlineAt: deadlineEnd(day) });
@@ -492,6 +510,11 @@ function renderInfo() {
   };
   document.getElementById("rMode").onchange = (ev) => {
     document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
+    // si el mínimo era el de la modalidad anterior, sigue a la nueva (7v7 → 7, 5v5 → 5)
+    const minEl = document.getElementById("rRosterMin");
+    const wasModeDefault = GAME_MODES.some((m) => m.players && m.players === Number(minEl.value));
+    const next = GAME_MODES.find((m) => m.id === ev.target.value);
+    if (wasModeDefault && next?.players) minEl.value = next.players;
   };
   document.getElementById("rRatioRule").onchange = (ev) => {
     document.getElementById("rRatioFixed").classList.toggle("d-none", ev.target.value !== "fixed");
@@ -521,6 +544,8 @@ function renderInfo() {
         rules: {
           mode: modeDef.id,
           playersOnField: modeDef.players || num("rPlayers") || 7,
+          rosterMin: Math.max(0, num("rRosterMin")),
+          rosterMax: Math.max(0, num("rRosterMax")),
           ratioRule: v("rRatioRule") || "abba",
           ratioFixed: v("rRatioFixed") === "F" ? "F" : "M",
           gameMinutes: num("rGameMin"),
@@ -602,18 +627,11 @@ function renderTeams() {
   const tab = document.getElementById("evTab");
   tab.innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="small ev-muted">${esc(EX.teamPoolHint)}</div>
-      <button class="btn btn-sm btn-outline-primary" id="evAddTeam"><i class="bi bi-plus-lg me-1"></i>${esc(EX.addTeam)}</button>
+      <div class="small ev-muted">${esc(EX.teamPoolHint)} ${esc(EX.teamsOnlyByRegistration)}</div>
     </div>
     ${requestsSection()}
     <div id="evTeams">${state.teams.length ? state.teams.map(teamCard).join("") : `<div class="ev-card ev-muted">${esc(EX.noTeams)}</div>`}</div>`;
 
-  document.getElementById("evAddTeam").onclick = () => {
-    const wrap = document.getElementById("evTeams");
-    if (!state.teams.length) wrap.innerHTML = "";
-    wrap.insertAdjacentHTML("afterbegin", teamCard({ divisionId: divisions()[0].id }));
-    wrap.querySelector("[data-f=name]").focus();
-  };
 
   tab.addEventListener("submit", (ev) => {
     const form = ev.target.closest("[data-team]");

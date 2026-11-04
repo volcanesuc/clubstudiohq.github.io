@@ -113,6 +113,7 @@ async function load() {
     state.owners = owners;
     state.regs = new Map(synced.map((x) => [x.eventId, x.reg]));
     state.missing = new Map(synced.map((x) => [x.eventId, x.missing]));
+    state.rosterLocked = new Set(synced.filter((x) => x.locked).map((x) => x.eventId));
     const registered = new Set(tournaments.map((t) => t.eventId));
     state.openEvents = events.filter((e) => registrationIsOpen(e) && isApproved(e) && !registered.has(e.id));
   }
@@ -217,7 +218,7 @@ function tournamentsTab() {
           </div>
           <i class="bi bi-chevron-right ev-muted"></i>
         </a>
-        ${admin() && reg ? `<div class="tp-ev__admin"><a class="small" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a><span class="small ev-muted">${esc(exf(EX.playersCount, { n: (reg.players || []).length }))}</span></div>` : ""}
+        ${admin() && reg ? `<div class="tp-ev__admin"><a class="small" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a><span class="small ev-muted">${state.rosterLocked?.has(t.eventId) ? `<i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)} · ` : ""}${esc(exf(EX.playersCount, { n: (reg.players || []).length }))}</span></div>` : ""}
         ${missing.length ? `
           <div class="alert alert-warning py-2 px-3 mb-0 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span class="small">${esc(exf(EX.sqMissingInReg, { n: missing.length, names: missing.map((m) => m.name).join(", ") }))}</span>
