@@ -1,41 +1,15 @@
-// /torneos/js/team_admin.js
+// /tournaments/js/team_admin.js
 // "Mi equipo": mis equipos (admin o jugador), crear un equipo, e inscribir un equipo en un torneo
 // con inscripciones abiertas eligiendo jugadores del roster, división, contacto y capitanes.
-//   /torneos/equipo.html                     mis equipos + torneos con inscripciones abiertas
-//   /torneos/equipo.html?e=EVENTO[&s=EQUIPO] nueva inscripción
-//   /torneos/equipo.html?e=EVENTO&r=ID       editar una inscripción
-import { EX, exf } from "/torneos/js/strings.js";
-import { eventRules, rosterProblem } from "/torneos/js/model.js";
-import {
-  REG,
-  isApproved,
-  registrationIsOpen,
-  rosterLocked,
-  isPlatformAdmin,
-  listPublicEvents,
-  loadEvent,
-  loadPublicEventBySlug,
-  loadRegistration,
-  saveRegistration,
-  withdrawRegistration,
-} from "/torneos/js/services.js";
-import { countryOptions } from "/torneos/js/countries.js";
-import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/torneos/js/squads.js";
-import {
-  avatarHtml,
-  esc,
-  eventUrl,
-  fmtDateRange,
-  hideLoader,
-  isGoogleUser,
-  regChip,
-  renderNav,
-  showLoader,
-  signInGoogle,
-  spiritPendingHtml,
-  teamBadge,
-  waitForUser,
-} from "/torneos/js/ui.js";
+//   /tournaments/team.html                     mis equipos + torneos con inscripciones abiertas
+//   /tournaments/team.html?e=EVENTO[&s=EQUIPO] nueva inscripción
+//   /tournaments/team.html?e=EVENTO&r=ID       editar una inscripción
+import { EX, exf } from "/tournaments/js/strings.js";
+import { eventRules, rosterProblem } from "/tournaments/js/model.js";
+import { REG, isApproved, registrationIsOpen, rosterLocked, isPlatformAdmin, listPublicEvents, listTeams, loadEvent, loadPublicEventBySlug, loadRegistration, saveRegistration, withdrawRegistration, fmtMoney, submitRegistrationPayment, teamFee } from "/tournaments/js/services.js";
+import { countryOptions, countryName, flagOf } from "/tournaments/js/countries.js";
+import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/tournaments/js/squads.js";
+import { avatarHtml, esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, regChip, renderNav, showLoader, signInGoogle, spiritPendingHtml, teamBadge, waitForUser, paymentChip, shrinkImage } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -72,7 +46,7 @@ async function run(fn) {
   }
 }
 
-const regUrl = (eid, extra = {}) => `/torneos/equipo.html?${new URLSearchParams({ e: eid, ...extra })}`;
+const regUrl = (eid, extra = {}) => `/tournaments/team.html?${new URLSearchParams({ e: eid, ...extra })}`;
 
 /* =========================
    Mis equipos
@@ -85,41 +59,60 @@ async function renderList() {
   const open = events.filter((e) => registrationIsOpen(e) && isApproved(e));
   // mis inscripciones en cada torneo abierto
   const mine = new Map(await Promise.all(open.map(async (e) => [e.id, await myRegistrationsFor(state.user, e.id).catch(() => [])])));
+  // jugadores por equipo (para la tarjeta)
+  const counts = new Map(await Promise.all(squads.map(async (sq) => [sq.id, (await listMembers(sq.id).catch(() => [])).length])));
   root.innerHTML = `
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
       <div>
         <h1 class="h3 fw-bold mb-1">${esc(EX.myTeams)}</h1>
         <div class="ev-muted">${esc(EX.myTeamsSubtitle)}</div>
       </div>
-      <a class="btn btn-outline-secondary btn-sm" href="/torneos/perfil.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>
+      <a class="btn btn-outline-secondary btn-sm" href="/tournaments/profile.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>
     </div>
     <div id="spPending"></div>
-    ${squads.length ? squads.map((s) => `
-      <a class="ev-card ev-event-item" href="${esc(squadUrl(s.id))}">
-        ${teamBadge(s, 40)}
-        <div class="flex-grow-1 min-w-0">
-          <div class="fw-bold text-truncate">${esc(s.name || "—")}</div>
-          <div class="small ev-muted text-truncate">${esc(s.city || "")}</div>
+    ${squads.length ? `<div class="mt-grid">${squads.map((s) => {
+      const isAdmin = isSquadAdmin(s, state.user.uid);
+      const n = counts.get(s.id);
+      return `
+      <a class="mt-card" href="${esc(squadUrl(s.id))}">
+        <div class="mt-card__banner" style="background: linear-gradient(135deg, ${esc(s.color || "#19473f")}, #2e1065)"></div>
+        <div class="mt-card__body">
+          <div class="mt-card__logo">${teamBadge(s, 72)}</div>
+          <div class="min-w-0 flex-grow-1">
+            <div class="mt-card__name">${esc(s.name || "—")}</div>
+            ${s.city || s.country ? `<div class="mt-card__place">${s.country ? `${flagOf(s.country)} ` : ""}${esc([s.city, countryName(s.country)].filter(Boolean).join(", "))}</div>` : ""}
+            <div class="d-flex flex-wrap gap-1 mt-2">
+              <span class="ev-chip ${isAdmin ? "ev-chip--ok" : ""}"><i class="bi ${isAdmin ? "bi-shield-check" : "bi-person-check"} me-1"></i>${esc(isAdmin ? EX.sqAdminBadge : EX.sqMemberBadge)}</span>
+              ${n !== undefined ? `<span class="ev-chip"><i class="bi bi-people me-1"></i>${esc(n === 1 ? EX.clPlayer : exf(EX.clPlayers, { n }))}</span>` : ""}
+            </div>
+          </div>
+          <i class="bi bi-chevron-right ev-muted"></i>
         </div>
-        <span class="ev-chip ${isSquadAdmin(s, state.user.uid) ? "ev-chip--ok" : ""}">${esc(isSquadAdmin(s, state.user.uid) ? EX.sqAdminBadge : EX.sqMemberBadge)}</span>
-        <i class="bi bi-chevron-right ev-muted"></i>
-      </a>`).join("") : `<div class="ev-card ev-muted">${esc(EX.myTeamsEmpty)}</div>`}
+      </a>`;
+    }).join("")}</div>` : `<div class="ev-card ev-muted">${esc(EX.myTeamsEmpty)}</div>`}
 
-    <form id="sqCreate" class="ev-card d-flex gap-2 flex-wrap align-items-end">
-      <div class="flex-grow-1" style="min-width:12rem">
-        <label class="form-label small" for="sqNewName">${esc(EX.sqCreate)}</label>
-        <input class="form-control" id="sqNewName" placeholder="${esc(EX.teamName)}" required />
-      </div>
-      <div style="min-width:10rem">
-        <label class="form-label small" for="sqNewCountry">${esc(EX.teamCountry)}</label>
-        <select class="form-select" id="sqNewCountry" required>${countryOptions("", esc(EX.teamCountryPick))}</select>
-      </div>
-      <div style="min-width:9rem">
-        <label class="form-label small" for="sqNewCity">${esc(EX.teamCity)}</label>
-        <input class="form-control" id="sqNewCity" />
-      </div>
-      <button class="btn tn-btn-grad" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.sqCreateBtn)}</button>
-    </form>
+    <details class="mt-create" ${squads.length ? "" : "open"}>
+      <summary class="mt-create__toggle"><i class="bi bi-plus-circle me-1"></i>${esc(EX.sqCreateToggle)}</summary>
+      <form id="sqCreate" class="mt-create__form">
+        <div class="row g-2">
+          <div class="col-12 col-md-5">
+            <label class="form-label small" for="sqNewName">${esc(EX.teamName)}</label>
+            <input class="form-control" id="sqNewName" required />
+          </div>
+          <div class="col-7 col-md-4">
+            <label class="form-label small" for="sqNewCountry">${esc(EX.teamCountry)}</label>
+            <select class="form-select" id="sqNewCountry" required>${countryOptions("", esc(EX.teamCountryPick))}</select>
+          </div>
+          <div class="col-5 col-md-3">
+            <label class="form-label small" for="sqNewCity">${esc(EX.teamCity)}</label>
+            <input class="form-control" id="sqNewCity" />
+          </div>
+        </div>
+        <div class="d-flex justify-content-end mt-2">
+          <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.sqCreateBtn)}</button>
+        </div>
+      </form>
+    </details>
 
     <h2 class="h6 mt-4 mb-2">${esc(EX.openRegistrations)}</h2>
     ${open.length ? open.map((e) => {
@@ -164,6 +157,9 @@ const divisions = () => (state.event.divisions?.length ? state.event.divisions :
 const rosterRangeText = (r) => (r.rosterMin && r.rosterMax ? exf(EX.regRosterRange, { min: r.rosterMin, max: r.rosterMax })
   : r.rosterMin ? exf(EX.regRosterAtLeast, { n: r.rosterMin }) : r.rosterMax ? exf(EX.regRosterAtMost, { n: r.rosterMax }) : "");
 
+// Otros equipos del torneo donde ya juega este miembro (no cuenta el propio)
+const elsewhere = (m) => (m.uid ? (state.otherRosters?.get(m.uid) || []).filter((t) => t.squadId !== state.squad?.id).map((t) => t.name) : []);
+
 const chosen = () => state.members.filter((m) => state.selected.has(m.id));
 
 function statusBanner(reg) {
@@ -177,6 +173,30 @@ function statusBanner(reg) {
   return `<div class="alert alert-${kind} d-flex gap-2 align-items-start">${regChip(reg.status)}<div>${esc(text)}</div></div>`;
 }
 
+// Cuota del equipo: monto, cómo pagar y (opcional) el comprobante; el organizador lo aprueba
+function paymentSection(r) {
+  const fee = teamFee(state.event);
+  if (!fee) return "";
+  const cur = state.event.fees?.currency || "CRC";
+  const st = r.paymentStatus || "none";
+  const proof = state.paymentProof || r.paymentProof || "";
+  const canUpload = st !== "approved";
+  return `
+    <section class="ev-card">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="h6 mb-0"><i class="bi bi-cash-coin me-1"></i>${esc(EX.feeTeam)}: ${esc(fmtMoney(fee, cur))}</h2>
+        ${r.id ? paymentChip(r) : ""}
+      </div>
+      ${state.event.fees?.info ? `<div class="small mb-2" style="white-space:pre-line">${esc(state.event.fees.info)}</div>` : ""}
+      ${st === "rejected" && r.paymentNote ? `<div class="alert alert-warning py-2 small">${esc(r.paymentNote)}</div>` : ""}
+      ${proof ? `<img class="tn-proof__img mb-2" src="${esc(proof)}" alt="${esc(EX.payProof)}" />` : ""}
+      ${canUpload ? `
+        <label class="form-label small" for="regProof">${esc(proof ? EX.payReplace : EX.payAttach)}</label>
+        <input class="form-control" id="regProof" type="file" accept="image/*" />
+        <div class="form-text">${esc(EX.payAttachHint)}</div>` : ""}
+    </section>`;
+}
+
 function captainOptions(selected) {
   return `<option value="">${esc(EX.choosePlayer)}</option>${chosen().map((m) => `<option value="${esc(m.id)}" ${m.id === selected ? "selected" : ""}>${esc(m.name)}${m.number !== null && m.number !== undefined ? ` #${esc(m.number)}` : ""}</option>`).join("")}`;
 }
@@ -186,7 +206,7 @@ function renderNoSquad() {
     <div class="ev-card text-center py-4 mt-2" style="max-width:560px;margin:auto">
       <h1 class="h5 fw-bold">${esc(exf(EX.registerTitle, { event: state.event.name || "" }))}</h1>
       <p class="ev-muted">${esc(EX.regNeedSquad)}</p>
-      <a class="btn tn-btn-grad" href="/torneos/equipo.html">${esc(EX.sqCreateBtn)}</a>
+      <a class="btn tn-btn-grad" href="/tournaments/team.html">${esc(EX.sqCreateBtn)}</a>
     </div>`;
 }
 
@@ -200,7 +220,7 @@ function renderForm() {
   const submitLabel = !r.id ? EX.regSubmit : r.status === REG.REJECTED ? EX.regResubmit : EX.regSave;
   const lockedSquad = !!r.id;
   root.innerHTML = `
-    <a class="small ev-muted text-decoration-none" href="/torneos/equipo.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>
+    <a class="small ev-muted text-decoration-none" href="/tournaments/team.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>
     <div class="mt-1 mb-3">
       <h1 class="h4 fw-bold mb-1">${esc(exf(EX.registerTitle, { event: e.name || "" }))}</h1>
       <div class="small ev-muted">${esc(fmtDateRange(e.startDate, e.endDate))}${e.venue ? ` · ${esc(e.venue)}` : ""} · <a href="${esc(eventUrl(e))}">${esc(EX.openPublic)}</a></div>
@@ -248,7 +268,10 @@ function renderForm() {
               <input class="form-check-input m-0" type="checkbox" id="pk_${esc(m.id)}" data-pick="${esc(m.id)}" ${state.selected.has(m.id) ? "checked" : ""} ${lockRoster ? "disabled" : ""} />
               <div class="tn-roster-num">${esc(m.number ?? "–")}</div>
               ${avatarHtml(m, 32)}
-              <div class="flex-grow-1 min-w-0 text-truncate">${esc(m.name)}</div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="text-truncate">${esc(m.name)}</div>
+                ${elsewhere(m).length ? `<div class="small text-warning-emphasis text-truncate"><i class="bi bi-people-fill me-1"></i>${esc(exf(EX.regAlsoIn, { teams: elsewhere(m).join(", ") }))}</div>` : ""}
+              </div>
               ${m.gender ? `<span class="ev-chip">${esc(m.gender)}</span>` : `<span class="ev-chip ev-chip--wait" title="${esc(EX.sqMissingGender)}">?</span>`}
             </label>`).join("")}`
           : `<div class="ev-muted small">${esc(EX.regNoMembers)} <a href="${esc(squadUrl(s.id))}">${esc(EX.regEditTeamLink)}</a></div>`}
@@ -261,6 +284,8 @@ function renderForm() {
           <div class="col-12 col-md-6"><label class="form-label small" for="regSpirit"><i class="bi bi-heart-fill text-danger me-1"></i>${esc(EX.spiritCaptain)}</label><select class="form-select" id="regSpirit"></select></div>
         </div>
       </section>
+
+      ${paymentSection(r)}
 
       <div class="d-flex justify-content-between gap-2 flex-wrap">
         ${r.id && !approved ? `<button type="button" class="btn btn-outline-danger" id="regWithdraw">${esc(EX.regWithdraw)}</button>` : "<span></span>"}
@@ -317,6 +342,18 @@ function bindForm() {
     });
   });
 
+  form.querySelector("#regProof")?.addEventListener("change", async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    try {
+      state.paymentProof = await shrinkImage(file, 1100);
+      renderForm();
+      alertBox(EX.payReadyToSend, "info");
+    } catch {
+      alertBox(EX.error, "danger");
+    }
+  });
+
   form.addEventListener("submit", (ev) => {
     ev.preventDefault();
     const r = state.reg;
@@ -355,6 +392,10 @@ function bindForm() {
       };
       const isNew = !r.id;
       const id = await saveRegistration(state.user, state.event, data);
+      if (state.paymentProof) {
+        await submitRegistrationPayment(state.event.id, id, state.paymentProof);
+        state.paymentProof = "";
+      }
       state.reg = (await loadRegistration(state.event.id, id)) || { ...data, id };
       history.replaceState(null, "", regUrl(state.event.id, { r: id }));
       renderForm();
@@ -374,6 +415,13 @@ async function openRegistration(eventKey, regId, squadId) {
   const event = (await loadEvent(eventKey).catch(() => null)) || (await loadPublicEventBySlug(eventKey).catch(() => null));
   if (!event) return alertBox(EX.eventNotFound, "warning");
   state.event = event;
+  // jugadores que ya están en el roster de otro equipo de este torneo (se puede estar en varios equipos)
+  state.otherRosters = new Map();
+  (await listTeams(event.id).catch(() => [])).forEach((t) => (t.players || []).forEach((p) => {
+    if (!p.uid) return;
+    if (!state.otherRosters.has(p.uid)) state.otherRosters.set(p.uid, []);
+    state.otherRosters.get(p.uid).push({ squadId: t.squadId || "", name: t.name || "" });
+  }));
   state.squads = (await listMySquads(state.user)).filter((s) => isSquadAdmin(s, state.user.uid));
   if (regId) {
     state.reg = await loadRegistration(event.id, regId);

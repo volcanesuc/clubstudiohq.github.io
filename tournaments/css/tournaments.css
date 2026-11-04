@@ -586,27 +586,74 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .cl-selects { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .5rem; }
 .cl-selects .form-select { border-radius: 999px; }
 
-/* Evento › Espíritu: ranking en tarjetas */
-.spb-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: .75rem; }
-.spb-card { background: #fff; border: 1px solid var(--ev-border); border-radius: 18px; padding: 1rem; min-width: 0; }
-.spb-card__head { display: flex; align-items: center; gap: .65rem; }
-.spb-card__name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.spb-card__count { font-size: .78rem; color: var(--ev-muted); }
-.spb-card__score { text-align: right; line-height: 1; white-space: nowrap; }
-.spb-card__score b { font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; color: #1f1446; }
-.spb-card__score span { font-size: .8rem; font-weight: 700; color: var(--ev-muted); margin-left: .1rem; }
-.spb-rank { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: .85rem; color: #4b4566; background: #f1eff8; }
-.spb-rank--1 { background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 60%, #b45309); color: #fff; }
-.spb-rank--2 { background: radial-gradient(circle at 35% 30%, #f1f5f9, #94a3b8 60%, #64748b); color: #fff; }
-.spb-rank--3 { background: radial-gradient(circle at 35% 30%, #fed7aa, #ea7a3a 60%, #9a3412); color: #fff; }
-.spb-total { position: relative; height: 10px; margin: .85rem 0 .9rem; border-radius: 999px; background: #eeebf7; }
-.spb-total > i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ev-main); }
-.spb-total__mark { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 2px; background: #1f1446; opacity: .35; }
-.spb-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: .6rem 1.1rem; }
-.spb-cat__top { display: flex; justify-content: space-between; gap: .5rem; font-size: .8rem; color: #4b4566; }
-.spb-cat__top span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.spb-cat__top b { font-variant-numeric: tabular-nums; color: #1f1446; }
-.spb-cat__bar { position: relative; height: 6px; margin-top: .25rem; border-radius: 999px; background: #eeebf7; }
-.spb-cat__bar > i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: color-mix(in srgb, var(--ev-main) 75%, #fff); }
-@media (max-width: 575.98px) { .spb-board { grid-template-columns: 1fr; } }
+
+/* Resumen › Inscripción */
+.ev-info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; }
+.ev-info { display: flex; gap: .6rem; align-items: flex-start; }
+.ev-info > i { font-size: 1.15rem; color: var(--ev-main); margin-top: .1rem; }
+.ev-info__label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ev-muted); font-weight: 700; }
+.ev-info__value { font-weight: 800; color: #1f1446; }
+/* Comprobantes de pago */
+.tn-proof { display: block; margin-top: .6rem; }
+.tn-proof img, .tn-proof__img { display: block; max-width: 100%; max-height: 320px; border-radius: 12px; border: 1px solid var(--ev-border); }
+
+/* Espíritu (tabla tipo Posiciones): promedio resaltado */
+.st-spirit { display: inline-block; min-width: 3.1rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 900; background: #f1eff8; color: #1f1446; }
+.st-spirit.is-high { background: #dcfce7; color: #166534; }
+.st-spirit.is-low { background: #fee2e2; color: #991b1b; }
+
+/* Estadísticas: MVP destacado y líderes con foto */
+.lb-hero { display: flex; align-items: center; gap: 1.1rem; padding: 1.1rem 1.25rem; margin-bottom: .9rem; border-radius: 22px; color: #fff;
+  background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--ev-accent) 35%, transparent) 0%, transparent 55%), var(--ev-main); }
+.lb-hero__photo { position: relative; display: inline-block; flex: 0 0 auto; }
+.lb-hero__photo .tn-avatar { border: 3px solid rgba(255, 255, 255, .85); box-shadow: 0 8px 24px rgba(0, 0, 0, .2); }
+.lb-hero__crown { position: absolute; right: -4px; bottom: -4px; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 60%, #b45309); color: #fff; border: 2px solid #fff; font-size: .85rem; }
+.lb-hero__kicker { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .8; }
+.lb-hero__name { font-size: 1.35rem; font-weight: 900; line-height: 1.15; }
+.lb-hero__team { display: flex; align-items: center; gap: .35rem; font-size: .85rem; opacity: .9; min-width: 0; }
+.lb-hero__stats { display: flex; gap: 1.25rem; margin-top: .55rem; }
+.lb-hero__stats b { display: block; font-size: 1.3rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.lb-hero__stats span { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; opacity: .8; font-weight: 700; }
+.lb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+.lb-card { background: #fff; border: 1px solid var(--ev-border); border-radius: 18px; padding: .9rem 1rem; min-width: 0; }
+.lb-card__title { display: flex; align-items: center; gap: .45rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ev-muted); font-weight: 800; margin: 0 0 .7rem; }
+.lb-card__title i { color: var(--ev-main); }
+.lb-top { display: flex; align-items: center; gap: .7rem; padding-bottom: .65rem; margin-bottom: .2rem; border-bottom: 1px solid var(--ev-border); }
+.lb-top__name { font-weight: 800; }
+.lb-top__val { font-size: 1.8rem; font-weight: 900; color: var(--ev-main); font-variant-numeric: tabular-nums; line-height: 1; }
+.lb-team { display: flex; align-items: center; gap: .3rem; font-size: .75rem; color: var(--ev-muted); min-width: 0; }
+.lb-row { display: flex; align-items: center; gap: .55rem; padding: .4rem 0; }
+.lb-row__pos { width: 1rem; font-weight: 800; font-size: .8rem; color: var(--ev-muted); text-align: center; }
+.lb-row__name { font-weight: 650; font-size: .92rem; }
+.lb-row__val { font-weight: 900; color: #1f1446; font-variant-numeric: tabular-nums; }
+@media (max-width: 575.98px) {
+  .lb-hero { padding: 1rem; gap: .85rem; }
+  .lb-hero__photo .tn-avatar { width: 68px !important; height: 68px !important; }
+  .lb-hero__name { font-size: 1.15rem; }
+  .lb-grid { grid-template-columns: 1fr; }
+}
+
+/* Mi equipo: tarjetas de equipo grandes; crear equipo discreto */
+.mt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .85rem; }
+.mt-card { display: block; overflow: hidden; border-radius: 20px; background: #fff; border: 1px solid var(--ev-border); color: inherit; text-decoration: none; transition: box-shadow .15s, transform .15s; }
+.mt-card:hover { color: inherit; box-shadow: 0 10px 28px rgba(31, 20, 70, .12); transform: translateY(-1px); }
+.mt-card__banner { height: 56px; }
+.mt-card__body { display: flex; align-items: flex-end; gap: .85rem; padding: 0 1rem 1rem; margin-top: -30px; }
+.mt-card__logo { flex: 0 0 auto; padding: 4px; border-radius: 18px; background: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .1); }
+.mt-card__logo .tn-team-logo, .mt-card__logo > span { border-radius: 14px !important; }
+.mt-card__name { font-size: 1.2rem; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-card__place { font-size: .85rem; color: var(--ev-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-card__body > .bi-chevron-right { align-self: center; margin-top: 30px; }
+.mt-create { margin-top: .85rem; }
+.mt-create__toggle { display: inline-flex; align-items: center; cursor: pointer; list-style: none; padding: .45rem .9rem; border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--ev-main) 45%, transparent); color: var(--ev-main); font-weight: 700; font-size: .9rem; }
+.mt-create__toggle::-webkit-details-marker { display: none; }
+.mt-create[open] .mt-create__toggle { margin-bottom: .6rem; }
+.mt-create__form { background: #fff; border: 1px solid var(--ev-border); border-radius: 16px; padding: .9rem 1rem; }
+.mt-card__body { align-items: flex-start; }
+.mt-card__body > .min-w-0 { padding-top: 36px; }
+@media (max-width: 575.98px) {
+  .lb-hero__stats { gap: .75rem; }
+  .lb-hero__stats span { font-size: .6rem; letter-spacing: .03em; }
+}

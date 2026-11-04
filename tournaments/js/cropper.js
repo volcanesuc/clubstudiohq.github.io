@@ -1,7 +1,7 @@
-// /torneos/js/cropper.js
+// /tournaments/js/cropper.js
 // Recorte de imágenes antes de subirlas (logo, foto de perfil, imagen del torneo).
 // Arrastrar para mover, rueda/pellizco/slider para zoom. Devuelve una data URL chica (webp o png).
-import { EX } from "/torneos/js/strings.js";
+import { EX } from "/tournaments/js/strings.js";
 
 let modalEl = null;
 

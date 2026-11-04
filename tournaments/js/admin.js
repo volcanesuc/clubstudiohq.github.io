@@ -1,9 +1,9 @@
-// /torneos/js/admin.js
+// /tournaments/js/admin.js
 // Admin de la plataforma: aprobar torneos (prueba gratis o pagado), rechazar y desactivar.
 // Un admin es quien tenga un doc en platform_admins/{uid} (se crea a mano en la consola de Firebase).
-import { EX, exf } from "/torneos/js/strings.js";
-import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, setApproval } from "/torneos/js/services.js";
-import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, renderNav, showLoader, toMillis, waitForUser } from "/torneos/js/ui.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, setApproval } from "/tournaments/js/services.js";
+import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, renderNav, showLoader, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const state = { pending: [], active: [], tab: "", search: "" };

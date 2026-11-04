@@ -169,7 +169,8 @@ service cloud.firestore {
           && !("teamId" in request.resource.data)
           && isActive(eventId)
           && registrationOpenNow(eventId)
-          && rosterSizeOk(eventId, request.resource.data.get("players", []));
+          && rosterSizeOk(eventId, request.resource.data.get("players", []))
+          && request.resource.data.get("paymentStatus", "none") in ["none", "submitted"];
 
         allow update: if isPlatformAdmin() || isOrganizer(eventId) || (
           managesEntry(resource.data)
@@ -192,6 +193,12 @@ service cloud.firestore {
           && (!rosterLockedNow(eventId) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(["players"]))
           && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["players"])
               || rosterSizeOk(eventId, request.resource.data.get("players", [])))
+        ) || (
+          // el equipo sube (o cambia) el comprobante de pago; aprobarlo es solo del organizador
+          managesEntry(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paymentProof", "paymentStatus", "paymentAt", "updatedAt"])
+          && request.resource.data.paymentStatus == "submitted"
+          && resource.data.get("paymentStatus", "none") != "approved"
         );
 
         allow delete: if isPlatformAdmin() || isOrganizer(eventId)

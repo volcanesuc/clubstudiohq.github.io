@@ -1,15 +1,15 @@
-// /torneos/js/ui.js
+// /tournaments/js/ui.js
 // UI compartida: barra superior de la plataforma, sesión con Google, loader, escape, fechas,
 // descripción de jugadas y filas de partidos.
-import { auth } from "/torneos/js/firebase.js";
+import { auth } from "/tournaments/js/firebase.js";
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { EX, exf } from "/torneos/js/strings.js";
-import { GAME_STATUS, PLAY, fmtClock } from "/torneos/js/model.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { GAME_STATUS, PLAY, fmtClock } from "/tournaments/js/model.js";
 
 export function esc(v) {
   return String(v ?? "")
@@ -76,12 +76,12 @@ function renderBottomNav({ active, isAdmin, google }) {
       <i class="bi ${icon}"></i><span>${esc(label)}</span>
     </a>`;
   bar.innerHTML = [
-    item("dir", "/torneos/", "bi-trophy", EX.navTournaments),
-    item("clubs", "/torneos/clubes.html", "bi-shield", EX.navClubs),
-    item("team", "/torneos/equipo.html", "bi-people", EX.navTeam),
-    item("org", "/torneos/organizar.html", "bi-clipboard-check", EX.navOrganize),
+    item("dir", "/tournaments/", "bi-trophy", EX.navTournaments),
+    item("clubs", "/tournaments/clubs.html", "bi-shield", EX.navClubs),
+    item("team", "/tournaments/team.html", "bi-people", EX.navTeam),
+    item("org", "/tournaments/organize.html", "bi-clipboard-check", EX.navOrganize),
     // el perfil queda en la foto de arriba (la barra tiene lugar para 5)
-    isAdmin ? item("admin", "/torneos/admin.html", "bi-shield-check", EX.navAdminShort) : "",
+    isAdmin ? item("admin", "/tournaments/admin.html", "bi-shield-check", EX.navAdminShort) : "",
   ].join("");
 }
 
@@ -102,7 +102,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
   if (isAdmin === undefined) {
     isAdmin = google ? adminCache.get(user.uid) === true : false;
     if (google && !adminCache.has(user.uid)) {
-      import("/torneos/js/services.js")
+      import("/tournaments/js/services.js")
         .then((m) => m.isPlatformAdmin(user.uid))
         .then((yes) => {
           adminCache.set(user.uid, yes);
@@ -115,18 +115,18 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
   }
   nav.innerHTML = `
     <div class="container d-flex align-items-center gap-3 py-2">
-      <a class="tn-nav__brand" href="/torneos/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
+      <a class="tn-nav__brand" href="/tournaments/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
       <div class="d-flex gap-1 flex-grow-1 overflow-auto tn-nav__tabs">
-        ${link("dir", "/torneos/", EX.navTournaments)}
-        ${link("clubs", "/torneos/clubes.html", EX.navClubs)}
-        ${link("team", "/torneos/equipo.html", EX.navTeam)}
-        ${google ? link("profile", "/torneos/perfil.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
-        ${link("org", "/torneos/organizar.html", EX.navOrganize)}
-        ${isAdmin ? link("admin", "/torneos/admin.html", EX.navAdmin) : ""}
+        ${link("dir", "/tournaments/", EX.navTournaments)}
+        ${link("clubs", "/tournaments/clubs.html", EX.navClubs)}
+        ${link("team", "/tournaments/team.html", EX.navTeam)}
+        ${google ? link("profile", "/tournaments/profile.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
+        ${link("org", "/tournaments/organize.html", EX.navOrganize)}
+        ${isAdmin ? link("admin", "/tournaments/admin.html", EX.navAdmin) : ""}
       </div>
       ${google
         ? `<div class="d-flex align-items-center gap-2">
-            <a href="/torneos/perfil.html" title="${esc(EX.navProfile)}" class="${active === "profile" ? "is-active" : ""}">${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="${esc(EX.navProfile)}" referrerpolicy="no-referrer" />` : `<i class="bi bi-person-circle text-white fs-5"></i>`}</a>
+            <a href="/tournaments/profile.html" title="${esc(EX.navProfile)}" class="${active === "profile" ? "is-active" : ""}">${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="${esc(EX.navProfile)}" referrerpolicy="no-referrer" />` : `<i class="bi bi-person-circle text-white fs-5"></i>`}</a>
             <button class="btn btn-sm btn-outline-light" id="tnSignOut" title="${esc(EX.signOut)}"><i class="bi bi-box-arrow-right tn-nav__out-icon"></i><span class="tn-nav__out-text">${esc(EX.signOut)}</span></button>
           </div>`
         : `<button class="btn btn-sm tn-btn-grad text-nowrap" id="tnSignIn"><span class="tn-nav__out-text">${esc(EX.signIn)}</span><span class="tn-nav__in-short">${esc(EX.signInShort)}</span></button>`}
@@ -209,6 +209,19 @@ export function regChip(status) {
   return `<span class="ev-chip ev-chip--wait">${esc(EX.regPending)}</span>`;
 }
 
+// Estado del pago de la inscripción (cuota de equipo)
+export function paymentChip(reg = {}) {
+  const st = reg.paymentStatus || "none";
+  const map = {
+    none: ["ev-chip--wait", EX.payNone],
+    submitted: ["ev-chip--wait", EX.paySubmitted],
+    approved: ["ev-chip--ok", EX.payApproved],
+    rejected: ["ev-chip--alert", EX.payRejected],
+  };
+  const [cls, label] = map[st] || map.none;
+  return `<span class="ev-chip ${cls}"><i class="bi bi-cash-coin me-1"></i>${esc(label)}</span>`;
+}
+
 // Aviso: partidos terminados donde mi equipo tiene que evaluar el espíritu del rival
 export function spiritPendingHtml(list = []) {
   if (!list.length) return "";
@@ -226,7 +239,7 @@ export function spiritPendingHtml(list = []) {
         const us = x.side === "A" ? g.scoreA || 0 : g.scoreB || 0;
         const them = x.side === "A" ? g.scoreB || 0 : g.scoreA || 0;
         return `
-          <a class="sp-pending__row" href="/torneos/espiritu.html?${new URLSearchParams({ event: x.eventId, game: g.id, side: x.side })}">
+          <a class="sp-pending__row" href="/tournaments/spirit.html?${new URLSearchParams({ event: x.eventId, game: g.id, side: x.side })}">
             ${teamBadge(x.opp, 34)}
             <div class="flex-grow-1 min-w-0">
               <div class="fw-semibold text-truncate">${esc(exf(EX.spVs, { team: x.opp?.name || "—" }))}</div>
@@ -398,8 +411,8 @@ export function gameRowHtml(game, { href = "", teams = null } = {}) {
     </${tag}>`;
 }
 
-export const gameUrl = (eventId, gameId) => `/torneos/partido.html?event=${encodeURIComponent(eventId)}&game=${encodeURIComponent(gameId)}`;
-export const eventUrl = (event) => `/torneos/evento.html?e=${encodeURIComponent(event.slug || event.id)}`;
+export const gameUrl = (eventId, gameId) => `/tournaments/game.html?event=${encodeURIComponent(eventId)}&game=${encodeURIComponent(gameId)}`;
+export const eventUrl = (event) => `/tournaments/event.html?e=${encodeURIComponent(event.slug || event.id)}`;
 
 /* =========================
    Diálogo propio (los confirm()/alert() nativos los bloquean algunos navegadores y apps)
@@ -450,10 +463,10 @@ export const showNotice = (message, opts = {}) => askConfirm(message, { cancel: 
    Sale una vez por sesión al entrar, en cualquier página, hasta que las hagan.
 ========================= */
 async function maybeSpiritPopup(user) {
-  if (!isGoogleUser(user) || location.pathname.endsWith("/espiritu.html")) return;
+  if (!isGoogleUser(user) || location.pathname.endsWith("/spirit.html")) return;
   const key = `tnSpiritPopup:${user.uid}`;
   try { if (sessionStorage.getItem(key)) return; } catch { /* sin storage: igual se muestra */ }
-  const { pendingSpirit } = await import("/torneos/js/squads.js");
+  const { pendingSpirit } = await import("/tournaments/js/squads.js");
   const list = await pendingSpirit(user).catch(() => []);
   if (!list.length) return;
   try { sessionStorage.setItem(key, "1"); } catch { /* nada */ }
@@ -465,6 +478,6 @@ async function maybeSpiritPopup(user) {
   });
   if (go) {
     const x = list[0];
-    location.href = `/torneos/espiritu.html?${new URLSearchParams({ event: x.eventId, game: x.game.id, side: x.side })}`;
+    location.href = `/tournaments/spirit.html?${new URLSearchParams({ event: x.eventId, game: x.game.id, side: x.side })}`;
   }
 }

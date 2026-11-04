@@ -1,16 +1,17 @@
-// /torneos/js/clubs.js
+// /tournaments/js/clubs.js
 // Clubes: todos los equipos de la plataforma, con filtro por rama (según los torneos que jugaron)
 // y búsqueda. Cada club abre su página (jugadores, torneos, resultados).
-import { EX, exf } from "/torneos/js/strings.js";
-import { loadDivisionOptions } from "/torneos/js/services.js";
-import { listClubDirectory, squadUrl } from "/torneos/js/squads.js";
-import { countryName, flagOf } from "/torneos/js/countries.js";
-import { esc, hideLoader, renderNav, revealActiveTab, showLoader, teamBadge, waitForUser } from "/torneos/js/ui.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { loadDivisionOptions } from "/tournaments/js/services.js";
+import { listClubDirectory, squadUrl } from "/tournaments/js/squads.js";
+import { countryName, flagOf } from "/tournaments/js/countries.js";
+import { esc, hideLoader, renderNav, revealActiveTab, showLoader, teamBadge, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const params = new URLSearchParams(location.search);
 // filtros (quedan en la URL para compartir): rama, categoría y país
-const state = { clubs: [], genders: [], filter: params.get("rama") || "all", level: params.get("cat") || "", country: params.get("pais") || "", term: "" };
+// (rama/cat/pais: nombres viejos de los parámetros, se siguen aceptando)
+const state = { clubs: [], genders: [], filter: params.get("division") || params.get("rama") || "all", level: params.get("level") || params.get("cat") || "", country: params.get("country") || params.get("pais") || "", term: "" };
 
 const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -82,7 +83,8 @@ function render() {
 
 function syncUrl() {
   const url = new URL(location.href);
-  [["rama", state.filter === "all" ? "" : state.filter], ["cat", state.level], ["pais", state.country]]
+  ["rama", "cat", "pais"].forEach((k) => url.searchParams.delete(k));
+  [["division", state.filter === "all" ? "" : state.filter], ["level", state.level], ["country", state.country]]
     .forEach(([k, v]) => (v ? url.searchParams.set(k, v) : url.searchParams.delete(k)));
   history.replaceState({}, "", url);
 }

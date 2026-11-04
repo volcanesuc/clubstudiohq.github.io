@@ -1,6 +1,6 @@
-// /torneos/js/game_page.js
+// /tournaments/js/game_page.js
 // Partido en vivo (público): marcador, reloj, jugadas, estadísticas por jugador y resumen por equipo.
-import { EX, exf } from "/torneos/js/strings.js";
+import { EX, exf } from "/tournaments/js/strings.js";
 import {
   GAME_STATUS,
   clockView,
@@ -12,9 +12,9 @@ import {
   needsRatio,
   pointRatio,
   ratioLabel,
-} from "/torneos/js/model.js";
-import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot } from "/torneos/js/ui.js";
+} from "/tournaments/js/model.js";
+import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/tournaments/js/services.js";
+import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);

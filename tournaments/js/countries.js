@@ -1,4 +1,4 @@
-// /torneos/js/countries.js
+// /tournaments/js/countries.js
 // Países para los clubes: código ISO (se guarda en squads/{id}.country), nombre en español y bandera.
 const CODES = [
   // América (primero, es donde más se usa)

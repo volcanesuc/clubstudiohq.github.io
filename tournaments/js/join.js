@@ -1,9 +1,9 @@
-// /torneos/js/join.js
+// /tournaments/js/join.js
 // Unirse a un equipo con un link (?t=TOKEN). El jugador entra con su propia cuenta de Google,
 // completa su perfil (foto opcional, nombre, número, F/M) y queda en el roster. El link de admin lo hace co-admin.
-import { EX, exf } from "/torneos/js/strings.js";
-import { isPlatformAdmin } from "/torneos/js/services.js";
-import { cropFromInput } from "/torneos/js/cropper.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { isPlatformAdmin } from "/tournaments/js/services.js";
+import { cropFromInput } from "/tournaments/js/cropper.js";
 import {
   INVITE_ROLE,
   ensureProfile,
@@ -13,7 +13,7 @@ import {
   loadInvite,
   loadSquad,
   squadUrl,
-} from "/torneos/js/squads.js";
+} from "/tournaments/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -24,7 +24,7 @@ import {
   signInGoogle,
   teamBadge,
   waitForUser,
-} from "/torneos/js/ui.js";
+} from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);

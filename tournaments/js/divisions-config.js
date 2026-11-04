@@ -1,4 +1,4 @@
-// /torneos/js/divisions-config.js
+// /tournaments/js/divisions-config.js
 // Opciones por defecto para armar divisiones (categoría + rama) y modalidades de juego.
 // Se pueden reemplazar sin tocar código desde Firestore: documento platform_config/divisions
 // con los campos { levels: [...], genders: [{ id, name, mixed }] } (ver README).

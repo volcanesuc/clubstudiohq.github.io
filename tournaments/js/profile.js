@@ -1,10 +1,10 @@
-// /torneos/js/profile.js
+// /tournaments/js/profile.js
 // Perfil del jugador (?u=UID, o el propio). Foto, número, F/M, equipos (con rol) e historial de
 // estadísticas en todos los torneos y partidos. El dueño del perfil lo edita.
-import { EX, exf } from "/torneos/js/strings.js";
-import { isPlatformAdmin } from "/torneos/js/services.js";
-import { cropFromInput } from "/torneos/js/cropper.js";
-import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, pendingSpirit, playerHistory, profileUrl, saveProfile, squadUrl } from "/torneos/js/squads.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { isPlatformAdmin } from "/tournaments/js/services.js";
+import { cropFromInput } from "/tournaments/js/cropper.js";
+import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, pendingSpirit, playerHistory, profileUrl, saveProfile, squadUrl } from "/tournaments/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -20,7 +20,7 @@ import {
   spiritPendingHtml,
   teamBadge,
   waitForUser,
-} from "/torneos/js/ui.js";
+} from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);

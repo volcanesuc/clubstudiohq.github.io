@@ -1,7 +1,8 @@
-// /torneos/js/organizer.js
+// /tournaments/js/organizer.js
 // Organizador (cualquier cuenta de Google): mis torneos, info y reglas, equipos, calendario (formatos),
 // activación (aprobación + plan) y links de planillero.
-import { EX, exf } from "/torneos/js/strings.js";
+import { countryOptions } from "/tournaments/js/countries.js";
+import { EX, exf } from "/tournaments/js/strings.js";
 import {
   DEFAULT_RULES,
   EVENT_STATUS,
@@ -13,63 +14,12 @@ import {
   rosterToText,
   slotMinutes,
   slugify,
-} from "/torneos/js/model.js";
-import { GAME_MODES } from "/torneos/js/divisions-config.js";
-import { cropFromInput } from "/torneos/js/cropper.js";
-import { assignSlots, getFormat, listFormats } from "/torneos/js/formats.js";
-import {
-  APPROVAL,
-  REG,
-  approveRegistration,
-  deadlineEnd,
-  registrationExpired,
-  rosterLocked,
-  createEvent,
-  createGameKey,
-  createGames,
-  deleteEvent,
-  deleteGame,
-  deleteTeam,
-  deleteUnplayedGames,
-  isApproved,
-  isUnplayed,
-  isPlatformAdmin,
-  listGameKeys,
-  listGames,
-  listMyEvents,
-  listRegistrations,
-  rejectRegistration,
-  listTeams,
-  loadDivisionOptions,
-  loadEvent,
-  requestApproval,
-  saveEvent,
-  saveTeam,
-  scorekeeperUrl,
-  updateGame,
-} from "/torneos/js/services.js";
-import { askConfirm,
-  esc,
-  eventUrl,
-  fmtDateRange,
-  fmtDayOnly,
-  fmtWhen,
-  fromLocalInput,
-  gameUrl,
-  hideLoader,
-  isGoogleUser,
-  phaseLabel,
-  regChip,
-  renderNav,
-  showLoader,
-  signInGoogle,
-  statusChip,
-  teamBadge,
-  toLocalInput,
-  toMillis,
-  waitForUser,
-  withLiveTeams,
-} from "/torneos/js/ui.js";
+} from "/tournaments/js/model.js";
+import { GAME_MODES } from "/tournaments/js/divisions-config.js";
+import { cropFromInput } from "/tournaments/js/cropper.js";
+import { assignSlots, getFormat, listFormats } from "/tournaments/js/formats.js";
+import { APPROVAL, REG, approveRegistration, deadlineEnd, registrationExpired, rosterLocked, createEvent, createGameKey, createGames, deleteEvent, deleteGame, deleteTeam, deleteUnplayedGames, isApproved, isUnplayed, isPlatformAdmin, listGameKeys, listGames, listMyEvents, listRegistrations, rejectRegistration, listTeams, loadDivisionOptions, loadEvent, requestApproval, saveEvent, saveTeam, scorekeeperUrl, updateGame, CURRENCIES, PAYMENT, decideRegistrationPayment, fmtMoney, teamFee } from "/tournaments/js/services.js";
+import { askConfirm, esc, eventUrl, fmtDateRange, fmtDayOnly, fmtWhen, fromLocalInput, gameUrl, hideLoader, isGoogleUser, phaseLabel, regChip, renderNav, showLoader, signInGoogle, statusChip, teamBadge, toLocalInput, toMillis, waitForUser, withLiveTeams, paymentChip } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -181,7 +131,7 @@ async function reloadData() {
 }
 
 const pendingRegs = () => state.regs.filter((r) => r.status === REG.PENDING);
-const registerLink = () => `${location.origin}/torneos/equipo.html?e=${encodeURIComponent(state.event.id)}`;
+const registerLink = () => `${location.origin}/tournaments/team.html?e=${encodeURIComponent(state.event.id)}`;
 
 const divisions = () => (state.event.divisions?.length ? state.event.divisions : [{ id: "open", name: "Open" }]);
 const fields = () => state.event.fields || [];
@@ -343,7 +293,7 @@ function renderInfo() {
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label small" for="eSlug">${esc(EX.eventSlug)}</label>
-            <div class="input-group"><span class="input-group-text small">/torneos/evento.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
+            <div class="input-group"><span class="input-group-text small">/tournaments/event.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
           </div>
           ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
           ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
@@ -355,11 +305,32 @@ function renderInfo() {
               ${SURFACES.map((id) => `<option value="${id}" ${e.surface === id ? "selected" : ""}>${esc(EX[`surface_${id}`])}</option>`).join("")}
             </select>
           </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small" for="eCountry">${esc(EX.teamCountry)}</label>
+            <select class="form-select" id="eCountry">${countryOptions(e.country || "", esc(EX.teamCountryPick))}</select>
+          </div>
           ${f("eAddress", EX.eventAddress, e.address)}
           ${f("eMaps", EX.eventMaps, e.mapsUrl, { col: "col-12", hint: EX.eventMapsHint })}
           <div class="col-12">
             <label class="form-label small" for="eDesc">${esc(EX.eventDescription)}</label>
             <textarea class="form-control" id="eDesc" rows="3">${esc(e.description || "")}</textarea>
+          </div>
+        </div>`)}
+
+      ${section("cash-coin", EX.secFees, `
+        <div class="row g-3">
+          <div class="col-7 col-md-4">
+            <label class="form-label small" for="eFeeTeam">${esc(EX.feeTeam)}</label>
+            <input class="form-control" id="eFeeTeam" type="number" min="0" step="any" value="${esc(e.fees?.team || "")}" placeholder="0" />
+          </div>
+          <div class="col-5 col-md-3">
+            <label class="form-label small" for="eFeeCurrency">${esc(EX.feeCurrency)}</label>
+            <select class="form-select" id="eFeeCurrency">${CURRENCIES.map((c) => `<option ${(e.fees?.currency || "CRC") === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+          </div>
+          <div class="col-12 col-md-5 d-flex align-items-end"><div class="form-text m-0">${esc(EX.feePlayerLater)}</div></div>
+          <div class="col-12">
+            <label class="form-label small" for="eFeeInfo">${esc(EX.feeInfo)}</label>
+            <textarea class="form-control" id="eFeeInfo" rows="2" placeholder="${esc(EX.feeInfoPh)}">${esc(e.fees?.info || "")}</textarea>
           </div>
         </div>`)}
 
@@ -536,6 +507,8 @@ function renderInfo() {
         endDate: v("eEnd"),
         venue: v("eVenue"),
         surface: v("eSurface"),
+        country: v("eCountry"),
+        fees: { team: Math.max(0, Number(v("eFeeTeam")) || 0), currency: v("eFeeCurrency") || "CRC", info: v("eFeeInfo") },
         address: v("eAddress"),
         mapsUrl: v("eMaps"),
         description: v("eDesc"),
@@ -629,6 +602,7 @@ function renderTeams() {
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="small ev-muted">${esc(EX.teamPoolHint)} ${esc(EX.teamsOnlyByRegistration)}</div>
     </div>
+    ${paymentsSection()}
     ${requestsSection()}
     <div id="evTeams">${state.teams.length ? state.teams.map(teamCard).join("") : `<div class="ev-card ev-muted">${esc(EX.noTeams)}</div>`}</div>`;
 
@@ -662,6 +636,19 @@ function renderTeams() {
   });
 
   tab.addEventListener("click", (ev) => {
+    const pay = ev.target.closest("[data-pay-approve],[data-pay-reject]");
+    if (pay) {
+      const ok = !!pay.dataset.payApprove;
+      const rid = pay.dataset.payApprove || pay.dataset.payReject;
+      const note = ok ? "" : prompt(EX.payRejectNote, "");
+      if (note === null) return;
+      return run(async () => {
+        await decideRegistrationPayment(state.event.id, rid, ok, note || "");
+        await reloadData();
+        alertBox(EX.saved);
+        renderEvent();
+      });
+    }
     const decide = ev.target.closest("[data-reg-approve],[data-reg-reject]");
     if (decide) {
       const reg = state.regs.find((r) => r.id === decide.dataset.regApprove || r.id === decide.dataset.regReject);
@@ -694,6 +681,28 @@ function renderTeams() {
   });
 }
 
+// Comprobantes de pago por revisar (de cualquier inscripción, aprobada o no)
+function paymentsSection() {
+  const list = state.regs.filter((r) => r.paymentStatus === PAYMENT.SUBMITTED && r.paymentProof);
+  if (!list.length) return "";
+  const fee = fmtMoney(teamFee(state.event), state.event.fees?.currency || "CRC");
+  return `
+    <h2 class="h6 mt-1 mb-2">${esc(exf(EX.payToReview, { n: list.length }))}</h2>
+    ${list.map((r) => `
+      <div class="ev-card tn-reg-card">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          ${teamBadge(r, 40)}
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-bold">${esc(r.name || "—")}</div>
+            <div class="small ev-muted">${esc(exf(EX.payFeeOf, { fee }))}</div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger" data-pay-reject="${esc(r.id)}">${esc(EX.payReject)}</button>
+          <button class="btn btn-sm btn-success" data-pay-approve="${esc(r.id)}"><i class="bi bi-check-lg me-1"></i>${esc(EX.payApprove)}</button>
+        </div>
+        <a href="${esc(r.paymentProof)}" target="_blank" rel="noopener" class="tn-proof"><img src="${esc(r.paymentProof)}" alt="${esc(EX.payProof)}" /></a>
+      </div>`).join("")}`;
+}
+
 function requestsSection() {
   const regs = state.regs.filter((r) => r.status !== REG.APPROVED);
   if (!regs.length && !state.event.registrationOpen) return "";
@@ -708,7 +717,7 @@ function requestsSection() {
           <div class="d-flex align-items-center gap-2 flex-wrap">
             ${teamBadge(r, 40)}
             <div class="flex-grow-1 min-w-0">
-              <div class="fw-bold">${esc(r.name || "—")} ${regChip(r.status)}</div>
+              <div class="fw-bold">${esc(r.name || "—")} ${regChip(r.status)} ${teamFee(state.event) ? paymentChip(r) : ""}</div>
               <div class="small ev-muted text-truncate">${esc([r.city, divisions().length > 1 ? divName(r.divisionId) : "", exf(EX.regManagedBy, { who: r.managerEmail || r.managerName || "" }), r.contact].filter(Boolean).join(" · "))}</div>
             </div>
             ${r.status === REG.PENDING ? `

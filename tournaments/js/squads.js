@@ -1,4 +1,4 @@
-// /torneos/js/squads.js
+// /tournaments/js/squads.js
 // Equipos permanentes (como un club): dueños/co-admins, roster con jugadores que se unen por link,
 // perfiles de jugador e historial de estadísticas en todos los torneos.
 //   squads/{sid}                          nombre, logo, color, ownerUids, capitanes por defecto
@@ -7,7 +7,7 @@
 //   squads/{sid}/tournaments/{eventId}    torneos donde se inscribió (puntero a la inscripción)
 //   squad_invites/{token}                 { squadId, role } — quien tiene el link puede unirse
 //   profiles/{uid}                        perfil del jugador: foto, número, F/M, equipos (squadIds)
-import { db, COL } from "/torneos/js/firebase.js";
+import { db, COL } from "/tournaments/js/firebase.js";
 import {
   collection,
   deleteDoc,
@@ -19,8 +19,8 @@ import {
   setDoc,
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { GAME_STATUS, randomId, spiritTable, standings } from "/torneos/js/model.js";
-import { listGames, listTeams, loadEvent, loadRegistration, rosterLocked } from "/torneos/js/services.js";
+import { GAME_STATUS, randomId, spiritTable, standings } from "/tournaments/js/model.js";
+import { listGames, listTeams, loadEvent, loadRegistration, rosterLocked } from "/tournaments/js/services.js";
 
 const SPIRIT_WINDOW_DAYS = 21; // después de esto ya no se recuerda la evaluación pendiente
 
@@ -33,9 +33,9 @@ const invitesRef = (sid) => doc(db, COL.squads, sid, "private", "invites");
 const profileRef = (uid) => doc(db, COL.profiles, uid);
 
 export const isSquadAdmin = (squad, uid) => !!uid && (squad?.ownerUids || []).includes(uid);
-export const joinUrl = (token) => `${location.origin}/torneos/unirme.html?t=${encodeURIComponent(token)}`;
-export const squadUrl = (sid) => `/torneos/club.html?s=${encodeURIComponent(sid)}`;
-export const profileUrl = (uid) => `/torneos/perfil.html?u=${encodeURIComponent(uid)}`;
+export const joinUrl = (token) => `${location.origin}/tournaments/join.html?t=${encodeURIComponent(token)}`;
+export const squadUrl = (sid) => `/tournaments/club.html?s=${encodeURIComponent(sid)}`;
+export const profileUrl = (uid) => `/tournaments/profile.html?u=${encodeURIComponent(uid)}`;
 
 /* =========================
    Perfiles

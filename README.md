@@ -1,18 +1,18 @@
 # ClubStudioHQ
 
-Landing de la plataforma (`index.html`) y módulo de **Torneos** (`/torneos/`), abierto a cualquier organizador
+Landing de la plataforma (`index.html`) y módulo de **Torneos** (`/tournaments/`), abierto a cualquier organizador
 (no hace falta tener un club en ClubStudioHQ).
 
 ## Torneos
 
 | Página | Para quién |
 |---|---|
-| `/torneos/` | Público: torneos publicados |
-| `/torneos/organizar.html` | Organizadores (entrar con Google): equipos, calendario, links de planillero |
-| `/torneos/evento.html?e=<link>` | Público: resumen, posiciones, estadísticas (MVP), partidos, equipos, espíritu |
-| `/torneos/partido.html?event=&game=` | Público: marcador y jugadas en vivo |
-| `/torneos/planillar.html?event=&game=&key=` | Planillero (link por partido, sin cuenta) |
-| `/torneos/admin.html` | Admins de la plataforma: aprobar torneos (prueba gratis / pagado) |
+| `/tournaments/` | Público: torneos publicados |
+| `/tournaments/organize.html` | Organizadores (entrar con Google): equipos, calendario, links de planillero |
+| `/tournaments/event.html?e=<link>` | Público: resumen, posiciones, estadísticas (MVP), partidos, equipos, espíritu |
+| `/tournaments/game.html?event=&game=` | Público: marcador y jugadas en vivo |
+| `/tournaments/score.html?event=&game=&key=` | Planillero (link por partido, sin cuenta) |
+| `/tournaments/admin.html` | Admins de la plataforma: aprobar torneos (prueba gratis / pagado) |
 
 **Flujo:** cualquiera con Google crea un torneo (borrador privado) → arma equipos y calendario →
 *Solicitar activación* → un admin lo aprueba con plan (prueba gratis o pagado, con vencimiento opcional) →

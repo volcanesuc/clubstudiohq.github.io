@@ -1,8 +1,8 @@
-// /torneos/js/firebase.js
+// /tournaments/js/firebase.js
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { FIREBASE_CONFIG } from "/torneos/js/firebase-config.js";
+import { FIREBASE_CONFIG } from "/tournaments/js/firebase-config.js";
 
 const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 

@@ -1,7 +1,8 @@
-// /torneos/js/event_page.js
+// /tournaments/js/event_page.js
 // Página pública de un evento (?e=slug): resumen, posiciones, estadísticas (MVP y líderes), equipos,
 // partidos y espíritu. Los partidos se actualizan en vivo.
-import { EX, exf } from "/torneos/js/strings.js";
+import { countryName, flagOf } from "/tournaments/js/countries.js";
+import { EX, exf } from "/tournaments/js/strings.js";
 import {
   GAME_STATUS,
   SPIRIT_KEYS,
@@ -12,10 +13,10 @@ import {
   playerTotals,
   spiritTable,
   standings,
-} from "/torneos/js/model.js";
-import { REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
-import { myRegistrationsFor } from "/torneos/js/squads.js";
-import { esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
+} from "/tournaments/js/model.js";
+import { deadlineEnd, REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee } from "/tournaments/js/services.js";
+import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
+import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
@@ -35,6 +36,32 @@ function mapQuery(e) {
   const place = url.match(/\/place\/([^/@?]+)/);
   if (place) return decodeURIComponent(place[1].replace(/\+/g, " "));
   return [e.venue, e.address].filter(Boolean).join(", ");
+}
+
+// Resumen › Inscripción: cuota, fechas límite y tamaño del roster (para ver antes de inscribirse)
+function registrationInfoCard() {
+  const e = state.event;
+  const r = state.rules;
+  const fee = teamFee(e);
+  const items = [];
+  if (fee) items.push(["cash-coin", EX.feeTeam, fmtMoney(fee, e.fees?.currency || "CRC")]);
+  if (e.registrationDeadline) items.push(["calendar-check", EX.regDeadline, fmtDayOnly(deadlineEnd(e.registrationDeadline))]);
+  if (e.rosterDeadline) items.push(["lock", EX.rosterDeadline, fmtDayOnly(deadlineEnd(e.rosterDeadline))]);
+  if (r.rosterMin || r.rosterMax) {
+    items.push(["people", EX.roster, r.rosterMin && r.rosterMax ? `${r.rosterMin}–${r.rosterMax}` : r.rosterMin ? exf(EX.regRosterAtLeast, { n: r.rosterMin }).replace(/[()]/g, "") : exf(EX.regRosterAtMost, { n: r.rosterMax }).replace(/[()]/g, "")]);
+  }
+  if (!items.length && !e.fees?.info) return "";
+  return `
+    <section class="ev-card mt-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="h6 mb-0">${esc(EX.regInfoTitle)}</h2>
+        ${registrationIsOpen(e) ? `<span class="ev-chip ev-chip--ok">${esc(EX.regOpen)}</span>` : `<span class="ev-chip">${esc(EX.registrationClosedShort)}</span>`}
+      </div>
+      <div class="ev-info-grid">
+        ${items.map(([icon, label, value]) => `<div class="ev-info"><i class="bi bi-${icon}"></i><div><div class="ev-info__label">${esc(label)}</div><div class="ev-info__value">${esc(value)}</div></div></div>`).join("")}
+      </div>
+      ${e.fees?.info ? `<div class="small ev-muted mt-2" style="white-space:pre-line">${esc(e.fees.info)}</div>` : ""}
+    </section>`;
 }
 
 function venueCard() {
@@ -58,7 +85,7 @@ function venueCard() {
 function myRegistrationHtml() {
   const e = state.event;
   const items = state.myRegs.map(({ squad, reg }) => {
-    const edit = `/torneos/equipo.html?${new URLSearchParams({ e: e.id, r: reg.id })}`;
+    const edit = `/tournaments/team.html?${new URLSearchParams({ e: e.id, r: reg.id })}`;
     return `
       <div class="tn-my-reg">
         ${teamBadge(squad, 26)}<span class="fw-bold">${esc(squad.name)}</span>${regChip(reg.status)}
@@ -68,7 +95,7 @@ function myRegistrationHtml() {
   }).join("");
   // "inscribir otro" solo si me queda algún equipo sin inscribir
   const register = registrationIsOpen(e) && (!state.myRegs.length || state.myRegs.freeSquads > 0)
-    ?`<a class="btn btn-light btn-sm fw-bold" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(state.myRegs.length ? EX.registerAnother : EX.registerTeam)}</a>`
+    ?`<a class="btn btn-light btn-sm fw-bold" href="/tournaments/team.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(state.myRegs.length ? EX.registerAnother : EX.registerTeam)}</a>`
     : "";
   if (!items && !register) return "";
   return `<div class="d-flex flex-wrap gap-2 mt-3">${items}${register}</div>`;
@@ -97,6 +124,7 @@ function overview() {
       ${tile(`${finals.length}/${games.length}`, EX.overviewGames)}
       ${tile(goals, EX.overviewGoals)}
     </div>
+    ${registrationInfoCard()}
     ${venueCard()}
     ${list(EX.liveNow, live)}
     ${list(EX.upcoming, upcoming)}
@@ -198,35 +226,85 @@ function standingsTab() {
     ${teams.length ? `<div class="st-legend">${esc(EX.standLegend)}</div>` : ""}`;
 }
 
+// Fotos de perfil de los jugadores con cuenta (perfil público), se cargan una vez y se repinta
+const photos = new Map();
+let photosLoading = false;
+function ensurePhotos(uids) {
+  const missing = uids.filter((u) => u && !photos.has(u));
+  if (!missing.length || photosLoading) return;
+  photosLoading = true;
+  Promise.all(missing.map(async (u) => photos.set(u, (await loadProfile(u).catch(() => null))?.photoURL || "")))
+    .finally(() => {
+      photosLoading = false;
+      if (state.tab === "stats") render();
+    });
+}
+
 function statsTab() {
   const teams = state.teams.filter(inDivision(state.division));
   const teamIds = new Set(teams.map((t) => t.id));
+  const teamById = new Map(teams.map((t) => [t.id, t]));
   const games = state.games.filter((g) => g.status !== GAME_STATUS.SCHEDULED && (teamIds.has(g.teamA?.id) || teamIds.has(g.teamB?.id)));
   const totals = playerTotals(games, teams, state.rules).filter((p) => p.teamId && teamIds.has(p.teamId));
-  if (!totals.length) return divisionPicker() + `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`;
-  const card = (title, key) => {
-    const rows = leaders(totals, key, 10);
-    return `
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="ev-leader-card h-100">
-          <h3>${esc(title)}</h3>
-          ${rows.map((p, i) => `
-            <div class="ev-leader-row">
-              <div class="ev-leader-row__pos">${i + 1}</div>
-              <div class="min-w-0"><div class="fw-semibold text-truncate">${esc(playerLabel(p))}</div><div class="small ev-muted text-truncate">${esc(p.teamName || "")}</div></div>
-              <div class="ev-leader-row__val">${p[key]}</div>
-            </div>`).join("") || `<div class="small ev-muted">—</div>`}
+  if (!totals.length) return `<div class="sb-toolbar">${divisionPicker()}</div><div class="ev-card ev-muted">${esc(EX.noStats)}</div>`;
+  ensurePhotos([...new Set(totals.map((p) => p.uid).filter(Boolean))]);
+  const person = (p) => ({ name: p.name, photoURL: photos.get(p.uid) || "" });
+  const sub = (p) => `${teamBadge(teamById.get(p.teamId) || { name: p.teamName }, 16)}<span class="text-truncate">${esc(p.teamName || "")}</span>`;
+  const link = (p, inner) => (p.uid ? `<a class="text-reset text-decoration-none" href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}">${inner}</a>` : inner);
+
+  // MVP del torneo: tarjeta grande con foto y sus números
+  const mvp = leaders(totals, "mvp", 1)[0];
+  const hero = mvp && mvp.mvp > 0 ? `
+    <section class="lb-hero">
+      ${link(mvp, `<span class="lb-hero__photo">${avatarHtml(person(mvp), 88)}<span class="lb-hero__crown"><i class="bi bi-trophy-fill"></i></span></span>`)}
+      <div class="min-w-0 flex-grow-1">
+        <div class="lb-hero__kicker">${esc(EX.leaderMvp)}</div>
+        <div class="lb-hero__name">${link(mvp, esc(playerLabel(mvp)))}</div>
+        <div class="lb-hero__team">${sub(mvp)}</div>
+        <div class="lb-hero__stats">
+          ${[["goals", EX.heroGoals], ["assists", EX.heroAssists], ["blocks", EX.heroBlocks]].map(([k, l]) => `<div><b>${mvp[k] || 0}</b><span>${esc(l)}</span></div>`).join("")}
         </div>
-      </div>`;
+      </div>
+    </section>` : "";
+
+  // Líderes por categoría: el primero destacado y el top 5 debajo
+  const board = (title, key, icon) => {
+    const rows = leaders(totals, key, 5).filter((p) => (p[key] || 0) > 0);
+    if (!rows.length) return "";
+    const [first, ...rest] = rows;
+    return `
+      <section class="lb-card">
+        <h3 class="lb-card__title"><i class="bi bi-${icon}"></i>${esc(title)}</h3>
+        <div class="lb-top">
+          ${link(first, avatarHtml(person(first), 56))}
+          <div class="min-w-0 flex-grow-1">
+            <div class="lb-top__name text-truncate">${link(first, esc(playerLabel(first)))}</div>
+            <div class="lb-team">${sub(first)}</div>
+          </div>
+          <div class="lb-top__val">${first[key]}</div>
+        </div>
+        ${rest.map((p, i) => `
+          <div class="lb-row">
+            <span class="lb-row__pos">${i + 2}</span>
+            ${link(p, avatarHtml(person(p), 32))}
+            <div class="min-w-0 flex-grow-1">
+              <div class="lb-row__name text-truncate">${link(p, esc(playerLabel(p)))}</div>
+              <div class="lb-team">${sub(p)}</div>
+            </div>
+            <span class="lb-row__val">${p[key]}</span>
+          </div>`).join("")}
+      </section>`;
   };
+
+  // las pérdidas no se muestran como "líderes" (nadie quiere ganar esa)
   return `
-    ${divisionPicker()}
-    <div class="row g-3">
-      ${card(EX.leaderMvp, "mvp")}
-      ${card(EX.leaderGoals, "goals")}
-      ${card(EX.leaderAssists, "assists")}
-      ${card(EX.leaderBlocks, "blocks")}
-      ${card(EX.leaderTurns, "turns")}
+    <div class="sb-toolbar">${divisionPicker()}</div>
+    ${hero}
+    <div class="lb-grid">
+      ${board(EX.leaderMvp, "mvp", "star-fill")}
+      ${board(EX.leaderGoals, "goals", "bullseye")}
+      ${board(EX.leaderAssists, "assists", "send-fill")}
+      ${board(EX.leaderBlocks, "blocks", "shield-fill")}
     </div>
     <div class="small ev-muted mt-2">${esc(EX.mvpHint)}</div>`;
 }
@@ -238,7 +316,7 @@ function teamsTab() {
     <div class="row g-3">
       ${teams.map((t) => {
         // con equipo en ClubStudioHQ: abre su página (jugadores, torneos, resultados)
-        const href = t.squadId ? `/torneos/club.html?s=${encodeURIComponent(t.squadId)}` : "";
+        const href = t.squadId ? `/tournaments/club.html?s=${encodeURIComponent(t.squadId)}` : "";
         const tag = href ? "a" : "div";
         return `
         <div class="col-12 col-md-6">
@@ -375,60 +453,52 @@ function gamesTab() {
 function spiritTab() {
   const teams = state.teams.filter(inDivision(state.division));
   const rows = spiritTable(teams, state.games).filter((r) => r.count > 0);
-  if (!rows.length) return divisionPicker() + `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`;
+  if (!rows.length) return `<div class="sb-toolbar">${divisionPicker()}</div><div class="ev-card ev-muted">${esc(EX.noStats)}</div>`;
   const short = { rules: "R", fouls: "F", fair: "I", attitude: "A", comm: "C" };
   const titles = { rules: EX.spiritRules, fouls: EX.spiritFouls, fair: EX.spiritFair, attitude: EX.spiritAttitude, comm: EX.spiritComm };
-  const labels = { rules: EX.spCatRules, fouls: EX.spCatFouls, fair: EX.spCatFair, attitude: EX.spCatAttitude, comm: EX.spCatComm };
-  const pct = (v, max) => Math.max(0, Math.min(100, (v / max) * 100));
-  const medal = (i) => (i < 3 ? `<span class="spb-rank spb-rank--${i + 1}">${i + 1}</span>` : `<span class="spb-rank">${i + 1}</span>`);
-
-  // Tarjeta por equipo: total sobre 20 (con la marca de 10 = lo normal) y las 5 categorías sobre 4
-  const card = (r, i) => `
-    <article class="spb-card">
-      <header class="spb-card__head">
-        ${medal(i)}
-        ${teamBadge(r.team, 40)}
-        <div class="min-w-0 flex-grow-1">
-          <div class="spb-card__name">${esc(r.team.name)}</div>
-          <div class="spb-card__count">${esc(r.count === 1 ? EX.spOneReview : exf(EX.spReviews, { n: r.count }))}</div>
-        </div>
-        <div class="spb-card__score"><b>${r.avg.toFixed(1)}</b><span>/20</span></div>
-      </header>
-      <div class="spb-total" title="${esc(exf(EX.spTotalTip, { n: r.avg.toFixed(1) }))}" role="img" aria-label="${esc(exf(EX.spTotalTip, { n: r.avg.toFixed(1) }))}">
-        <i style="width:${pct(r.avg, 20)}%"></i>
-        <span class="spb-total__mark" style="left:50%" aria-hidden="true"></span>
-      </div>
-      <div class="spb-cats">
-        ${SPIRIT_KEYS.map((k) => `
-          <div class="spb-cat" title="${esc(titles[k])}: ${r.catAvg[k].toFixed(1)} / 4">
-            <div class="spb-cat__top"><span>${esc(labels[k])}</span><b>${r.catAvg[k].toFixed(1)}</b></div>
-            <div class="spb-cat__bar"><i style="width:${pct(r.catAvg[k], 4)}%"></i></div>
-          </div>`).join("")}
-      </div>
-    </article>`;
-
+  const divName = divisions().find((d) => d.id === state.division)?.name || divisions()[0]?.name || "";
+  const reviews = rows.reduce((n, r) => n + r.count, 0);
+  // mismo formato que Posiciones: tarjeta con encabezado, tabla y leyenda
   return `
-    ${divisionPicker()}
-    <div class="spb-intro small ev-muted mb-3">${esc(EX.spIntro)}</div>
-    <div class="spb-board">${rows.map(card).join("")}</div>
-    <details class="mt-3">
-      <summary class="small ev-muted">${esc(EX.spTableView)}</summary>
-      <div class="ev-card p-0 overflow-hidden mt-2">
-        <div class="table-responsive">
-          <table class="table table-sm mb-0 ev-table">
-            <thead><tr><th class="ps-3">#</th><th>${esc(EX.standTeam)}</th><th class="num">${esc(EX.spiritAvg)}</th>
-              ${SPIRIT_KEYS.map((k) => `<th class="num" title="${esc(titles[k])}">${short[k]}</th>`).join("")}
-              <th class="num pe-3">${esc(EX.spiritCount)}</th></tr></thead>
-            <tbody>${rows.map((r, i) => `
-              <tr><td class="ps-3 fw-bold">${i + 1}</td><td>${esc(r.team.name)}</td><td class="num fw-bold">${r.avg.toFixed(1)}</td>
-              ${SPIRIT_KEYS.map((k) => `<td class="num">${r.catAvg[k].toFixed(1)}</td>`).join("")}
-              <td class="num pe-3">${r.count}</td></tr>`).join("")}
-            </tbody>
-          </table>
+    <div class="sb-toolbar">${divisionPicker()}</div>
+    <section class="st-card">
+      <header class="st-card__head">
+        <div>
+          <div class="st-card__title">${esc(divName ? `${EX.tabSpirit} · ${divName}` : EX.tabSpirit)}</div>
+          <div class="st-card__sub">${esc(reviews === 1 ? EX.spOneReview : exf(EX.spReviews, { n: reviews }))}</div>
         </div>
+        <span class="st-live"><i class="bi bi-heart-fill"></i> WFDF</span>
+      </header>
+      <div class="table-responsive">
+        <table class="st-table">
+          <thead><tr>
+            <th class="st-pos">#</th>
+            <th class="st-team">${esc(EX.standTeam)}</th>
+            <th class="num" title="${esc(EX.spiritAvgLong)}">${esc(EX.spiritAvgShort)}</th>
+            ${SPIRIT_KEYS.map((k) => `<th class="num d-none d-sm-table-cell" title="${esc(titles[k])}">${short[k]}</th>`).join("")}
+            <th class="num" title="${esc(EX.spiritCount)}">${esc(EX.spiritCountShort)}</th>
+          </tr></thead>
+          <tbody>${rows.map((r, i) => `
+            <tr class="${i === 0 ? "is-leader" : ""}">
+              <td class="st-pos"><span class="st-rank">${i + 1}</span></td>
+              <td class="st-team">
+                <div class="d-flex align-items-center gap-2">
+                  ${teamBadge(r.team, 30)}
+                  <div class="min-w-0">
+                    <div class="st-team__name">${esc(r.team.name)}</div>
+                    ${r.team.city ? `<div class="st-team__sub d-none d-sm-block">${esc(r.team.city)}</div>` : ""}
+                  </div>
+                </div>
+              </td>
+              <td class="num"><span class="st-spirit ${r.avg >= 12 ? "is-high" : r.avg < 8 ? "is-low" : ""}">${r.avg.toFixed(1)}</span></td>
+              ${SPIRIT_KEYS.map((k) => `<td class="num d-none d-sm-table-cell">${r.catAvg[k].toFixed(1)}</td>`).join("")}
+              <td class="num">${r.count}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
       </div>
-      <div class="small ev-muted mt-2">${SPIRIT_KEYS.map((k) => `${short[k]}: ${esc(titles[k])}`).join(" · ")}</div>
-    </details>`;
+    </section>
+    <div class="st-legend">${esc(EX.spLegendIntro)} ${SPIRIT_KEYS.map((k) => `${short[k]}: ${esc(titles[k])}`).join(" · ")}</div>`;
 }
 
 /* =========================
@@ -454,6 +524,7 @@ function render() {
         ${e.startDate ? `<span><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</span>` : ""}
         ${e.venue ? `<span><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</span>` : ""}
         ${SURFACES.includes(e.surface) ? `<span><i class="bi ${SURFACE_ICONS[e.surface]}"></i> ${esc(EX[`surface_${e.surface}`])}</span>` : ""}
+        ${e.country ? `<span>${flagOf(e.country)} ${esc(countryName(e.country))}</span>` : ""}
         ${e.mapsUrl ? `<a class="text-white" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map"></i></a>` : ""}
       </div>
       ${myRegistrationHtml()}

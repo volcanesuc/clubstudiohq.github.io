@@ -1,4 +1,4 @@
-// /torneos/js/services.js
+// /tournaments/js/services.js
 // Firestore de la plataforma de torneos:
 //   events/{eventId}                        torneo (info, reglas, organizadores, activación)
 //   events/{eventId}/teams/{teamId}         equipos con roster
@@ -10,7 +10,7 @@
 //   game_keys/{token}                       link de planillero -> { eventId, gameId }
 //   game_claims/{gameId}_{uid}              sesión que reclamó un link
 //   platform_admins/{uid}                   quién aprueba torneos (se crea a mano en la consola)
-import { auth, db, COL } from "/torneos/js/firebase.js";
+import { auth, db, COL } from "/tournaments/js/firebase.js";
 import { onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   collection,
@@ -26,9 +26,9 @@ import {
   where,
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { GAME_STATUS, randomId } from "/torneos/js/model.js";
-import { DIVISION_OPTIONS } from "/torneos/js/divisions-config.js";
-import { toMillis } from "/torneos/js/ui.js";
+import { GAME_STATUS, randomId } from "/tournaments/js/model.js";
+import { DIVISION_OPTIONS } from "/tournaments/js/divisions-config.js";
+import { toMillis } from "/tournaments/js/ui.js";
 
 export const APPROVAL = { NONE: "none", REQUESTED: "requested", APPROVED: "approved", REJECTED: "rejected" };
 export const REG = { PENDING: "pending", APPROVED: "approved", REJECTED: "rejected" };
@@ -49,6 +49,35 @@ export const registrationExpired = (event, now = new Date()) => {
   const end = event?.registrationDeadlineAt ? new Date(toMillis(event.registrationDeadlineAt)) : deadlineEnd(event?.registrationDeadline);
   return !!end && now > end;
 };
+// Cuotas del torneo: { team, currency, info } (la cuota por jugador queda para después)
+export const CURRENCIES = ["CRC", "USD", "EUR", "MXN", "COP", "GTQ", "HNL", "NIO", "PAB", "DOP", "PEN", "CLP", "ARS"];
+export const teamFee = (event) => Number(event?.fees?.team) || 0;
+export function fmtMoney(amount, currency = "USD") {
+  try {
+    return new Intl.NumberFormat("es", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(amount) || 0);
+  } catch {
+    return `${currency} ${Number(amount) || 0}`;
+  }
+}
+
+// Pago de la inscripción: el admin del equipo sube el comprobante (opcional) y el organizador lo aprueba.
+// En la inscripción: paymentStatus "none" | "submitted" | "approved" | "rejected", paymentProof (imagen), paymentAt
+export const PAYMENT = { NONE: "none", SUBMITTED: "submitted", APPROVED: "approved", REJECTED: "rejected" };
+
+export async function submitRegistrationPayment(eid, rid, proof) {
+  await updateDoc(doc(regsCol(eid), rid), { paymentProof: proof, paymentStatus: PAYMENT.SUBMITTED, paymentAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+
+export async function decideRegistrationPayment(eid, rid, approved, note = "") {
+  await updateDoc(doc(regsCol(eid), rid), {
+    paymentStatus: approved ? PAYMENT.APPROVED : PAYMENT.REJECTED,
+    paymentNote: note,
+    paymentDecidedAt: serverTimestamp(),
+    paymentDecidedBy: auth.currentUser?.uid || null,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 // Roster cerrado: después de rosterDeadline los equipos ya no suman ni sacan jugadores (el organizador sí).
 export const rosterLocked = (event, now = new Date()) => {
   const end = event?.rosterDeadlineAt ? new Date(toMillis(event.rosterDeadlineAt)) : deadlineEnd(event?.rosterDeadline);
@@ -424,7 +453,7 @@ export async function createGameKey(eid, gid) {
 }
 
 export function scorekeeperUrl(eid, gid, token) {
-  return `${location.origin}/torneos/planillar.html?${new URLSearchParams({ event: eid, game: gid, key: token })}`;
+  return `${location.origin}/tournaments/score.html?${new URLSearchParams({ event: eid, game: gid, key: token })}`;
 }
 
 // Espera a que Firebase restaure la sesión guardada (al cargar la página auth.currentUser es null un instante).

@@ -1,11 +1,11 @@
-// /torneos/js/spirit.js
+// /tournaments/js/spirit.js
 // Evaluación de espíritu (WFDF) que hace cada equipo al terminar el partido (?event=&game=&side=).
 // Pueden evaluar los admins del equipo del torneo o su capitán(a) de espíritu; solo guardan su lado.
-import { EX, exf } from "/torneos/js/strings.js";
-import { GAME_STATUS, SPIRIT_KEYS, spiritTotal } from "/torneos/js/model.js";
-import { isPlatformAdmin, listGames, listTeams, loadEvent, saveTeamSpirit } from "/torneos/js/services.js";
-import { canRateSpirit } from "/torneos/js/squads.js";
-import { esc, eventUrl, gameUrl, hideLoader, isGoogleUser, renderNav, showLoader, signInGoogle, teamBadge, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { GAME_STATUS, SPIRIT_KEYS, spiritTotal } from "/tournaments/js/model.js";
+import { isPlatformAdmin, listGames, listTeams, loadEvent, saveTeamSpirit } from "/tournaments/js/services.js";
+import { canRateSpirit } from "/tournaments/js/squads.js";
+import { esc, eventUrl, gameUrl, hideLoader, isGoogleUser, renderNav, showLoader, signInGoogle, teamBadge, waitForUser, withLiveTeams } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -92,7 +92,7 @@ function renderDone() {
       <h1 class="h4 fw-bold mt-2">${esc(EX.spThanks)}</h1>
       <p class="ev-muted">${esc(exf(EX.spThanksSub, { team: opp?.name || "", n: spiritTotal(state.card) }))}</p>
       <div class="d-flex justify-content-center gap-2 flex-wrap">
-        <a class="btn btn-primary" href="/torneos/equipo.html">${esc(EX.spBack)}</a>
+        <a class="btn btn-primary" href="/tournaments/team.html">${esc(EX.spBack)}</a>
         <a class="btn btn-light" href="${esc(eventUrl(state.event))}#spirit">${esc(EX.tabSpirit)}</a>
       </div>
     </section>`);

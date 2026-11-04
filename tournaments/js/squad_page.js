@@ -1,8 +1,8 @@
-// /torneos/js/squad_page.js
+// /tournaments/js/squad_page.js
 // Página del equipo (?s=ID). Pública: roster y torneos. Admins: editar datos, roster, capitanes,
 // links de invitación (jugadores y co-admins), co-admins e inscripciones.
-import { EX, exf } from "/torneos/js/strings.js";
-import { REG, isApproved, listPublicEvents, registrationIsOpen } from "/torneos/js/services.js";
+import { EX, exf } from "/tournaments/js/strings.js";
+import { REG, isApproved, listPublicEvents, registrationIsOpen } from "/tournaments/js/services.js";
 import {
   INVITE_ROLE,
   addSelfToRoster,
@@ -25,7 +25,7 @@ import {
   saveMember,
   saveSquad,
   setOwners,
-} from "/torneos/js/squads.js";
+} from "/tournaments/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -39,10 +39,10 @@ import {
   spiritPendingHtml,
   teamBadge,
   waitForUser,
-} from "/torneos/js/ui.js";
-import { isPlatformAdmin } from "/torneos/js/services.js";
-import { cropFromInput } from "/torneos/js/cropper.js";
-import { countryName, countryOptions, flagOf } from "/torneos/js/countries.js";
+} from "/tournaments/js/ui.js";
+import { isPlatformAdmin } from "/tournaments/js/services.js";
+import { cropFromInput } from "/tournaments/js/cropper.js";
+import { countryName, countryOptions, flagOf } from "/tournaments/js/countries.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -59,7 +59,8 @@ const state = {
   owners: [], // perfiles de los admins
   openEvents: [],
   editing: "", // id del jugador en edición
-  tab: new URLSearchParams(location.search).get("tab") || "torneos",
+  // tabs: tournaments | players | admin ("torneos"/"jugadores" son los nombres viejos)
+  tab: ({ torneos: "tournaments", jugadores: "players" })[new URLSearchParams(location.search).get("tab")] || new URLSearchParams(location.search).get("tab") || "tournaments",
   results: null, // resultado del equipo en cada torneo (se carga aparte)
   spirit: [], // evaluaciones de espíritu que me tocan en este equipo
 };
@@ -143,7 +144,7 @@ function header() {
         </div>
         <div class="tp-hero__actions">
           ${playerLink ? `<button class="btn tn-btn-grad" data-copy="${esc(playerLink)}"><i class="bi bi-link-45deg me-1"></i>${esc(EX.sqInvitePlayers)}</button>` : ""}
-          ${isMember() ? `<a class="btn btn-light" href="/torneos/perfil.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>` : ""}
+          ${isMember() ? `<a class="btn btn-light" href="/tournaments/profile.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>` : ""}
           <button class="btn btn-light" data-copy="${esc(location.origin + squadUrl(SID))}"><i class="bi bi-share me-1"></i>${esc(EX.tpShare)}</button>
         </div>
       </div>
@@ -218,7 +219,7 @@ function tournamentsTab() {
           </div>
           <i class="bi bi-chevron-right ev-muted"></i>
         </a>
-        ${admin() && reg ? `<div class="tp-ev__admin"><a class="small" href="/torneos/equipo.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a><span class="small ev-muted">${state.rosterLocked?.has(t.eventId) ? `<i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)} · ` : ""}${esc(exf(EX.playersCount, { n: (reg.players || []).length }))}</span></div>` : ""}
+        ${admin() && reg ? `<div class="tp-ev__admin"><a class="small" href="/tournaments/team.html?${new URLSearchParams({ e: t.eventId, r: reg.id })}"><i class="bi bi-pencil me-1"></i>${esc(EX.regEditMine)}</a><span class="small ev-muted">${state.rosterLocked?.has(t.eventId) ? `<i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)} · ` : ""}${esc(exf(EX.playersCount, { n: (reg.players || []).length }))}</span></div>` : ""}
         ${missing.length ? `
           <div class="alert alert-warning py-2 px-3 mb-0 mt-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span class="small">${esc(exf(EX.sqMissingInReg, { n: missing.length, names: missing.map((m) => m.name).join(", ") }))}</span>
@@ -232,7 +233,7 @@ function tournamentsTab() {
       ${state.openEvents.map((e) => `
         <div class="tp-row">
           <div class="flex-grow-1 min-w-0"><div class="fw-semibold">${esc(e.name)}</div><div class="small ev-muted">${esc(fmtDateRange(e.startDate, e.endDate))}</div></div>
-          <a class="btn btn-sm tn-btn-grad" href="/torneos/equipo.html?${new URLSearchParams({ e: e.id, s: SID })}">${esc(EX.registerTeam)}</a>
+          <a class="btn btn-sm tn-btn-grad" href="/tournaments/team.html?${new URLSearchParams({ e: e.id, s: SID })}">${esc(EX.registerTeam)}</a>
         </div>`).join("")}
     </div>` : "";
   return `
@@ -392,20 +393,20 @@ function adminTab() {
 function render() {
   document.title = `${state.squad.name} · ClubStudioHQ`;
   const tabs = [
-    ["torneos", `<i class="bi bi-trophy"></i> ${esc(EX.tpTabEvents)}`],
-    ["jugadores", `<i class="bi bi-people"></i> ${esc(EX.tpTabPlayers)}`],
+    ["tournaments", `<i class="bi bi-trophy"></i> ${esc(EX.tpTabEvents)}`],
+    ["players", `<i class="bi bi-people"></i> ${esc(EX.tpTabPlayers)}`],
     ...(admin() ? [["admin", `<i class="bi bi-gear"></i> ${esc(EX.tpTabAdmin)}`]] : []),
   ];
-  if (!tabs.some(([id]) => id === state.tab)) state.tab = "torneos";
+  if (!tabs.some(([id]) => id === state.tab)) state.tab = "tournaments";
   root.innerHTML = `
     <div class="tp-wrap">
-      ${state.user ? `<a class="small ev-muted text-decoration-none" href="/torneos/equipo.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>` : ""}
+      ${state.user ? `<a class="small ev-muted text-decoration-none" href="/tournaments/team.html"><i class="bi bi-arrow-left"></i> ${esc(EX.myTeams)}</a>` : ""}
       ${header()}
       ${honorsShelf()}
       <nav class="tp-tabs" role="tablist">
         ${tabs.map(([id, label]) => `<button class="tp-tab ${state.tab === id ? "is-active" : ""}" data-tp-tab="${id}" role="tab">${label}</button>`).join("")}
       </nav>
-      <div class="tp-panel">${state.tab === "jugadores" ? playersTab() : state.tab === "admin" ? adminTab() : tournamentsTab()}</div>
+      <div class="tp-panel">${state.tab === "players" ? playersTab() : state.tab === "admin" ? adminTab() : tournamentsTab()}</div>
     </div>`;
 }
 
@@ -525,7 +526,7 @@ root.addEventListener("click", (ev) => {
     if (!confirm(EX.sqLeaveConfirm)) return;
     return run(async () => {
       await leaveSquad(state.user, state.squad);
-      location.href = "/torneos/equipo.html";
+      location.href = "/tournaments/team.html";
     });
   }
   const regAdd = t.closest("[data-reg-add]");

@@ -1,4 +1,4 @@
-// /torneos/js/firebase-config.js
+// /tournaments/js/firebase-config.js
 // Proyecto de Firebase de la PLATAFORMA (no el de un club).
 // Firebase console > Configuración del proyecto > Tus apps > App web > SDK config.
 // Estos valores son públicos por diseño: la seguridad la dan las reglas de Firestore (firestore.rules).

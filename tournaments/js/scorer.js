@@ -1,8 +1,8 @@
-// /torneos/js/scorer.js
+// /tournaments/js/scorer.js
 // Planillaje en vivo con link de planillero (?event=&game=&key=). Pensado para el teléfono en la cancha.
 // Cada jugada se guarda como documento propio (funciona sin señal y se puede corregir/borrar);
 // el marcador y las estadísticas del partido se recalculan desde las jugadas.
-import { EX, exf } from "/torneos/js/strings.js";
+import { EX, exf } from "/tournaments/js/strings.js";
 import {
   AUDIT_PLAYS,
   GAME_STATUS,
@@ -23,8 +23,8 @@ import {
   gameElapsedMs,
   gameSummary,
   other,
-} from "/torneos/js/model.js";
-import { auth } from "/torneos/js/firebase.js";
+} from "/tournaments/js/model.js";
+import { auth } from "/tournaments/js/firebase.js";
 import {
   addPlay,
   claimScorekeeper,
@@ -35,8 +35,8 @@ import {
   subscribePlays,
   updateGame,
   updatePlay,
-} from "/torneos/js/services.js";
-import { askConfirm, possessionDot, esc, feedItemHtml, playerLabel, showNotice } from "/torneos/js/ui.js";
+} from "/tournaments/js/services.js";
+import { askConfirm, possessionDot, esc, feedItemHtml, playerLabel, showNotice } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
