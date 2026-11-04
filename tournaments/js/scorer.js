@@ -222,6 +222,8 @@ function adjustClock(deltaSec) {
    Reloj / estado del partido
 ========================= */
 async function startGame() {
+  // partido de llave que todavía no tiene sus dos equipos (falta terminar el anterior)
+  if (!state.game?.teamA?.id || !state.game?.teamB?.id) return showNotice(EX.skTeamsPending);
   if (!state.offenseChoice) return showNotice(EX.skPickOffense);
   if (ratioAtStart() && !state.ratioChoice) return showNotice(EX.skPickRatio);
   const now = Date.now();

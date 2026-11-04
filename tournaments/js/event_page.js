@@ -9,19 +9,20 @@ import {
   SURFACES,
   SURFACE_ICONS,
   eventRules,
+  slotMinutes,
   leaders,
   playerTotals,
   spiritTable,
   standings,
 } from "/tournaments/js/model.js";
-import { deadlineEnd, REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee } from "/tournaments/js/services.js";
+import { deadlineEnd, REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
 import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
-import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/tournaments/js/ui.js";
+import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams, atMinutes, downloadIcs, scheduleDays, scheduleGridHtml } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "" };
+const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "", gamesView: "list" };
 
 // fila de partido con nombre, color y logo actuales del equipo
 const row = (g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id), teams: state.teams });
@@ -82,6 +83,20 @@ function venueCard() {
 }
 
 // Mis inscripciones en este torneo (si soy admin de un equipo) o el botón para inscribirme
+// Si estoy en un roster y el torneo pide formulario que todavía no firmé
+function waiverBanner() {
+  const e = state.event;
+  if (!waiverOn(e) || !state.user || !state.waivers) return "";
+  const inRoster = state.teams.some((t) => (t.players || []).some((p) => p.uid === state.user.uid));
+  if (!inRoster || state.waivers.get(state.user.uid)?.version === e.waiver.version) return "";
+  return `
+    <div class="ev-waiver-banner mt-3">
+      <i class="bi bi-file-earmark-text"></i>
+      <span class="flex-grow-1">${esc(EX.waiverBanner)}</span>
+      <a class="btn btn-sm btn-light fw-bold" href="/tournaments/waiver.html?e=${encodeURIComponent(e.slug || e.id)}">${esc(EX.waiverBannerBtn)}</a>
+    </div>`;
+}
+
 function myRegistrationHtml() {
   const e = state.event;
   const items = state.myRegs.map(({ squad, reg }) => {
@@ -128,8 +143,17 @@ function overview() {
     ${venueCard()}
     ${list(EX.liveNow, live)}
     ${list(EX.upcoming, upcoming)}
-    ${list(EX.results, finals.slice().reverse().slice(0, 6))}`;
+    ${list(EX.results, finals.slice().reverse().slice(0, 6))}
+    ${exportBar()}`;
 }
+
+// Descargar el torneo (partidos, posiciones, equipos, jugadores, espíritu)
+const exportBar = () => `
+  <div class="tn-export mt-4">
+    <span class="small fw-semibold ev-muted"><i class="bi bi-download me-1"></i>${esc(EX.exDownload)}</span>
+    <button class="btn btn-sm btn-outline-secondary" data-export="pdf"><i class="bi bi-file-earmark-pdf me-1"></i>${esc(EX.exPdf)}</button>
+    <button class="btn btn-sm btn-outline-secondary" data-export="xlsx"><i class="bi bi-file-earmark-spreadsheet me-1"></i>${esc(EX.exExcel)}</button>
+  </div>`;
 
 function divisionPicker() {
   if (divisions().length < 2) return "";
@@ -432,9 +456,26 @@ function gamesTab() {
     return sample ? fmtWhen(sample.startAt, { weekday: "short", day: "numeric", month: "short" }) : EX.noSchedule;
   };
 
+  // vista por hora: canchas en columnas, horas en filas (un día a la vez)
+  const viewToggle = `
+    <div class="sb-filters sb-view" role="tablist" aria-label="${esc(EX.schedViewGrid)}">
+      <button class="sb-filter ${state.gamesView === "list" ? "is-active" : ""}" data-gview="list"><i class="bi bi-list-ul me-1"></i>${esc(EX.schedViewList)}</button>
+      <button class="sb-filter ${state.gamesView === "grid" ? "is-active" : ""}" data-gview="grid"><i class="bi bi-calendar3-week me-1"></i>${esc(EX.schedViewGrid)}</button>
+    </div>`;
+  const calButton = `<button class="btn btn-sm btn-outline-primary" data-ics="all"><i class="bi bi-calendar-plus me-1"></i>${esc(EX.icsAll)}</button>`;
+  if (state.gamesView === "grid") {
+    const gdays = scheduleDays(all, state.event);
+    const gday = gdays.includes(state.gameDay) ? state.gameDay : gdays[0] || "";
+    return `
+      <div class="sb-toolbar">${divisionPicker()}${viewToggle}${calButton}</div>
+      ${gdays.length ? `<div class="sb-days">${gdays.map((k) => `<button class="sb-day ${gday === k ? "is-active" : ""}" data-gday="${k}">${esc(fmtWhen(atMinutes(k, 720), { weekday: "short", day: "numeric", month: "short" }))}<span>${all.filter((g) => dayKey(g.startAt) === k).length}</span></button>`).join("")}</div>` : ""}
+      ${gday ? scheduleGridHtml({ games: all, fields: state.event.fields || [], day: gday, stepMin: slotMinutes(state.rules), href: (g) => gameUrl(state.event.id, g.id) }) : `<div class="ev-card ev-muted">${esc(EX.noSchedule)}</div>`}`;
+  }
   return `
     <div class="sb-toolbar">
       ${divisionPicker()}
+      ${viewToggle}
+      ${calButton}
       <div class="sb-filters" role="tablist">
         ${filters.map(([id, label, n]) => `<button class="sb-filter ${state.gameFilter === id ? "is-active" : ""} ${id === GAME_STATUS.LIVE && n ? "has-live" : ""}" data-gfilter="${id}">${id === GAME_STATUS.LIVE && n ? "<i class=\"sb-live-dot\"></i>" : ""}${esc(label)} <span>${n}</span></button>`).join("")}
       </div>
@@ -528,6 +569,7 @@ function render() {
         ${e.mapsUrl ? `<a class="text-white" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map"></i></a>` : ""}
       </div>
       ${myRegistrationHtml()}
+      ${waiverBanner()}
     </section>
     <ul class="nav nav-pills mb-3 ev-tabs">
       ${TABS.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
@@ -557,6 +599,29 @@ $("tnRoot").addEventListener("click", async (ev) => {
   if (gf) {
     state.gameFilter = gf.dataset.gfilter;
     return render();
+  }
+  const ex = ev.target.closest("[data-export]");
+  if (ex) {
+    showLoader();
+    try {
+      const m = await import("/tournaments/js/export.js");
+      await (ex.dataset.export === "pdf" ? m.exportPdf : m.exportExcel)(state.event, state.teams, state.games);
+    } catch (err) {
+      console.error("[export]", err);
+    } finally {
+      hideLoader();
+    }
+    return;
+  }
+    const gv = ev.target.closest("[data-gview]");
+  if (gv) {
+    state.gamesView = gv.dataset.gview;
+    return render();
+  }
+  const ics = ev.target.closest("[data-ics]");
+  if (ics) {
+    const games = state.games.filter(inDivision(state.division)).filter((g) => toMillis(g.startAt));
+    return downloadIcs(games, state.event, `${state.event.slug || "torneo"}.ics`);
   }
   const gd = ev.target.closest("[data-gday]");
   if (gd) {
@@ -594,6 +659,13 @@ $("tnRoot").addEventListener("change", (ev) => {
     state.division = divisions().length > 1 ? divisions()[0].id : "";
     state.teams = await listTeams(event.id);
     render();
+    // formulario: ¿ya firmé? (público: solo dice quién firmó)
+    if (state.user && waiverOn(event)) {
+      listWaiverStatus(event.id).then((ws) => {
+        state.waivers = new Map(ws.map((w) => [w.uid, w]));
+        render();
+      }).catch(() => {});
+    }
     // estado de mi inscripción (no bloquea la página)
     if (state.user) {
       myRegistrationsFor(state.user, event.id).then((regs) => {

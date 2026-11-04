@@ -657,3 +657,73 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
   .lb-hero__stats { gap: .75rem; }
   .lb-hero__stats span { font-size: .6rem; letter-spacing: .03em; }
 }
+
+/* Equipo todavía sin definir en una llave */
+.tn-team-badge--tbd { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 50%; background: #e7e4f0; color: #6b6585; font-weight: 900; border: 1px dashed #b9b3cc; }
+
+/* Calendario por horas */
+.sg-wrap { overflow-x: auto; border: 1px solid var(--ev-border); border-radius: 16px; background: #fff; }
+.sg { border-collapse: separate; border-spacing: 0; width: 100%; min-width: max-content; }
+.sg th, .sg td { border-bottom: 1px solid var(--ev-border); border-right: 1px solid var(--ev-border); vertical-align: top; }
+.sg thead th { position: sticky; top: 0; background: #faf9fe; font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #4b4566; padding: .55rem .6rem; text-align: left; min-width: 170px; z-index: 1; }
+.sg .sg-time { position: sticky; left: 0; background: #faf9fe; min-width: 58px; width: 58px; font-size: .78rem; font-weight: 800; color: var(--ev-muted); padding: .55rem .5rem; text-align: right; z-index: 2; }
+.sg-cell { padding: .3rem; height: 78px; }
+.sg-cell.is-clash { background: #fff1f2; }
+.sg-cell.is-over { background: color-mix(in srgb, var(--ev-main) 10%, #fff); outline: 2px dashed color-mix(in srgb, var(--ev-main) 50%, transparent); outline-offset: -3px; }
+.sg-chip { display: grid; gap: .1rem; padding: .35rem .45rem; margin-bottom: .25rem; border-radius: 10px; background: #f4f2fb; border: 1px solid #e4e0f3; color: inherit; text-decoration: none; font-size: .78rem; cursor: default; }
+a.sg-chip { cursor: pointer; }
+a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
+.sg-chip[draggable="true"] { cursor: grab; }
+.sg-chip.is-live { background: #fee2e2; border-color: #fecaca; }
+.sg-chip.is-final { background: #f1f5f9; border-color: #e2e8f0; opacity: .85; }
+.sg-chip.is-picked { outline: 2px solid var(--ev-main); outline-offset: 1px; }
+.sg-chip__time { font-size: .68rem; font-weight: 800; color: var(--ev-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-chip__team { display: flex; align-items: center; gap: .3rem; min-width: 0; font-weight: 700; }
+.sg-chip__team b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sg-tray { min-height: 64px; padding: .5rem; border: 2px dashed var(--ev-border); border-radius: 14px; display: flex; flex-wrap: wrap; gap: .4rem; }
+.sg-tray .sg-chip { width: 180px; margin: 0; }
+.sg-tray.is-over { border-color: var(--ev-main); background: color-mix(in srgb, var(--ev-main) 6%, #fff); }
+.sg-days { display: flex; gap: .35rem; overflow-x: auto; margin-bottom: .6rem; scrollbar-width: none; }
+.sg-days::-webkit-scrollbar { display: none; }
+
+.tn-export { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding-top: .9rem; border-top: 1px solid var(--ev-border); }
+
+/* Formulario de exención */
+.tn-waiver-text { white-space: pre-line; max-height: 320px; overflow: auto; padding: .85rem 1rem; border-radius: 12px; background: #faf9fe; border: 1px solid var(--ev-border); font-size: .92rem; }
+.tn-signature { font-family: "Segoe Script", "Brush Script MT", cursive; font-size: 1.25rem; }
+.wv-chip { font-size: .72rem; }
+
+.ev-waiver-banner { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .6rem .8rem; border-radius: 14px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .25); }
+.ev-waiver-banner > i { font-size: 1.2rem; }
+
+.sb-days { scrollbar-width: none; }
+.sb-days::-webkit-scrollbar { display: none; }
+
+/* Asistente de calendario */
+.wz-step { border: 1px solid var(--ev-border); border-radius: 16px; padding: .85rem 1rem; margin-bottom: .65rem; background: #fff; }
+.wz-step__head { display: flex; align-items: center; gap: .55rem; margin-bottom: .55rem; }
+.wz-step__n { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--ev-main); color: #fff; font-weight: 900; font-size: .8rem; flex: 0 0 auto; }
+.wz-step__title { font-weight: 800; }
+.wz-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.wz-chip { border: 1px solid var(--ev-border); background: #faf9fe; border-radius: 999px; padding: .4rem .9rem; font-weight: 700; color: #4b4566; }
+.wz-chip.is-on { background: var(--ev-main); color: #fff; border-color: var(--ev-main); }
+.wz-check { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; cursor: pointer; }
+.wz-day { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--ev-border); background: #faf9fe; font-weight: 800; color: #4b4566; }
+.wz-day.is-on { background: var(--ev-main); color: #fff; border-color: var(--ev-main); }
+.wz-days { display: grid; gap: .4rem; }
+.wz-dayrow { display: grid; grid-template-columns: minmax(130px, 1fr) 110px auto 110px; gap: .5rem; align-items: center; }
+.wz-dayrow.is-off { opacity: .55; }
+.wz-mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .5rem; }
+.wz-mixopt { display: grid; gap: .2rem; text-align: left; padding: .7rem .85rem; border-radius: 14px; border: 1px solid var(--ev-border); background: #faf9fe; color: inherit; }
+.wz-mixopt i { font-size: 1.2rem; color: var(--ev-main); }
+.wz-mixopt span { font-size: .8rem; color: var(--ev-muted); }
+.wz-mixopt.is-on { border-color: var(--ev-main); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ev-main) 30%, transparent); background: #fff; }
+.wz-preview { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--ev-border); }
+.wz-preview__head { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: .6rem; }
+@media (max-width: 575.98px) {
+  .wz-dayrow { grid-template-columns: 1fr 1fr; }
+  .wz-dayrow > .wz-check { grid-column: 1 / -1; }
+  .wz-dayrow > span { display: none; }
+}
+.wz-dayrow input { min-width: 0; }
+@media (max-width: 575.98px) { .wz-step { padding: .75rem .7rem; } }

@@ -159,6 +159,19 @@ service cloud.firestore {
       }
 
       // inscripciones: las manda cualquier cuenta de Google si el torneo está activo y con inscripciones abiertas
+      // formulario de exención: los datos (emergencia, salud) solo los ven el jugador y el organizador
+      match /waivers/{uid} {
+        allow read: if isPlatformAdmin() || isOrganizer(eventId) || (signedIn() && request.auth.uid == uid);
+        allow create, update: if isGoogle() && request.auth.uid == uid && request.resource.data.uid == uid;
+        allow delete: if isPlatformAdmin() || isOrganizer(eventId);
+      }
+      // quién firmó (sin datos privados): lo ven el equipo y el organizador
+      match /waiver_status/{uid} {
+        allow read: if canRead(eventId);
+        allow create, update: if isGoogle() && request.auth.uid == uid && request.resource.data.uid == uid;
+        allow delete: if isPlatformAdmin() || isOrganizer(eventId);
+      }
+
       match /registrations/{regId} {
         allow read: if isPlatformAdmin() || isOrganizer(eventId) || managesEntry(resource.data);
 

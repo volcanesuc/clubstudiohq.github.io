@@ -292,6 +292,10 @@ export async function shrinkImage(file, max = 256) {
 // Logo del equipo, o un círculo con su color e inicial
 export function teamBadge(team = {}, size = 32) {
   const style = `width:${size}px;height:${size}px`;
+  // llave sin definir ("Ganador de Semifinal 1"): círculo gris con "?"
+  if (team.placeholder || (!team.id && !team.name && !team.logo)) {
+    return `<span class="tn-team-badge tn-team-badge--tbd" style="${style};font-size:${Math.round(size * 0.45)}px">?</span>`;
+  }
   if (team.logo && String(team.logo).startsWith("data:image/")) {
     return `<img class="tn-team-logo" src="${esc(team.logo)}" alt="" style="${style}" />`;
   }
@@ -480,4 +484,130 @@ async function maybeSpiritPopup(user) {
     const x = list[0];
     location.href = `/tournaments/spirit.html?${new URLSearchParams({ event: x.eventId, game: x.game.id, side: x.side })}`;
   }
+}
+
+/* =========================
+   Calendario por horas (canchas en columnas, horas en filas)
+========================= */
+const pad2 = (n) => String(n).padStart(2, "0");
+export const localDay = (value) => {
+  const ms = toMillis(value);
+  if (!ms) return "";
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+const minutesOfDay = (value) => {
+  const d = new Date(toMillis(value));
+  return d.getHours() * 60 + d.getMinutes();
+};
+export const atMinutes = (day, min) => {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d, Math.floor(min / 60), min % 60);
+};
+
+/**
+ * Grilla de un día: una columna por cancha y una fila por franja (duración del partido + descanso).
+ * @param {{ games: object[], fields: string[], day: string, stepMin: number, editable?: boolean,
+ *           href?: (g) => string, picked?: string }} opts
+ */
+export function scheduleGridHtml({ games = [], fields = [], day = "", stepMin = 100, editable = false, href = null, picked = "" }) {
+  const step = Math.max(15, Number(stepMin) || 100);
+  const dayGames = games.filter((g) => localDay(g.startAt) === day);
+  // canchas del torneo + las que usen los partidos; "Sin cancha" solo si algún partido no tiene
+  const cols = [...new Set([...fields, ...dayGames.map((g) => g.field).filter(Boolean)])];
+  if (!cols.length || dayGames.some((g) => !g.field)) cols.push("");
+  const columns = cols;
+  const starts = dayGames.map((g) => minutesOfDay(g.startAt));
+  // arranca a la hora del primer partido (o 08:00 si el día está vacío)
+  const first = starts.length ? Math.min(...starts) : 8 * 60;
+  const from = first;
+  const last = Math.max(from + step * 4, ...starts.map((m) => m + step));
+  const rows = [];
+  for (let m = from; m < Math.min(last, 24 * 60); m += step) rows.push(m);
+  const rowOf = (g) => Math.floor((minutesOfDay(g.startAt) - from) / step);
+
+  const chip = (g) => {
+    const live = g.status === GAME_STATUS.LIVE;
+    const final = g.status === GAME_STATUS.FINAL;
+    const inner = `
+      <span class="sg-chip__time">${pad2(Math.floor(minutesOfDay(g.startAt) / 60))}:${pad2(minutesOfDay(g.startAt) % 60)}${g.phase ? ` · ${esc(g.phase)}` : g.pool ? ` · ${esc(exf(EX.phasePool, { pool: g.pool }))}` : ""}</span>
+      <span class="sg-chip__team">${teamBadge(g.teamA || {}, 16)}<span class="text-truncate">${esc(g.teamA?.name || "—")}</span>${final || live ? `<b>${g.scoreA || 0}</b>` : ""}</span>
+      <span class="sg-chip__team">${teamBadge(g.teamB || {}, 16)}<span class="text-truncate">${esc(g.teamB?.name || "—")}</span>${final || live ? `<b>${g.scoreB || 0}</b>` : ""}</span>`;
+    const cls = `sg-chip ${live ? "is-live" : ""} ${final ? "is-final" : ""} ${picked === g.id ? "is-picked" : ""}`;
+    if (editable) return `<div class="${cls}" draggable="${final || live ? "false" : "true"}" data-sg-game="${esc(g.id)}" ${final || live ? 'data-locked="1"' : ""}>${inner}</div>`;
+    return href ? `<a class="${cls}" href="${esc(href(g))}">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
+  };
+
+  return `
+    <div class="sg-wrap">
+      <table class="sg">
+        <thead><tr><th class="sg-time"></th>${columns.map((f) => `<th>${esc(f || EX.noField)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${rows.map((m, ri) => `
+            <tr>
+              <th class="sg-time">${pad2(Math.floor(m / 60))}:${pad2(m % 60)}</th>
+              ${columns.map((f) => {
+                const here = dayGames.filter((g) => rowOf(g) === ri && (g.field || "") === f);
+                const clash = here.length > 1;
+                return `<td class="sg-cell ${clash ? "is-clash" : ""}" ${editable ? `data-sg-slot="${esc(atMinutes(day, m).toISOString())}" data-sg-field="${esc(f)}"` : ""}>${here.map(chip).join("")}</td>`;
+              }).join("")}
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// Días del torneo con partidos (y las fechas del evento), en orden
+export function scheduleDays(games = [], event = {}) {
+  const days = new Set(games.map((g) => localDay(g.startAt)).filter(Boolean));
+  if (event.startDate) {
+    const end = event.endDate || event.startDate;
+    for (let d = new Date(`${event.startDate}T12:00`); localDay(d) <= end && days.size < 40; d.setDate(d.getDate() + 1)) days.add(localDay(d));
+  }
+  return [...days].sort();
+}
+
+/* =========================
+   Agregar al calendario (.ics para Apple/Outlook/Google y link directo a Google Calendar)
+========================= */
+const icsDate = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const icsText = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, (c) => `\\${c}`);
+
+function gameEventInfo(g, event = {}) {
+  const start = new Date(toMillis(g.startAt));
+  const minutes = Number(event.rules?.gameMinutes) || 90;
+  const end = new Date(start.getTime() + minutes * 60000);
+  const title = `${g.teamA?.name || "?"} vs ${g.teamB?.name || "?"} · ${event.name || "ClubStudioHQ"}`;
+  const where = [event.venue, g.field].filter(Boolean).join(" · ");
+  const url = `${location.origin}${gameUrl(event.id, g.id)}`;
+  const details = [phaseLabel(g), url].filter(Boolean).join("\n");
+  return { start, end, title, where, details, url };
+}
+
+export function icsForGames(games = [], event = {}) {
+  const now = icsDate(Date.now());
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ClubStudioHQ//Torneos//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${icsText(event.name || "Torneo")}`];
+  games.filter((g) => toMillis(g.startAt)).forEach((g) => {
+    const x = gameEventInfo(g, event);
+    lines.push("BEGIN:VEVENT", `UID:${g.id}@clubstudiohq.com`, `DTSTAMP:${now}`, `DTSTART:${icsDate(x.start)}`, `DTEND:${icsDate(x.end)}`,
+      `SUMMARY:${icsText(x.title)}`, `LOCATION:${icsText(x.where)}`, `DESCRIPTION:${icsText(x.details)}`, `URL:${x.url}`, "END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+export function downloadIcs(games, event, filename = "partidos.ics") {
+  const blob = new Blob([icsForGames(games, event)], { type: "text/calendar;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+export function googleCalendarUrl(g, event = {}) {
+  const x = gameEventInfo(g, event);
+  const q = new URLSearchParams({ action: "TEMPLATE", text: x.title, dates: `${icsDate(x.start)}/${icsDate(x.end)}`, details: x.details, location: x.where });
+  return `https://calendar.google.com/calendar/render?${q}`;
 }

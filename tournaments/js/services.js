@@ -28,6 +28,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId } from "/tournaments/js/model.js";
 import { DIVISION_OPTIONS } from "/tournaments/js/divisions-config.js";
+import { resolveGames } from "/tournaments/js/brackets.js";
 import { toMillis } from "/tournaments/js/ui.js";
 
 export const APPROVAL = { NONE: "none", REQUESTED: "requested", APPROVED: "approved", REJECTED: "rejected" };
@@ -76,6 +77,36 @@ export async function decideRegistrationPayment(eid, rid, approved, note = "") {
     paymentDecidedBy: auth.currentUser?.uid || null,
     updatedAt: serverTimestamp(),
   });
+}
+
+// Formulario de exención (waiver) del torneo: event.waiver = { enabled, title, text, askEmergency, askBirth, askMedical, version }
+// Cada jugador firma el suyo: waivers/{uid} (datos privados: solo el jugador y el organizador)
+// y waiver_status/{uid} (público: quién firmó, para que el equipo vea pendientes).
+export const waiverOn = (event) => event?.waiver?.enabled === true && !!String(event.waiver.text || "").trim();
+export const waiverVersion = (text = "") => {
+  let h = 0;
+  for (const c of String(text)) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return `v${(h >>> 0).toString(36)}`;
+};
+
+export async function listWaiverStatus(eid) {
+  const snap = await getDocs(collection(db, COL.events, eid, "waiver_status"));
+  return list(snap);
+}
+
+export async function loadMyWaiver(eid, uid) {
+  const snap = await getDoc(doc(db, COL.events, eid, "waivers", uid));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function signWaiver(eid, user, data) {
+  const batch = writeBatch(db);
+  const at = serverTimestamp();
+  batch.set(doc(db, COL.events, eid, "waivers", user.uid), { ...data, uid: user.uid, email: user.email || "", signedAt: at });
+  batch.set(doc(db, COL.events, eid, "waiver_status", user.uid), {
+    uid: user.uid, name: data.signature || "", teamId: data.teamId || "", teamName: data.teamName || "", version: data.version || "", minor: !!data.guardianName, signedAt: at,
+  });
+  await batch.commit();
 }
 
 // Roster cerrado: después de rosterDeadline los equipos ya no suman ni sacan jugadores (el organizador sí).
@@ -351,15 +382,17 @@ export async function rejectRegistration(eid, rid, note = "") {
 /* =========================
    Partidos
 ========================= */
-const teamRef = (t) => (t ? { id: t.id, name: t.name || "", color: t.color || "" } : null);
+// (en llaves, un equipo todavía desconocido se guarda vacío: resolveGames lo completa)
+const teamRef = (t) => (t && t.id ? { id: t.id, name: t.name || "", color: t.color || "" } : { id: "", name: "" });
 
+// Los partidos de llave (eliminación, playoffs) se devuelven con sus equipos ya resueltos (ver brackets.js)
 export async function listGames(eid) {
   const snap = await getDocs(gamesCol(eid));
-  return list(snap).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt) || String(a.field || "").localeCompare(String(b.field || "")));
+  return resolveGames(list(snap)).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt) || String(a.field || "").localeCompare(String(b.field || "")));
 }
 
 export function subscribeGames(eid, cb) {
-  return onSnapshot(gamesCol(eid), (snap) => cb(list(snap).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt))));
+  return onSnapshot(gamesCol(eid), (snap) => cb(resolveGames(list(snap)).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt))));
 }
 
 export function subscribeGame(eid, gid, cb) {
@@ -375,6 +408,10 @@ export async function createGames(eid, games) {
         phase: g.phase || "",
         pool: g.pool || "",
         round: g.round || null,
+        // llaves: de dónde sale cada equipo (se llena solo al terminar los partidos anteriores)
+        key: g.key || "",
+        slotA: g.slotA || null,
+        slotB: g.slotB || null,
         field: g.field || "",
         startAt: g.startAt || null,
         teamA: teamRef(g.teamA),

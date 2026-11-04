@@ -4,6 +4,8 @@
 //   registerFormat({ id, label, available: true, generate(teams, options) -> [{ phase, round, teamA, teamB }] })
 // El organizador elige el formato al generar el calendario; los horarios y canchas los asigna assignSlots().
 
+import { doubleElim, nextSwissRound, poolsPlayoffs, singleElimination } from "/tournaments/js/brackets.js";
+
 const FORMATS = new Map();
 
 export function registerFormat(format) {
@@ -66,10 +68,48 @@ registerFormat({
   },
 });
 
-// Fase 2: se habilitan al implementarlos
-registerFormat({ id: "swiss", label: "Swiss", available: false, generate: () => [] });
-registerFormat({ id: "single_elim", label: "Eliminación directa", available: false, generate: () => [] });
-registerFormat({ id: "pools_bracket", label: "Grupos + llave", available: false, generate: () => [] });
+// Llaves (ver brackets.js): los partidos que dependen de otros llevan slotA/slotB y se llenan solos.
+// Orden de siembra: el orden de los equipos (el organizador lo define en Equipos › "Siembra").
+const bySeed = (teams) => teams.slice().sort((a, b) => (Number(a.seed) || 999) - (Number(b.seed) || 999) || String(a.name).localeCompare(String(b.name)));
+const toGame = (g) => ({ key: g.key, phase: g.label, round: g.round, slotA: g.slotA, slotB: g.slotB, teamA: g.slotA?.team || null, teamB: g.slotB?.team || null });
+
+registerFormat({
+  id: "single_elim",
+  label: "Eliminación simple",
+  available: true,
+  options: ["thirdPlace"],
+  generate: (teams, { thirdPlace = false } = {}) => singleElimination(bySeed(teams), { thirdPlace }).map(toGame),
+});
+
+registerFormat({
+  id: "double_elim",
+  label: "Eliminación doble",
+  available: true,
+  generate: (teams) => doubleElim(bySeed(teams)).map(toGame),
+});
+
+registerFormat({
+  id: "pools_playoffs",
+  label: "Fase de grupos + playoffs",
+  available: true,
+  options: ["advance", "thirdPlace"],
+  generate(teams, { advance = 2, thirdPlace = false, divisionId = "" } = {}) {
+    const rr = FORMATS.get("round_robin").generate(teams);
+    // con un solo grupo los partidos no llevan "pool": la llave lo busca igual
+    const { bracket } = poolsPlayoffs(teams, rr, { advance, thirdPlace, divisionId });
+    return [...rr, ...bracket.map(toGame)];
+  },
+});
+
+registerFormat({
+  id: "swiss",
+  label: "Sistema suizo",
+  available: true,
+  incremental: true, // se genera ronda por ronda
+  generate(teams, { played = [] } = {}) {
+    return nextSwissRound(bySeed(teams), played).games;
+  },
+});
 
 /* =========================
    Horarios y canchas
@@ -83,18 +123,33 @@ export function assignSlots(games, { fields = [], start, gameMinutes = 90 } = {}
   const courts = fields.length ? fields : [""];
   const pending = games.slice().sort((a, b) => (a.round || 0) - (b.round || 0));
   const out = [];
+  // llaves: un partido va después de los partidos de los que salen sus equipos (y de su grupo)
+  const slotOfKey = new Map();
+  const poolSlots = new Map(); // grupo -> última franja con partidos de ese grupo
+  const poolOf = (g) => String(g.pool || "").toUpperCase();
+  const deps = (g) => [g.slotA, g.slotB].filter(Boolean);
+  const ready = (g, slot) => deps(g).every((s) => {
+    if (s.from) return slotOfKey.has(s.from) && slotOfKey.get(s.from) < slot;
+    if (s.pool) {
+      const left = pending.some((x) => !x.key && (poolOf(x) === s.pool || !x.pool));
+      return !left && (poolSlots.get(s.pool) ?? poolSlots.get("") ?? -1) < slot;
+    }
+    return true;
+  });
   let slot = 0;
   while (pending.length) {
     const busy = new Set();
     let used = 0;
     for (let i = 0; i < pending.length && used < courts.length; ) {
       const g = pending[i];
-      const ids = [g.teamA?.id, g.teamB?.id];
-      if (ids.some((id) => busy.has(id))) {
+      const ids = [g.teamA?.id, g.teamB?.id].filter(Boolean);
+      if (ids.some((id) => busy.has(id)) || !ready(g, slot)) {
         i++;
         continue;
       }
       ids.forEach((id) => busy.add(id));
+      if (g.key) slotOfKey.set(g.key, slot);
+      else poolSlots.set(poolOf(g), slot);
       out.push({
         ...g,
         field: courts[used],

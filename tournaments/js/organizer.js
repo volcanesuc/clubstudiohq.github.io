@@ -17,9 +17,10 @@ import {
 } from "/tournaments/js/model.js";
 import { GAME_MODES } from "/tournaments/js/divisions-config.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
-import { assignSlots, getFormat, listFormats } from "/tournaments/js/formats.js";
-import { APPROVAL, REG, approveRegistration, deadlineEnd, registrationExpired, rosterLocked, createEvent, createGameKey, createGames, deleteEvent, deleteGame, deleteTeam, deleteUnplayedGames, isApproved, isUnplayed, isPlatformAdmin, listGameKeys, listGames, listMyEvents, listRegistrations, rejectRegistration, listTeams, loadDivisionOptions, loadEvent, requestApproval, saveEvent, saveTeam, scorekeeperUrl, updateGame, CURRENCIES, PAYMENT, decideRegistrationPayment, fmtMoney, teamFee } from "/tournaments/js/services.js";
-import { askConfirm, esc, eventUrl, fmtDateRange, fmtDayOnly, fmtWhen, fromLocalInput, gameUrl, hideLoader, isGoogleUser, phaseLabel, regChip, renderNav, showLoader, signInGoogle, statusChip, teamBadge, toLocalInput, toMillis, waitForUser, withLiveTeams, paymentChip } from "/tournaments/js/ui.js";
+import { getFormat, listFormats } from "/tournaments/js/formats.js";
+import { buildSchedule, playDays, scheduleWarnings } from "/tournaments/js/scheduler.js";
+import { APPROVAL, REG, approveRegistration, deadlineEnd, registrationExpired, rosterLocked, createEvent, createGameKey, createGames, deleteEvent, deleteGame, deleteTeam, deleteUnplayedGames, isApproved, isUnplayed, isPlatformAdmin, listGameKeys, listGames, listMyEvents, listRegistrations, rejectRegistration, listTeams, loadDivisionOptions, loadEvent, requestApproval, saveEvent, saveTeam, scorekeeperUrl, updateGame, CURRENCIES, PAYMENT, decideRegistrationPayment, fmtMoney, teamFee, listWaiverStatus, waiverOn, waiverVersion } from "/tournaments/js/services.js";
+import { askConfirm, atMinutes, scheduleDays, scheduleGridHtml, esc, eventUrl, fmtDateRange, fmtDayOnly, fmtWhen, fromLocalInput, gameUrl, hideLoader, isGoogleUser, phaseLabel, regChip, renderNav, showLoader, signInGoogle, statusChip, teamBadge, toLocalInput, toMillis, waitForUser, withLiveTeams, paymentChip } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -118,16 +119,25 @@ async function openEvent(id) {
 
 async function reloadData() {
   const eid = state.event.id;
-  const [teams, games, keys, regs] = await Promise.all([
+  const [teams, games, keys, regs, waivers] = await Promise.all([
     listTeams(eid),
     listGames(eid),
     listGameKeys(eid).catch(() => []),
     listRegistrations(eid).catch(() => []),
+    listWaiverStatus(eid).catch(() => []),
   ]);
+  state.waivers = new Map(waivers.map((w) => [w.uid, w]));
   state.regs = regs;
   state.teams = teams;
   state.games = games;
   state.keys = new Map(keys.map((k) => [k.gameId, k.id]));
+  // llaves: cuando un partido ya sabe sus equipos (ganó el anterior, terminó el grupo) se guardan en el partido,
+  // así el planillero y las estadísticas trabajan con equipos reales
+  const toSave = games.filter((g) => (g.slotA || g.slotB) && (g._filled?.A || g._filled?.B));
+  await Promise.all(toSave.map((g) => updateGame(eid, g.id, {
+    ...(g._filled.A ? { teamA: { id: g.teamA.id, name: g.teamA.name, color: g.teamA.color || "" } } : {}),
+    ...(g._filled.B ? { teamB: { id: g.teamB.id, name: g.teamB.name, color: g.teamB.color || "" } } : {}),
+  }).catch(() => {})));
 }
 
 const pendingRegs = () => state.regs.filter((r) => r.status === REG.PENDING);
@@ -151,7 +161,11 @@ function renderEvent() {
         <h1 class="h3 fw-bold mb-1">${esc(e.name || "—")}</h1>
         <div class="ev-muted small">${esc(fmtDateRange(e.startDate, e.endDate))}${e.venue ? ` · ${esc(e.venue)}` : ""}</div>
       </div>
-      <a class="btn btn-sm btn-outline-secondary" href="${esc(eventUrl(e))}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1"></i>${esc(EX.openPublic)}</a>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-secondary" data-export="pdf" title="${esc(EX.exDownload)}"><i class="bi bi-file-earmark-pdf me-1"></i>${esc(EX.exPdf)}</button>
+        <button class="btn btn-sm btn-outline-secondary" data-export="xlsx" title="${esc(EX.exDownload)}"><i class="bi bi-file-earmark-spreadsheet me-1"></i>${esc(EX.exExcel)}</button>
+        <a class="btn btn-sm btn-outline-secondary" href="${esc(eventUrl(e))}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right me-1"></i>${esc(EX.openPublic)}</a>
+      </div>
     </div>
     ${approvalCard(e)}
     <ul class="nav nav-pills mb-3 ev-tabs">
@@ -314,6 +328,21 @@ function renderInfo() {
           <div class="col-12">
             <label class="form-label small" for="eDesc">${esc(EX.eventDescription)}</label>
             <textarea class="form-control" id="eDesc" rows="3">${esc(e.description || "")}</textarea>
+          </div>
+        </div>`)}
+
+      ${section("file-earmark-check", EX.secWaiver, `
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="eWaiverOn" ${e.waiver?.enabled ? "checked" : ""} />
+          <label class="form-check-label fw-semibold" for="eWaiverOn">${esc(EX.waiverEnable)}</label>
+        </div>
+        <div class="form-text mt-0 mb-2">${esc(EX.waiverEnableHint)}</div>
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label small" for="eWaiverTitle">${esc(EX.waiverTitleLabel)}</label><input class="form-control" id="eWaiverTitle" value="${esc(e.waiver?.title || EX.waiverDefaultTitle)}" /></div>
+          <div class="col-12"><label class="form-label small" for="eWaiverText">${esc(EX.waiverTextLabel)}</label><textarea class="form-control" id="eWaiverText" rows="6" placeholder="${esc(EX.waiverTextPh)}">${esc(e.waiver?.text || "")}</textarea></div>
+          <div class="col-12 d-flex flex-wrap gap-3">
+            ${[["eWaiverEm", "askEmergency", EX.waiverAskEmergency], ["eWaiverBirth", "askBirth", EX.waiverAskBirth], ["eWaiverMed", "askMedical", EX.waiverAskMedical]].map(([id, k, l]) => `
+              <div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(e.waiver ? e.waiver[k] : k !== "askMedical") ? "checked" : ""} /><label class="form-check-label small" for="${id}">${esc(l)}</label></div>`).join("")}
           </div>
         </div>`)}
 
@@ -509,6 +538,16 @@ function renderInfo() {
         surface: v("eSurface"),
         country: v("eCountry"),
         fees: { team: Math.max(0, Number(v("eFeeTeam")) || 0), currency: v("eFeeCurrency") || "CRC", info: v("eFeeInfo") },
+        waiver: {
+          enabled: document.getElementById("eWaiverOn").checked,
+          title: v("eWaiverTitle") || EX.waiverDefaultTitle,
+          text: document.getElementById("eWaiverText").value.trim(),
+          askEmergency: document.getElementById("eWaiverEm").checked,
+          askBirth: document.getElementById("eWaiverBirth").checked,
+          askMedical: document.getElementById("eWaiverMed").checked,
+          // si cambia el texto, las firmas anteriores quedan como "versión vieja"
+          version: waiverVersion(document.getElementById("eWaiverText").value.trim()),
+        },
         address: v("eAddress"),
         mapsUrl: v("eMaps"),
         description: v("eDesc"),
@@ -565,23 +604,27 @@ function captainSelect(field, label, t) {
 }
 
 function teamCard(t = {}) {
+  // formularios firmados (solo jugadores con cuenta pueden firmar)
+  const wv = waiverOn(state.event) && t.id ? waiverCount(t) : null;
   const reg = t.registrationId ? state.regs.find((r) => r.id === t.registrationId) : null;
   return `
     <form class="ev-card ev-team-card" data-team="${esc(t.id || "")}">
       ${t.id ? `<div class="d-flex align-items-center gap-2 mb-2">
         ${teamBadge(t, 36)}
         <div class="fw-bold flex-grow-1 text-truncate">${esc(t.name || "")}</div>
+        ${wv ? `<span class="ev-chip ${wv.signed === wv.total ? "ev-chip--ok" : "ev-chip--wait"}"><i class="bi bi-file-earmark-check me-1"></i>${esc(exf(EX.waiverSigned, wv))}</span>` : ""}
         ${reg ? `<span class="small ev-muted text-truncate">${esc(exf(EX.regManagedBy, { who: reg.managerEmail || reg.managerName || "" }))}${reg.contact ? ` · ${esc(reg.contact)}` : ""}</span>` : ""}
       </div>` : ""}
       <div class="row g-2">
         <div class="col-12 col-md-4"><label class="form-label small">${esc(EX.teamName)}</label><input class="form-control" data-f="name" value="${esc(t.name || "")}" required /></div>
-        <div class="col-6 col-md-3"><label class="form-label small">${esc(EX.teamCity)}</label><input class="form-control" data-f="city" value="${esc(t.city || "")}" /></div>
+        <div class="col-6 col-md-2"><label class="form-label small">${esc(EX.teamCity)}</label><input class="form-control" data-f="city" value="${esc(t.city || "")}" /></div>
         <div class="col-6 col-md-2"><label class="form-label small">${esc(EX.teamColor)}</label><input class="form-control form-control-color w-100" type="color" data-f="color" value="${esc(t.color || "#19473f")}" /></div>
         <div class="col-6 col-md-2">
           <label class="form-label small">${esc(EX.teamDivision)}</label>
           <select class="form-select" data-f="divisionId">${divisions().map((d) => `<option value="${esc(d.id)}" ${d.id === t.divisionId ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select>
         </div>
         <div class="col-6 col-md-1"><label class="form-label small">${esc(EX.teamPool)}</label><input class="form-control" data-f="pool" maxlength="3" value="${esc(t.pool || "")}" title="${esc(EX.teamPoolHint)}" /></div>
+        <div class="col-6 col-md-1"><label class="form-label small">${esc(EX.teamSeed)}</label><input class="form-control" data-f="seed" type="number" min="1" max="999" value="${esc(t.seed || "")}" title="${esc(EX.teamSeedHint)}" /></div>
         <div class="col-12">
           <label class="form-label small">${esc(EX.roster)} · <span class="ev-muted">${esc(exf(EX.playersCount, { n: (t.players || []).length }))}</span></label>
           <textarea class="form-control" data-f="roster" rows="${Math.min(10, Math.max(3, (t.players || []).length + 1))}" placeholder="${esc(EX.rosterHint)}">${esc(rosterToText(t.players || []))}</textarea>
@@ -621,6 +664,7 @@ function renderTeams() {
         color: val("color"),
         divisionId: val("divisionId"),
         pool: val("pool").toUpperCase(),
+        seed: Number(val("seed")) || null,
         players: parseRoster(form.querySelector("[data-f=roster]").value, prev?.players || []),
       };
       if (prev) {
@@ -748,33 +792,7 @@ function renderSchedule() {
   const teamOpts = (sel) => state.teams.map((t) => `<option value="${esc(t.id)}" ${t.id === sel ? "selected" : ""}>${esc(t.name)}</option>`).join("");
   const r = eventRules(state.event);
   tab.innerHTML = `
-    <form class="tn-section" id="evGenForm">
-      <h2 class="tn-section__title"><i class="bi bi-magic"></i>${esc(EX.scheduleTitle)}</h2>
-      <div class="small ev-muted mb-3">${esc(EX.scheduleHint)}</div>
-      <div class="row g-3">
-        <div class="col-12 col-md-4">
-          <label class="form-label small" for="gFormat">${esc(EX.format)}</label>
-          <select class="form-select" id="gFormat">
-            ${listFormats().map((f) => `<option value="${esc(f.id)}" ${f.available ? "" : "disabled"} ${f.id === (state.event.format || "round_robin") ? "selected" : ""}>${esc(f.label)}${f.available ? "" : ` ${esc(EX.formatComingSoon)}`}</option>`).join("")}
-          </select>
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label small" for="gDivision">${esc(EX.scheduleDivision)}</label>
-          <select class="form-select" id="gDivision">${divisions().map((d) => `<option value="${esc(d.id)}">${esc(d.name)}</option>`).join("")}</select>
-        </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label small" for="gStart">${esc(EX.scheduleStart)}</label>
-          <input class="form-control" id="gStart" type="datetime-local" value="${esc(defaultStart)}" />
-        </div>
-        <div class="col-12">
-          <div class="form-text m-0"><i class="bi bi-clock me-1"></i>${esc(exf(EX.scheduleSlotInfo, { slot: slotMinutes(r), game: r.gameMinutes || r.hardCapMin || 90, gap: r.betweenGamesMin || 0 }))}</div>
-          <div class="form-text m-0"><i class="bi bi-arrow-repeat me-1"></i>${esc(EX.scheduleReplaceInfo)}</div>
-        </div>
-        <div class="col-12 d-flex justify-content-end">
-          <button class="btn btn-primary" type="submit"><i class="bi bi-magic me-1"></i>${esc(EX.generate)}</button>
-        </div>
-      </div>
-    </form>
+    <section class="tn-section" id="evWizard"></section>
 
     <form class="tn-section" id="evManualForm">
       <h2 class="tn-section__title"><i class="bi bi-plus-circle"></i>${esc(EX.addGameManual)}</h2>
@@ -786,37 +804,12 @@ function renderSchedule() {
         <div class="col-6 col-md-4"><label class="form-label small">${esc(EX.startAt)}</label><input class="form-control" id="mStart" type="datetime-local" value="${esc(defaultStart)}" /></div>
         <div class="col-12 col-md-8 d-flex align-items-end justify-content-end"><button class="btn btn-outline-primary" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.add)}</button></div>
       </div>
-    </form>`;
+    </form>
 
-  document.getElementById("evGenForm").onsubmit = (ev) => {
-    ev.preventDefault();
-    const formatId = document.getElementById("gFormat").value;
-    const divisionId = document.getElementById("gDivision").value;
-    const teams = state.teams.filter((t) => (t.divisionId || divisions()[0].id) === divisionId);
-    if (teams.length < 2) return alertBox(EX.generateNeedTeams, "warning");
-    // los partidos sin jugar de la división se reemplazan; los jugados se conservan
-    const existing = state.games.filter((g) => gameDivision(g) === divisionId);
-    const unplayed = existing.filter(isUnplayed);
-    const played = new Set(existing.filter((g) => !isUnplayed(g)).map((g) => pairKey(g.teamA?.id, g.teamB?.id)));
-    if (unplayed.length && !confirm(exf(EX.generateReplaceConfirm, { n: unplayed.length }))) return;
-    run(async () => {
-      const removed = await deleteUnplayedGames(state.event.id, unplayed, state.keys);
-      const raw = getFormat(formatId).generate(teams, { event: state.event })
-        .filter((g) => !played.has(pairKey(g.teamA?.id, g.teamB?.id)));
-      const slotted = assignSlots(raw, {
-        fields: fields(),
-        start: fromLocalInput(document.getElementById("gStart").value),
-        gameMinutes: slotMinutes(eventRules(state.event)),
-      }).map((g) => ({ ...g, divisionId }));
-      await createGames(state.event.id, slotted);
-      await saveEvent(state.event.id, { format: formatId });
-      state.event.format = formatId;
-      await reloadData();
-      alertBox(removed ? exf(EX.generatedReplaced, { n: slotted.length, removed }) : exf(EX.generated, { n: slotted.length }));
-      state.tab = "games";
-      renderEvent();
-    });
-  };
+    <section class="tn-section" id="evCal">${calendarHtml()}</section>`;
+  bindCalendar();
+
+  renderWizard();
 
   document.getElementById("evManualForm").onsubmit = (ev) => {
     ev.preventDefault();
@@ -837,6 +830,397 @@ function renderSchedule() {
       state.tab = "games";
       renderEvent();
     });
+  };
+}
+
+// "5/12 firmados" para un equipo (firma de la versión actual del formulario)
+function waiverCount(t) {
+  const ps = t.players || [];
+  const v = state.event.waiver?.version || "";
+  const signed = ps.filter((p) => p.uid && state.waivers?.get(p.uid)?.version === v).length;
+  return { signed, total: ps.length };
+}
+
+/* ---------- Asistente de calendario ---------- */
+const WEEKDAYS = [[1, "L"], [2, "K"], [3, "M"], [4, "J"], [5, "V"], [6, "S"], [0, "D"]];
+const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+// respuestas del asistente: las guardadas en el torneo, o valores por defecto
+function wizardDefaults() {
+  const e = state.event;
+  const saved = e.scheduleConfig || {};
+  const evDays = [];
+  if (e.startDate) {
+    for (let d = new Date(`${e.startDate}T12:00`); localDayOf(d) <= (e.endDate || e.startDate) && evDays.length < 14; d.setDate(d.getDate() + 1)) evDays.push(localDayOf(d));
+  }
+  const days = evDays.map((day) => ({ day, on: true, start: "08:00", end: "18:00", ...(saved.days || []).find((x) => x.day === day) }));
+  return {
+    kind: saved.kind || (evDays.length > 4 ? "league" : "tournament"),
+    format: saved.format || e.format || "round_robin",
+    thirdPlace: !!saved.thirdPlace,
+    advance: saved.advance || 2,
+    divisions: (saved.divisions || divisions().map((d) => d.id)).filter((id) => divisions().some((d) => d.id === id)),
+    days,
+    league: { from: e.startDate || "", to: e.endDate || "", weekdays: [2, 4], every: 1, skip: "", start: "19:00", end: "22:00", ...(saved.league || {}) },
+    fields: (saved.fields || fields()).filter((f) => fields().includes(f)),
+    rules: { maxPerDay: 3, restSlots: 1, spread: true, playoffsLastDay: true, mix: "mixed", block: 2, fillCourts: true, ...(saved.rules || {}) },
+  };
+}
+const localDayOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function wizardHtml() {
+  const w = state.wiz;
+  const f = getFormat(w.format);
+  const step = (n, title, body, hide = false) => `
+    <div class="wz-step ${hide ? "d-none" : ""}">
+      <div class="wz-step__head"><span class="wz-step__n">${n}</span><span class="wz-step__title">${esc(title)}</span></div>
+      <div class="wz-step__body">${body}</div>
+    </div>`;
+  const chip = (name, value, label, icon) => `<button type="button" class="wz-chip ${w[name] === value ? "is-on" : ""}" data-wz-set="${name}" data-wz-val="${esc(value)}">${icon ? `<i class="bi bi-${icon} me-1"></i>` : ""}${esc(label)}</button>`;
+  const manual = w.kind === "manual";
+  const multiDiv = w.divisions.length > 1;
+  const swissRound = (div) => Math.max(0, ...state.games.filter((g) => gameDivision(g) === div && !g.key && !g.phase).map((g) => g.round || 0)) + 1;
+  return `
+    <h2 class="tn-section__title"><i class="bi bi-magic"></i>${esc(EX.wzTitle)}</h2>
+    <div class="small ev-muted mb-3">${esc(EX.wzHint)}</div>
+
+    ${step(1, EX.wzStepKind, `
+      <div class="wz-chips">
+        ${chip("kind", "tournament", EX.wzKindTournament, "trophy")}
+        ${chip("kind", "league", EX.wzKindLeague, "calendar-range")}
+        ${chip("kind", "manual", EX.wzKindManual, "hand-index")}
+      </div>
+      <div class="form-text">${esc(EX[`wzKindHint_${w.kind}`] || "")}</div>`)}
+
+    ${step(2, EX.wzStepFormat, `
+      <div class="row g-2">
+        <div class="col-12 col-md-6">
+          <label class="form-label small" for="wzFormat">${esc(EX.format)}</label>
+          <select class="form-select" id="wzFormat">${listFormats().map((x) => `<option value="${esc(x.id)}" ${x.id === w.format ? "selected" : ""}>${esc(x.label)}</option>`).join("")}</select>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label small">${esc(EX.wzDivisions)}</label>
+          <div class="wz-chips">${divisions().map((d) => `<label class="wz-check"><input type="checkbox" data-wz-div="${esc(d.id)}" ${w.divisions.includes(d.id) ? "checked" : ""} /> ${esc(d.name)} <span class="ev-muted">(${state.teams.filter((t) => (t.divisionId || divisions()[0].id) === d.id).length})</span></label>`).join("")}</div>
+        </div>
+        ${(f.options || []).includes("thirdPlace") ? `<div class="col-12 col-md-6"><label class="wz-check"><input type="checkbox" id="wzThird" ${w.thirdPlace ? "checked" : ""} /> ${esc(EX.optThirdPlace)}</label></div>` : ""}
+        ${(f.options || []).includes("advance") ? `<div class="col-6 col-md-3"><label class="form-label small" for="wzAdvance">${esc(EX.optAdvance)}</label><select class="form-select form-select-sm" id="wzAdvance">${[1, 2, 3, 4].map((n) => `<option ${n === Number(w.advance) ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
+        <div class="col-12"><div class="form-text m-0">${esc(EX[`formatHint_${f.id}`] ? exf(EX[`formatHint_${f.id}`], { n: swissRound(w.divisions[0]) }) : "")}</div></div>
+      </div>`)}
+
+    ${step(3, EX.wzStepWhen, w.kind === "league" ? `
+      <div class="row g-2">
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzLFrom">${esc(EX.wzFrom)}</label><input class="form-control" type="date" id="wzLFrom" value="${esc(w.league.from)}" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzLTo">${esc(EX.wzTo)}</label><input class="form-control" type="date" id="wzLTo" value="${esc(w.league.to)}" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzLStart">${esc(EX.wzStartTime)}</label><input class="form-control" type="time" step="900" id="wzLStart" value="${esc(w.league.start)}" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzLEnd">${esc(EX.wzEndTime)}</label><input class="form-control" type="time" step="900" id="wzLEnd" value="${esc(w.league.end)}" /></div>
+        <div class="col-12 col-md-7">
+          <label class="form-label small">${esc(EX.wzWeekdays)}</label>
+          <div class="wz-chips">${WEEKDAYS.map(([d, l]) => `<button type="button" class="wz-day ${w.league.weekdays.includes(d) ? "is-on" : ""}" data-wz-weekday="${d}" title="${esc(EX[`wd${d}`])}">${l}</button>`).join("")}</div>
+        </div>
+        <div class="col-12 col-md-5"><label class="form-label small" for="wzLEvery">${esc(EX.wzEvery)}</label>
+          <select class="form-select" id="wzLEvery">${[1, 2, 3, 4].map((n) => `<option value="${n}" ${Number(w.league.every) === n ? "selected" : ""}>${esc(n === 1 ? EX.wzEveryWeek : exf(EX.wzEveryN, { n }))}</option>`).join("")}</select></div>
+        <div class="col-12"><label class="form-label small" for="wzLSkip">${esc(EX.wzSkip)}</label><input class="form-control" id="wzLSkip" value="${esc(w.league.skip)}" placeholder="2026-12-24, 2026-12-25" /></div>
+        <div class="col-12"><div class="form-text m-0">${esc(exf(EX.wzLeagueDates, { n: playDays(wizardCfg()).length }))}</div></div>
+      </div>` : w.days.length ? `
+      <div class="wz-days">
+        ${w.days.map((d, i) => `
+          <div class="wz-dayrow ${d.on ? "" : "is-off"}">
+            <label class="wz-check"><input type="checkbox" data-wz-dayon="${i}" ${d.on ? "checked" : ""} /> ${esc(fmtWhen(atMinutes(d.day, 720), { weekday: "short", day: "numeric", month: "short" }))}</label>
+            <input class="form-control form-control-sm" type="time" step="900" data-wz-daystart="${i}" value="${esc(d.start)}" aria-label="${esc(EX.wzStartTime)}" ${d.on ? "" : "disabled"} />
+            <span class="ev-muted small">–</span>
+            <input class="form-control form-control-sm" type="time" step="900" data-wz-dayend="${i}" value="${esc(d.end)}" aria-label="${esc(EX.wzEndTime)}" ${d.on ? "" : "disabled"} />
+          </div>`).join("")}
+      </div>` : `<div class="small text-warning-emphasis">${esc(EX.wzNeedDates)}</div>`, manual)}
+
+    ${step(4, EX.wzStepFields, `
+      <div class="wz-chips">${fields().map((fl) => `<label class="wz-check"><input type="checkbox" data-wz-field="${esc(fl)}" ${w.fields.includes(fl) ? "checked" : ""} /> ${esc(fl)}</label>`).join("") || `<span class="small text-warning-emphasis">${esc(EX.wzNeedFields)}</span>`}</div>`, manual)}
+
+    ${step(5, EX.wzStepRules, `
+      <div class="row g-3">
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzMax">${esc(w.kind === "league" ? EX.wzMaxPerDate : EX.wzMaxPerDay)}</label>
+          <select class="form-select" id="wzMax">${[0, 1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${Number(w.rules.maxPerDay) === n ? "selected" : ""}>${n ? n : esc(EX.wzNoLimit)}</option>`).join("")}</select></div>
+        <div class="col-6 col-md-3"><label class="form-label small" for="wzRest">${esc(EX.wzRest)}</label>
+          <select class="form-select" id="wzRest">${[0, 1, 2].map((n) => `<option value="${n}" ${Number(w.rules.restSlots) === n ? "selected" : ""}>${esc(n ? exf(EX.wzRestN, { n }) : EX.wzRestNone)}</option>`).join("")}</select></div>
+        <div class="col-12 col-md-6 d-flex flex-column gap-1 justify-content-end">
+          <label class="wz-check"><input type="checkbox" id="wzSpread" ${w.rules.spread ? "checked" : ""} /> ${esc(EX.wzSpread)}</label>
+          ${f.id === "pools_playoffs" || f.id === "single_elim" || f.id === "double_elim" ? `<label class="wz-check"><input type="checkbox" id="wzPlayoffsLast" ${w.rules.playoffsLastDay ? "checked" : ""} /> ${esc(EX.wzPlayoffsLast)}</label>` : ""}
+        </div>
+        ${multiDiv ? `
+        <div class="col-12">
+          <label class="form-label small">${esc(EX.wzMix)}</label>
+          <div class="wz-mix">
+            ${[["mixed", "grid-3x2", EX.wzMixMixed, EX.wzMixMixedHint], ["alternate", "layers", EX.wzMixAlternate, EX.wzMixAlternateHint], ["sequential", "arrow-down", EX.wzMixSequential, EX.wzMixSequentialHint]].map(([id, icon, label, hint]) => `
+              <button type="button" class="wz-mixopt ${w.rules.mix === id ? "is-on" : ""}" data-wz-mix="${id}">
+                <i class="bi bi-${icon}"></i><b>${esc(label)}</b><span>${esc(hint)}</span>
+              </button>`).join("")}
+          </div>
+          <div class="d-flex flex-wrap gap-3 align-items-center mt-2">
+            ${w.rules.mix === "alternate" ? `<label class="small d-flex align-items-center gap-2">${esc(EX.wzBlock)} <select class="form-select form-select-sm w-auto" id="wzBlock">${[1, 2, 3, 4].map((n) => `<option ${Number(w.rules.block) === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>` : ""}
+            <label class="wz-check"><input type="checkbox" id="wzFill" ${w.rules.fillCourts ? "checked" : ""} /> ${esc(EX.wzFill)}</label>
+          </div>
+        </div>` : ""}
+      </div>`, manual)}
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button type="button" class="btn btn-primary" id="wzPreview"><i class="bi bi-eye me-1"></i>${esc(EX.wzPreview)}</button>
+    </div>
+    <div id="wzResult"></div>`;
+}
+
+// configuración para el motor (playDays / buildSchedule)
+function wizardCfg() {
+  const w = state.wiz;
+  return {
+    kind: w.kind,
+    days: w.days,
+    league: { ...w.league, skip: String(w.league.skip || "").split(/[\s,;]+/).filter(Boolean) },
+  };
+}
+
+// lee los campos del asistente a state.wiz (sin perder lo que ya estaba)
+function readWizard() {
+  const w = state.wiz;
+  const box = document.getElementById("evWizard");
+  const q = (sel) => box.querySelector(sel);
+  if (q("#wzFormat")) w.format = q("#wzFormat").value;
+  w.thirdPlace = !!q("#wzThird")?.checked;
+  if (q("#wzAdvance")) w.advance = Number(q("#wzAdvance").value) || 2;
+  w.divisions = [...box.querySelectorAll("[data-wz-div]")].filter((c) => c.checked).map((c) => c.dataset.wzDiv);
+  box.querySelectorAll("[data-wz-dayon]").forEach((c) => (w.days[c.dataset.wzDayon].on = c.checked));
+  box.querySelectorAll("[data-wz-daystart]").forEach((c) => (w.days[c.dataset.wzDaystart].start = c.value));
+  box.querySelectorAll("[data-wz-dayend]").forEach((c) => (w.days[c.dataset.wzDayend].end = c.value));
+  if (q("#wzLFrom")) Object.assign(w.league, { from: q("#wzLFrom").value, to: q("#wzLTo").value, start: q("#wzLStart").value, end: q("#wzLEnd").value, every: Number(q("#wzLEvery").value) || 1, skip: q("#wzLSkip").value });
+  if (box.querySelector("[data-wz-field]")) w.fields = [...box.querySelectorAll("[data-wz-field]")].filter((c) => c.checked).map((c) => c.dataset.wzField);
+  if (q("#wzMax")) w.rules.maxPerDay = Number(q("#wzMax").value) || 0;
+  if (q("#wzRest")) w.rules.restSlots = Number(q("#wzRest").value) || 0;
+  if (q("#wzSpread")) w.rules.spread = q("#wzSpread").checked;
+  if (q("#wzPlayoffsLast")) w.rules.playoffsLastDay = q("#wzPlayoffsLast").checked;
+  if (q("#wzBlock")) w.rules.block = Number(q("#wzBlock").value) || 1;
+  if (q("#wzFill")) w.rules.fillCourts = q("#wzFill").checked;
+}
+
+function renderWizard() {
+  if (!state.wiz || state.wiz.eventId !== state.event.id) state.wiz = { ...wizardDefaults(), eventId: state.event.id };
+  const box = document.getElementById("evWizard");
+  if (!box) return;
+  box.innerHTML = wizardHtml();
+  box.onclick = (ev) => {
+    const set = ev.target.closest("[data-wz-set]");
+    const wd = ev.target.closest("[data-wz-weekday]");
+    const mx = ev.target.closest("[data-wz-mix]");
+    if (set || wd || mx) readWizard();
+    if (set) state.wiz[set.dataset.wzSet] = set.dataset.wzVal;
+    if (wd) {
+      const d = Number(wd.dataset.wzWeekday);
+      const list = state.wiz.league.weekdays;
+      state.wiz.league.weekdays = list.includes(d) ? list.filter((x) => x !== d) : [...list, d];
+    }
+    if (mx) state.wiz.rules.mix = mx.dataset.wzMix;
+    if (set || wd || mx) return renderWizard();
+    if (ev.target.closest("#wzPreview")) {
+      readWizard();
+      return previewWizard();
+    }
+    if (ev.target.closest("#wzConfirm")) return confirmWizard();
+    const pday = ev.target.closest("[data-wz-pday]");
+    if (pday) {
+      state.wizPlan.day = pday.dataset.wzPday;
+      return renderPreview();
+    }
+  };
+  // cambios que muestran u ocultan opciones (formato, categorías, días)
+  box.onchange = (ev) => {
+    if (ev.target.matches("#wzFormat, [data-wz-div], [data-wz-dayon], #wzLFrom, #wzLTo, #wzLEvery, #wzLSkip")) {
+      readWizard();
+      renderWizard();
+    }
+  };
+}
+
+// arma los partidos (sin guardar) y los acomoda según las respuestas
+function planWizard() {
+  const w = state.wiz;
+  const format = getFormat(w.format);
+  const byDivision = {};
+  const replaced = []; // partidos sin jugar que se reemplazan
+  const notes = [];
+  w.divisions.forEach((div) => {
+    const teams = state.teams.filter((t) => (t.divisionId || divisions()[0].id) === div);
+    const divName = divisions().find((d) => d.id === div)?.name || "";
+    if (teams.length < 2) return notes.push(exf(EX.wzFewTeams, { div: divName }));
+    const existing = state.games.filter((g) => gameDivision(g) === div);
+    if (format.incremental) {
+      const played = existing.filter((g) => !g.key && !g.phase);
+      if (played.some((g) => g.status !== GAME_STATUS.FINAL)) return notes.push(exf(EX.wzSwissPending, { div: divName }));
+      byDivision[div] = format.generate(teams, { divisionId: div, played });
+      return;
+    }
+    const unplayed = existing.filter(isUnplayed);
+    replaced.push(...unplayed);
+    const played = new Set(existing.filter((g) => !isUnplayed(g)).map((g) => pairKey(g.teamA?.id, g.teamB?.id)));
+    byDivision[div] = format.generate(teams, { divisionId: div, thirdPlace: w.thirdPlace, advance: w.advance })
+      .filter((g) => !(g.teamA?.id && g.teamB?.id && played.has(pairKey(g.teamA.id, g.teamB.id))));
+  });
+  const replacedIds = new Set(replaced.map((g) => g.id));
+  if (w.kind === "manual") {
+    const games = Object.entries(byDivision).flatMap(([div, list]) => list.map((g) => ({ ...g, divisionId: div, field: "", startAt: null })));
+    return { games: [], unscheduled: games.map((game) => ({ game, reason: "manual" })), replaced, notes, days: [] };
+  }
+  const days = playDays(wizardCfg());
+  const plan = buildSchedule({
+    byDivision,
+    divisionOrder: w.divisions,
+    occupied: state.games.filter((g) => !replacedIds.has(g.id) && toMillis(g.startAt)),
+    days,
+    fields: w.fields,
+    slotMinutes: slotMinutes(eventRules(state.event)),
+    rules: w.rules,
+  });
+  return { ...plan, replaced, notes, days };
+}
+
+function previewWizard() {
+  const w = state.wiz;
+  if (!w.divisions.length) return alertBox(EX.wzNeedDivision, "warning");
+  if (w.kind !== "manual" && !playDays(wizardCfg()).length) return alertBox(EX.wzNeedDays, "warning");
+  if (w.kind !== "manual" && !w.fields.length) return alertBox(EX.wzNeedFields, "warning");
+  const plan = planWizard();
+  // ids temporales para la grilla de la vista previa
+  plan.games = plan.games.map((g, i) => ({ ...g, id: `preview${i}`, status: GAME_STATUS.SCHEDULED }));
+  plan.day = plan.games[0] ? localDayOf(plan.games[0].startAt) : "";
+  state.wizPlan = plan;
+  renderPreview();
+  document.getElementById("wzResult")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderPreview() {
+  const plan = state.wizPlan;
+  const box = document.getElementById("wzResult");
+  if (!plan || !box) return;
+  const w = state.wiz;
+  const warns = scheduleWarnings(plan, w.rules);
+  const days = [...new Set(plan.games.map((g) => localDayOf(g.startAt)))].sort();
+  const divName = (id) => divisions().find((d) => d.id === id)?.name || "";
+  const total = plan.games.length + plan.unscheduled.length;
+  box.innerHTML = `
+    <div class="wz-preview">
+      <div class="wz-preview__head">
+        <div>
+          <div class="fw-bold">${esc(EX.wzPreviewTitle)}</div>
+          <div class="small ev-muted">${esc(exf(EX.wzPreviewSummary, { n: total, placed: plan.games.length, days: days.length, replaced: plan.replaced.length }))}</div>
+        </div>
+        <button type="button" class="btn btn-success" id="wzConfirm" ${total ? "" : "disabled"}><i class="bi bi-check2-circle me-1"></i>${esc(EX.wzConfirm)}</button>
+      </div>
+      ${[...plan.notes, ...warns.map((x) => x.type === "unscheduled"
+        ? exf(w.kind === "manual" ? EX.wzManualNote : EX.wzWarnUnscheduled, { n: x.n })
+        : exf(EX.wzWarnOverMax, { team: x.name, day: x.day, n: x.n }))].map((t) => `<div class="alert alert-warning py-2 small mb-2">${esc(t)}</div>`).join("")}
+      ${days.length ? `
+        <div class="sg-days">${days.map((d) => `<button type="button" class="sb-day ${d === plan.day ? "is-active" : ""}" data-wz-pday="${d}">${esc(fmtWhen(atMinutes(d, 720), { weekday: "short", day: "numeric", month: "short" }))}<span>${plan.games.filter((g) => localDayOf(g.startAt) === d).length}</span></button>`).join("")}</div>
+        ${scheduleGridHtml({ games: plan.games, fields: w.fields, day: plan.day || days[0], stepMin: slotMinutes(eventRules(state.event)) })}` : ""}
+      ${plan.unscheduled.length ? `
+        <div class="small fw-bold mt-3 mb-1">${esc(EX.calUnscheduled)} (${plan.unscheduled.length})</div>
+        <div class="small ev-muted">${plan.unscheduled.slice(0, 30).map(({ game: g }) => esc(`${divisions().length > 1 ? `${divName(g.divisionId)} · ` : ""}${g.phase || ""} ${g.teamA?.name || ""} vs ${g.teamB?.name || ""}`.trim())).join(" · ")}${plan.unscheduled.length > 30 ? " …" : ""}</div>` : ""}
+    </div>`;
+}
+
+function confirmWizard() {
+  const plan = state.wizPlan;
+  const w = state.wiz;
+  if (!plan) return;
+  if (plan.replaced.length && !confirm(exf(EX.generateReplaceConfirm, { n: plan.replaced.length }))) return;
+  run(async () => {
+    const removed = plan.replaced.length ? await deleteUnplayedGames(state.event.id, plan.replaced, state.keys) : 0;
+    const toCreate = [...plan.games.map(({ id: _tmp, status: _s, ...g }) => g), ...plan.unscheduled.map((x) => x.game)];
+    await createGames(state.event.id, toCreate);
+    // se guardan las respuestas: al regenerar no hay que contestar todo otra vez
+    const { eventId: _e, ...cfg } = w;
+    await saveEvent(state.event.id, { format: w.format, scheduleConfig: cfg });
+    state.event.format = w.format;
+    state.event.scheduleConfig = cfg;
+    state.wizPlan = null;
+    await reloadData();
+    alertBox(removed ? exf(EX.generatedReplaced, { n: toCreate.length, removed }) : exf(EX.generated, { n: toCreate.length }));
+    renderEvent();
+  });
+}
+
+/* ---------- Calendario por horas (arrastrar y soltar) ---------- */
+function calendarHtml() {
+  const days = scheduleDays(state.games, state.event);
+  if (!state.calDay || !days.includes(state.calDay)) state.calDay = days[0] || "";
+  const unscheduled = state.games.filter((g) => !toMillis(g.startAt));
+  const r = eventRules(state.event);
+  const chip = (g) => `<div class="sg-chip ${state.calPick === g.id ? "is-picked" : ""}" draggable="true" data-sg-game="${esc(g.id)}">
+      <span class="sg-chip__time">${esc(phaseLabel(g) || EX.tabGames)}</span>
+      <span class="sg-chip__team">${teamBadge(g.teamA || {}, 16)}<span class="text-truncate">${esc(g.teamA?.name || "—")}</span></span>
+      <span class="sg-chip__team">${teamBadge(g.teamB || {}, 16)}<span class="text-truncate">${esc(g.teamB?.name || "—")}</span></span>
+    </div>`;
+  return `
+    <h2 class="tn-section__title"><i class="bi bi-calendar3-week"></i>${esc(EX.calTitle)}</h2>
+    <div class="small ev-muted mb-2">${esc(EX.calHint)}</div>
+    ${days.length ? `<div class="sg-days">${days.map((d) => `<button type="button" class="sb-day ${d === state.calDay ? "is-active" : ""}" data-cal-day="${d}">${esc(fmtWhen(atMinutes(d, 720), { weekday: "short", day: "numeric", month: "short" }))}<span>${state.games.filter((g) => toLocalInput(g.startAt).startsWith(d)).length}</span></button>`).join("")}</div>` : ""}
+    ${state.calDay ? scheduleGridHtml({ games: state.games, fields: fields(), day: state.calDay, stepMin: slotMinutes(r), editable: true, picked: state.calPick }) : ""}
+    <div class="small fw-bold mt-3 mb-1">${esc(EX.calUnscheduled)} <span class="ev-muted fw-normal">(${unscheduled.length})</span></div>
+    <div class="sg-tray" data-sg-slot="" data-sg-field="">${unscheduled.map(chip).join("") || `<span class="small ev-muted">${esc(EX.calUnscheduledHint)}</span>`}</div>`;
+}
+
+function bindCalendar() {
+  const box = document.getElementById("evCal");
+  if (!box) return;
+  const rerender = () => {
+    box.innerHTML = calendarHtml();
+  };
+  const move = (gid, slot, field) => {
+    const g = state.games.find((x) => x.id === gid);
+    if (!g || g.status !== GAME_STATUS.SCHEDULED) return;
+    const startAt = slot ? new Date(slot) : null;
+    run(async () => {
+      await updateGame(state.event.id, gid, { startAt, field: slot ? field : "" });
+      Object.assign(g, { startAt, field: slot ? field : "" });
+      state.calPick = "";
+      if (startAt) state.calDay = toLocalInput(startAt).slice(0, 10);
+      rerender();
+      alertBox(EX.calMoved);
+    });
+  };
+  box.onclick = (ev) => {
+    const day = ev.target.closest("[data-cal-day]");
+    if (day) {
+      state.calDay = day.dataset.calDay;
+      return rerender();
+    }
+    const chip = ev.target.closest("[data-sg-game]");
+    if (chip && !chip.dataset.locked) {
+      state.calPick = state.calPick === chip.dataset.sgGame ? "" : chip.dataset.sgGame;
+      rerender();
+      if (state.calPick) alertBox(EX.calPicked, "info");
+      return;
+    }
+    // tocar una celda con un partido elegido lo mueve ahí (celular)
+    const cell = ev.target.closest("[data-sg-slot]");
+    if (cell && state.calPick) move(state.calPick, cell.dataset.sgSlot, cell.dataset.sgField);
+  };
+  box.ondragstart = (ev) => {
+    const chip = ev.target.closest("[data-sg-game]");
+    if (!chip || chip.dataset.locked) return ev.preventDefault();
+    ev.dataTransfer.setData("text/plain", chip.dataset.sgGame);
+    ev.dataTransfer.effectAllowed = "move";
+  };
+  box.ondragover = (ev) => {
+    const cell = ev.target.closest("[data-sg-slot]");
+    if (!cell) return;
+    ev.preventDefault();
+    box.querySelectorAll(".is-over").forEach((el) => el !== cell && el.classList.remove("is-over"));
+    cell.classList.add("is-over");
+  };
+  box.ondragleave = (ev) => ev.target.closest?.("[data-sg-slot]")?.classList.remove("is-over");
+  box.ondrop = (ev) => {
+    const cell = ev.target.closest("[data-sg-slot]");
+    if (!cell) return;
+    ev.preventDefault();
+    cell.classList.remove("is-over");
+    const gid = ev.dataTransfer.getData("text/plain");
+    if (gid) move(gid, cell.dataset.sgSlot, cell.dataset.sgField);
   };
 }
 
@@ -1053,3 +1437,19 @@ function renderSignIn() {
     hideLoader();
   }
 })();
+
+// Descargar el torneo en PDF o Excel (mismo contenido que la página pública)
+document.addEventListener("click", async (ev) => {
+  const ex = ev.target.closest("[data-export]");
+  if (!ex || !state.event) return;
+  showLoader();
+  try {
+    const m = await import("/tournaments/js/export.js");
+    await (ex.dataset.export === "pdf" ? m.exportPdf : m.exportExcel)(state.event, state.teams, state.games);
+  } catch (err) {
+    console.error("[export]", err);
+    alertBox(`${EX.error} ${err?.message || ""}`, "danger");
+  } finally {
+    hideLoader();
+  }
+});

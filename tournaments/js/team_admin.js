@@ -6,7 +6,7 @@
 //   /tournaments/team.html?e=EVENTO&r=ID       editar una inscripción
 import { EX, exf } from "/tournaments/js/strings.js";
 import { eventRules, rosterProblem } from "/tournaments/js/model.js";
-import { REG, isApproved, registrationIsOpen, rosterLocked, isPlatformAdmin, listPublicEvents, listTeams, loadEvent, loadPublicEventBySlug, loadRegistration, saveRegistration, withdrawRegistration, fmtMoney, submitRegistrationPayment, teamFee } from "/tournaments/js/services.js";
+import { REG, isApproved, registrationIsOpen, rosterLocked, isPlatformAdmin, listPublicEvents, listTeams, loadEvent, loadPublicEventBySlug, loadRegistration, saveRegistration, withdrawRegistration, fmtMoney, submitRegistrationPayment, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
 import { countryOptions, countryName, flagOf } from "/tournaments/js/countries.js";
 import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/tournaments/js/squads.js";
 import { avatarHtml, esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, regChip, renderNav, showLoader, signInGoogle, spiritPendingHtml, teamBadge, waitForUser, paymentChip, shrinkImage } from "/tournaments/js/ui.js";
@@ -174,6 +174,29 @@ function statusBanner(reg) {
 }
 
 // Cuota del equipo: monto, cómo pagar y (opcional) el comprobante; el organizador lo aprueba
+// Estado del formulario de un jugador del roster
+function waiverChip(m) {
+  if (!m.uid) return `<div class="small ev-muted"><i class="bi bi-file-earmark me-1"></i>${esc(EX.waiverStatusNoAccount)}</div>`;
+  const ok = state.waivers.get(m.uid)?.version === (state.event.waiver?.version || "");
+  return `<div class="small ${ok ? "text-success" : "text-warning-emphasis"}"><i class="bi ${ok ? "bi-file-earmark-check-fill" : "bi-file-earmark"} me-1"></i>${esc(ok ? EX.waiverStatusSigned : EX.waiverStatusPending)}</div>`;
+}
+
+// Link del formulario para pasarle a los jugadores
+function waiverSection() {
+  if (!waiverOn(state.event)) return "";
+  const url = `${location.origin}/tournaments/waiver.html?e=${encodeURIComponent(state.event.slug || state.event.id)}`;
+  return `
+    <section class="ev-card">
+      <h2 class="h6 mb-2"><i class="bi bi-file-earmark-check me-1"></i>${esc(state.event.waiver.title || EX.secWaiver)}</h2>
+      <div class="small ev-muted mb-2">${esc(EX.waiverShare)}</div>
+      <div class="input-group input-group-sm">
+        <input class="form-control" value="${esc(url)}" readonly />
+        <button class="btn btn-outline-secondary" type="button" data-copy-waiver="${esc(url)}"><i class="bi bi-clipboard"></i></button>
+        <a class="btn btn-outline-success" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(exf(EX.waiverWa, { event: state.event.name || "", url }))}"><i class="bi bi-whatsapp"></i></a>
+      </div>
+    </section>`;
+}
+
 function paymentSection(r) {
   const fee = teamFee(state.event);
   if (!fee) return "";
@@ -270,6 +293,7 @@ function renderForm() {
               ${avatarHtml(m, 32)}
               <div class="flex-grow-1 min-w-0">
                 <div class="text-truncate">${esc(m.name)}</div>
+                ${waiverOn(state.event) ? waiverChip(m) : ""}
                 ${elsewhere(m).length ? `<div class="small text-warning-emphasis text-truncate"><i class="bi bi-people-fill me-1"></i>${esc(exf(EX.regAlsoIn, { teams: elsewhere(m).join(", ") }))}</div>` : ""}
               </div>
               ${m.gender ? `<span class="ev-chip">${esc(m.gender)}</span>` : `<span class="ev-chip ev-chip--wait" title="${esc(EX.sqMissingGender)}">?</span>`}
@@ -285,6 +309,7 @@ function renderForm() {
         </div>
       </section>
 
+      ${waiverSection()}
       ${paymentSection(r)}
 
       <div class="d-flex justify-content-between gap-2 flex-wrap">
@@ -416,6 +441,8 @@ async function openRegistration(eventKey, regId, squadId) {
   if (!event) return alertBox(EX.eventNotFound, "warning");
   state.event = event;
   // jugadores que ya están en el roster de otro equipo de este torneo (se puede estar en varios equipos)
+  // formulario de exención: quién del roster ya firmó
+  state.waivers = new Map(waiverOn(event) ? (await listWaiverStatus(event.id).catch(() => [])).map((w) => [w.uid, w]) : []);
   state.otherRosters = new Map();
   (await listTeams(event.id).catch(() => [])).forEach((t) => (t.players || []).forEach((p) => {
     if (!p.uid) return;
@@ -489,3 +516,13 @@ function renderSignIn() {
     hideLoader();
   }
 })();
+
+// copiar el link del formulario
+document.addEventListener("click", async (ev) => {
+  const b = ev.target.closest("[data-copy-waiver]");
+  if (!b) return;
+  try {
+    await navigator.clipboard.writeText(b.dataset.copyWaiver);
+    alertBox(EX.copied || EX.saved);
+  } catch { /* sin portapapeles */ }
+});

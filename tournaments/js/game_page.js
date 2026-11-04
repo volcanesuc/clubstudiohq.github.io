@@ -14,7 +14,7 @@ import {
   ratioLabel,
 } from "/tournaments/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/tournaments/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot } from "/tournaments/js/ui.js";
+import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot, downloadIcs, googleCalendarUrl, toMillis } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -94,7 +94,17 @@ function render() {
   const feed = feedPlays(state.plays, state.rules).reverse();
 
   $("tnRoot").innerHTML = `
-    <a class="small ev-muted text-decoration-none" href="${esc(eventUrl(state.event))}"><i class="bi bi-arrow-left"></i> ${esc(state.event.name || "")}</a>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <a class="small ev-muted text-decoration-none" href="${esc(eventUrl(state.event))}"><i class="bi bi-arrow-left"></i> ${esc(state.event.name || "")}</a>
+      ${g.status === GAME_STATUS.SCHEDULED && toMillis(g.startAt) ? `
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-calendar-plus me-1"></i>${esc(EX.icsGame)}</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" target="_blank" rel="noopener" href="${esc(googleCalendarUrl(g, state.event))}"><i class="bi bi-google me-2"></i>${esc(EX.icsGoogle)}</a></li>
+            <li><button class="dropdown-item" data-ics-game><i class="bi bi-calendar-event me-2"></i>${esc(EX.icsFile)}</button></li>
+          </ul>
+        </div>` : ""}
+    </div>
     <div class="d-flex justify-content-between align-items-center mt-1 mb-2 flex-wrap gap-2">
       <div class="small ev-muted">${esc([phaseLabel(g), g.field, fmtWhen(g.startAt)].filter(Boolean).join(" · "))}</div>
       ${statusChip(g.status)}
@@ -168,3 +178,9 @@ setInterval(() => {
     hideLoader();
   }
 })();
+
+// partido › agregar al calendario (.ics)
+document.addEventListener("click", (ev) => {
+  if (!ev.target.closest("[data-ics-game]") || !state.game) return;
+  downloadIcs([state.game], state.event, "partido.ics");
+});
