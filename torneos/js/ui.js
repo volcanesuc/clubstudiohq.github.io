@@ -115,7 +115,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
   }
   nav.innerHTML = `
     <div class="container d-flex align-items-center gap-3 py-2">
-      <a class="tn-nav__brand" href="/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
+      <a class="tn-nav__brand" href="/torneos/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
       <div class="d-flex gap-1 flex-grow-1 overflow-auto tn-nav__tabs">
         ${link("dir", "/torneos/", EX.navTournaments)}
         ${link("clubs", "/torneos/clubes.html", EX.navClubs)}
