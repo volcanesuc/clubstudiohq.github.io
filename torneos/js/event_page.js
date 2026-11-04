@@ -378,23 +378,57 @@ function spiritTab() {
   if (!rows.length) return divisionPicker() + `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`;
   const short = { rules: "R", fouls: "F", fair: "I", attitude: "A", comm: "C" };
   const titles = { rules: EX.spiritRules, fouls: EX.spiritFouls, fair: EX.spiritFair, attitude: EX.spiritAttitude, comm: EX.spiritComm };
+  const labels = { rules: EX.spCatRules, fouls: EX.spCatFouls, fair: EX.spCatFair, attitude: EX.spCatAttitude, comm: EX.spCatComm };
+  const pct = (v, max) => Math.max(0, Math.min(100, (v / max) * 100));
+  const medal = (i) => (i < 3 ? `<span class="spb-rank spb-rank--${i + 1}">${i + 1}</span>` : `<span class="spb-rank">${i + 1}</span>`);
+
+  // Tarjeta por equipo: total sobre 20 (con la marca de 10 = lo normal) y las 5 categorías sobre 4
+  const card = (r, i) => `
+    <article class="spb-card">
+      <header class="spb-card__head">
+        ${medal(i)}
+        ${teamBadge(r.team, 40)}
+        <div class="min-w-0 flex-grow-1">
+          <div class="spb-card__name">${esc(r.team.name)}</div>
+          <div class="spb-card__count">${esc(r.count === 1 ? EX.spOneReview : exf(EX.spReviews, { n: r.count }))}</div>
+        </div>
+        <div class="spb-card__score"><b>${r.avg.toFixed(1)}</b><span>/20</span></div>
+      </header>
+      <div class="spb-total" title="${esc(exf(EX.spTotalTip, { n: r.avg.toFixed(1) }))}" role="img" aria-label="${esc(exf(EX.spTotalTip, { n: r.avg.toFixed(1) }))}">
+        <i style="width:${pct(r.avg, 20)}%"></i>
+        <span class="spb-total__mark" style="left:50%" aria-hidden="true"></span>
+      </div>
+      <div class="spb-cats">
+        ${SPIRIT_KEYS.map((k) => `
+          <div class="spb-cat" title="${esc(titles[k])}: ${r.catAvg[k].toFixed(1)} / 4">
+            <div class="spb-cat__top"><span>${esc(labels[k])}</span><b>${r.catAvg[k].toFixed(1)}</b></div>
+            <div class="spb-cat__bar"><i style="width:${pct(r.catAvg[k], 4)}%"></i></div>
+          </div>`).join("")}
+      </div>
+    </article>`;
+
   return `
     ${divisionPicker()}
-    <div class="ev-card p-0 overflow-hidden">
-      <div class="table-responsive">
-        <table class="table table-sm mb-0 ev-table">
-          <thead><tr><th class="ps-3">#</th><th>${esc(EX.standTeam)}</th><th class="num">${esc(EX.spiritAvg)}</th>
-            ${SPIRIT_KEYS.map((k) => `<th class="num" title="${esc(titles[k])}">${short[k]}</th>`).join("")}
-            <th class="num pe-3">${esc(EX.spiritCount)}</th></tr></thead>
-          <tbody>${rows.map((r, i) => `
-            <tr><td class="ps-3 fw-bold">${i + 1}</td><td>${esc(r.team.name)}</td><td class="num fw-bold">${r.avg.toFixed(1)}</td>
-            ${SPIRIT_KEYS.map((k) => `<td class="num">${r.catAvg[k].toFixed(1)}</td>`).join("")}
-            <td class="num pe-3">${r.count}</td></tr>`).join("")}
-          </tbody>
-        </table>
+    <div class="spb-intro small ev-muted mb-3">${esc(EX.spIntro)}</div>
+    <div class="spb-board">${rows.map(card).join("")}</div>
+    <details class="mt-3">
+      <summary class="small ev-muted">${esc(EX.spTableView)}</summary>
+      <div class="ev-card p-0 overflow-hidden mt-2">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 ev-table">
+            <thead><tr><th class="ps-3">#</th><th>${esc(EX.standTeam)}</th><th class="num">${esc(EX.spiritAvg)}</th>
+              ${SPIRIT_KEYS.map((k) => `<th class="num" title="${esc(titles[k])}">${short[k]}</th>`).join("")}
+              <th class="num pe-3">${esc(EX.spiritCount)}</th></tr></thead>
+            <tbody>${rows.map((r, i) => `
+              <tr><td class="ps-3 fw-bold">${i + 1}</td><td>${esc(r.team.name)}</td><td class="num fw-bold">${r.avg.toFixed(1)}</td>
+              ${SPIRIT_KEYS.map((k) => `<td class="num">${r.catAvg[k].toFixed(1)}</td>`).join("")}
+              <td class="num pe-3">${r.count}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-    <div class="small ev-muted mt-2">${SPIRIT_KEYS.map((k) => `${short[k]}: ${esc(titles[k])}`).join(" · ")}</div>`;
+      <div class="small ev-muted mt-2">${SPIRIT_KEYS.map((k) => `${short[k]}: ${esc(titles[k])}`).join(" · ")}</div>
+    </details>`;
 }
 
 /* =========================

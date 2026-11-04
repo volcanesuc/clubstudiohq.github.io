@@ -406,7 +406,6 @@ function renderLive() {
     ${breakBanner()}
     ${onBreak() ? `<div class="sk-banner alert-warning mt-2 small">${esc(EX.skLockedBreak)}</div>` : ""}
     ${gameOver() ? `<div class="sk-banner alert-success mt-2 d-flex justify-content-between align-items-center gap-2 flex-wrap"><span>${esc(exf(EX.skGameOver, { n: state.rules.gameTo, a: state.calc.score.A, b: state.calc.score.B }))}</span><button class="btn btn-sm btn-danger" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button></div>` : ""}
-    ${state.calc.suggestHalftime && !gameOver() && !state.game.clock?.break ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
     <div class="sk-actions">${sideButtons("A")}${sideButtons("B")}</div>
     <div class="sk-bar">
       <button class="btn btn-outline-secondary" data-act="undo"><i class="bi bi-arrow-counterclockwise me-1"></i>${esc(EX.skUndo)}</button>
@@ -438,6 +437,31 @@ function renderFinal() {
 
 let renderedMode = "";
 
+// Medio tiempo: popup cuando un equipo llega a "medio tiempo a" (ej. 7) o se cumple la mitad del tiempo.
+// Cada motivo se pregunta una sola vez; si siguen jugando queda el botón "Medio tiempo" abajo.
+const halftimeAsked = new Set();
+let halftimeDialog = false;
+function maybeHalftimePrompt() {
+  if (!isLive() || !state.calc || state.calc.halftimeDone || onBreak() || gameOver() || halftimeDialog) return;
+  const r = state.rules;
+  const s = state.calc.score;
+  const byScore = state.calc.suggestHalftime;
+  const halfMs = r.gameMinutes ? r.gameMinutes * 30000 : 0;
+  const byTime = !!halfMs && clockView(state.game.clock || {}, r).elapsedMs >= halfMs;
+  const reason = byScore ? "score" : byTime ? "time" : "";
+  if (!reason || halftimeAsked.has(reason)) return;
+  halftimeAsked.add(reason);
+  halftimeDialog = true;
+  const leader = s.A >= s.B ? "A" : "B";
+  const msg = reason === "score"
+    ? exf(EX.skHalftimeByScore, { team: teamName(leader), n: Math.max(s.A, s.B), a: s.A, b: s.B })
+    : exf(EX.skHalftimeByTime, { min: r.gameMinutes / 2, a: s.A, b: s.B });
+  askConfirm(msg, { title: EX.skHalftimeTitle, ok: EX.skHalftimeStart, cancel: EX.skKeepPlaying }).then((ok) => {
+    halftimeDialog = false;
+    if (ok && isLive() && !state.calc.halftimeDone && !onBreak()) onHalftime();
+  });
+}
+
 function render() {
   if (!state.game || !state.calc) return;
   document.title = `${teamName("A")} ${state.calc.score.A}–${state.calc.score.B} ${teamName("B")} · ${EX.skTitle}`;
@@ -445,6 +469,7 @@ function render() {
   const mode = notStarted ? "pre" : isFinal() ? "final" : "live";
   renderedMode = mode;
   $("tnRoot").innerHTML = mode === "pre" ? renderPreGame() : mode === "final" ? renderFinal() : renderLive();
+  if (mode === "live") maybeHalftimePrompt();
 }
 
 /* =========================
@@ -509,6 +534,8 @@ setInterval(() => {
   if (brkEl && view.brk) brkEl.textContent = view.brk.text;
   // el descanso llegó a 0: se reanuda el reloj solo
   if (view.brk?.done && isLive()) finishBreak();
+  // la mitad del tiempo se cumple con el reloj corriendo, sin que nadie toque nada
+  maybeHalftimePrompt();
 }, 500);
 
 // sin señal
