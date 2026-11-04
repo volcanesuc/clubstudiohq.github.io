@@ -13,7 +13,7 @@ import {
 } from "/torneos/js/model.js";
 import { REG, listTeams, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
 import { myRegistrationsFor } from "/torneos/js/squads.js";
-import { esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
+import { esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
@@ -234,12 +234,16 @@ function teamsTab() {
   return `
     ${divisionPicker()}
     <div class="row g-3">
-      ${teams.map((t) => `
+      ${teams.map((t) => {
+        // con equipo en ClubStudioHQ: abre su página (jugadores, torneos, resultados)
+        const href = t.squadId ? `/torneos/club.html?s=${encodeURIComponent(t.squadId)}` : "";
+        const tag = href ? "a" : "div";
+        return `
         <div class="col-12 col-md-6">
-          <div class="ev-card h-100">
-            <div class="d-flex align-items-center gap-2 mb-1">
+          <${tag} class="ev-card ev-team-card h-100 ${href ? "is-link" : ""}" ${href ? `href="${esc(href)}"` : ""}>
+            <div class="d-flex align-items-center gap-2">
               ${teamBadge(t, 40)}
-              <div class="min-w-0">
+              <div class="min-w-0 flex-grow-1">
                 <div class="fw-bold text-truncate">${esc(t.name)}</div>
                 <div class="small ev-muted">${esc([t.city, t.pool ? exf(EX.phasePool, { pool: t.pool }) : ""].filter(Boolean).join(" · "))}${t.city || t.pool ? " · " : ""}${esc(exf(EX.playersSummary, {
                   n: (t.players || []).length,
@@ -247,10 +251,11 @@ function teamsTab() {
                   m: (t.players || []).filter((p) => p.gender === "M").length,
                 }))}</div>
               </div>
+              ${href ? `<i class="bi bi-chevron-right ev-muted"></i>` : ""}
             </div>
-            <div class="small">${(t.players || []).map((p) => `<span class="text-nowrap">${p.uid ? `<a class="text-decoration-none" href="/torneos/perfil.html?u=${encodeURIComponent(p.uid)}">${esc(playerLabel(p))}</a>` : esc(playerLabel(p))}${p.id === t.captainId ? `<span class="tn-cap tn-cap--c" title="${esc(EX.captain)}">C</span>` : ""}${p.id === t.spiritCaptainId ? `<span class="tn-cap tn-cap--s" title="${esc(EX.spiritCaptain)}">E</span>` : ""}</span>`).join(" · ") || "—"}</div>
-          </div>
-        </div>`).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}
+          </${tag}>
+        </div>`;
+      }).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}
     </div>`;
 }
 
@@ -420,6 +425,7 @@ function render() {
       ${TABS.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
     </ul>
     <div id="evpTab">${tab[2]()}</div>`;
+  revealActiveTab(document.querySelector(".ev-tabs"));
 }
 
 $("tnRoot").addEventListener("click", async (ev) => {

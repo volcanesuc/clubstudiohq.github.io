@@ -6,6 +6,7 @@ import {
   DEFAULT_RULES,
   EVENT_STATUS,
   GAME_STATUS,
+  RATIO_RULES,
   eventRules,
   parseRoster,
   rosterToText,
@@ -352,6 +353,13 @@ function renderInfo() {
               <input class="form-control ${mode.id === "other" ? "" : "d-none"}" style="max-width:7rem" id="rPlayers" type="number" min="1" max="15" value="${esc(r.playersOnField)}" aria-label="${esc(EX.rulePlayers)}" placeholder="${esc(EX.rulePlayers)}" />
             </div>
             <div class="form-text">${esc(EX.ruleModeHint)}</div>
+            <label class="form-label small mt-3" for="rRatioRule">${esc(EX.ruleRatio)}</label>
+            <select class="form-select" id="rRatioRule">${RATIO_RULES.map((id) => `<option value="${id}" ${r.ratioRule === id ? "selected" : ""}>${esc(EX[`ruleRatio_${id}`])}</option>`).join("")}</select>
+            <select class="form-select mt-2 ${r.ratioRule === "fixed" ? "" : "d-none"}" id="rRatioFixed" aria-label="${esc(EX.ruleRatio_fixed)}">
+              <option value="M" ${r.ratioFixed === "M" ? "selected" : ""}>${esc(EX.ruleRatioFixedM)}</option>
+              <option value="F" ${r.ratioFixed === "F" ? "selected" : ""}>${esc(EX.ruleRatioFixedF)}</option>
+            </select>
+            <div class="form-text">${esc(EX.ruleRatioHint)}</div>
             <label class="form-label small mt-3" for="eFields">${esc(EX.eventFields)}</label>
             <textarea class="form-control" id="eFields" rows="3">${esc(fields().join("\n"))}</textarea>
           </div>
@@ -464,6 +472,9 @@ function renderInfo() {
   document.getElementById("rMode").onchange = (ev) => {
     document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
   };
+  document.getElementById("rRatioRule").onchange = (ev) => {
+    document.getElementById("rRatioFixed").classList.toggle("d-none", ev.target.value !== "fixed");
+  };
 
   document.getElementById("evInfoForm").onsubmit = (ev) => {
     ev.preventDefault();
@@ -488,6 +499,8 @@ function renderInfo() {
         rules: {
           mode: modeDef.id,
           playersOnField: modeDef.players || num("rPlayers") || 7,
+          ratioRule: v("rRatioRule") || "abba",
+          ratioFixed: v("rRatioFixed") === "F" ? "F" : "M",
           gameMinutes: num("rGameMin"),
           betweenGamesMin: num("rGap"),
           stopClockOnBreaks: document.getElementById("rStopBreaks").checked,

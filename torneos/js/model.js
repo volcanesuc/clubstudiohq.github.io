@@ -21,9 +21,20 @@ export const PLAY = {
   CLOCK_ADJUST: "clock_adjust",
   BREAK_END: "break_end",
   REOPEN: "reopen",
+  RATIO: "ratio", // mixto con proporción por punto: { point, letter: "F" | "M" }
 };
 
-export const AUDIT_PLAYS = [PLAY.CLOCK_ADJUST, PLAY.BREAK_END, PLAY.REOPEN];
+export const AUDIT_PLAYS = [PLAY.CLOCK_ADJUST, PLAY.BREAK_END, PLAY.REOPEN, PLAY.RATIO];
+
+// Reglas de proporción en mixto (WFDF Apéndice / USA Ultimate):
+//  abba    Regla A (proporción prescrita): se elige el 1er punto y se alterna cada dos puntos (ABBA)
+//  offense La ofensiva elige en cada punto (ligas locales)
+//  fixed   Fija: siempre la misma (ej. 4M · 3F)
+//  none    Libre: no se lleva proporción
+export const RATIO_RULES = ["abba", "offense", "fixed", "none"];
+export const ratioPerPoint = (rules) => rules?.ratioRule === "offense";
+// ¿se elige la proporción del primer punto al iniciar?
+export const ratioChosenAtStart = (rules) => rules?.ratioRule === "abba" || ratioPerPoint(rules);
 
 export const SPIRIT_KEYS = ["rules", "fouls", "fair", "attitude", "comm"];
 
@@ -41,6 +52,8 @@ export const DEFAULT_RULES = {
   timeoutsPerHalf: 1,
   timeoutSeconds: 75,
   halftimeMinutes: 7,
+  ratioRule: "abba", // mixto: ver RATIO_RULES
+  ratioFixed: "M", // con ratioRule "fixed": mayoría de hombres (M) o mujeres (F)
   mvp: { goals: 1, assists: 1, blocks: 1, turns: 0 },
 };
 
@@ -61,6 +74,8 @@ export function eventRules(event = {}) {
     timeoutsPerHalf: n(r.timeoutsPerHalf, DEFAULT_RULES.timeoutsPerHalf),
     timeoutSeconds: n(r.timeoutSeconds, DEFAULT_RULES.timeoutSeconds),
     halftimeMinutes: n(r.halftimeMinutes, DEFAULT_RULES.halftimeMinutes),
+    ratioRule: RATIO_RULES.includes(r.ratioRule) ? r.ratioRule : DEFAULT_RULES.ratioRule,
+    ratioFixed: r.ratioFixed === "F" ? "F" : "M",
     mvp: {
       goals: n(r.mvp?.goals, 1),
       assists: n(r.mvp?.assists, 1),
@@ -106,7 +121,20 @@ export function ratioLabel(letter, players = 7) {
   return letter === "F" ? `${maj}F · ${min}M` : `${maj}M · ${min}F`;
 }
 
-export const needsRatio = (division, rules = DEFAULT_RULES) => isMixedDivision(division) && (rules.playersOnField || 0) % 2 === 1;
+export const needsRatio = (division, rules = DEFAULT_RULES) =>
+  isMixedDivision(division) && (rules.playersOnField || 0) % 2 === 1 && rules.ratioRule !== "none";
+
+// Proporción ("F" o "M") del punto pointIndex (0 = primer punto) según la regla del torneo.
+export function pointRatio(rules, game = {}, plays = [], pointIndex = 0) {
+  const rule = rules?.ratioRule || "abba";
+  if (rule === "none") return "";
+  if (rule === "fixed") return rules.ratioFixed === "F" ? "F" : "M";
+  if (rule === "abba") return ratioForPoint(pointIndex, game.ratioFirst);
+  // por punto: la última elección registrada para ese punto (el primero puede venir del inicio)
+  const chosen = plays.filter((p) => p.type === PLAY.RATIO && !p.deleted && p.point === pointIndex).sort((a, b) => (a.at || 0) - (b.at || 0)).pop();
+  if (chosen) return chosen.letter === "F" ? "F" : "M";
+  return pointIndex === 0 && (game.ratioFirst === "F" || game.ratioFirst === "M") ? game.ratioFirst : "";
+}
 
 export function slugify(text) {
   return String(text || "")

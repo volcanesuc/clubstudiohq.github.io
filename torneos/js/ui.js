@@ -53,7 +53,17 @@ export async function signOutUser() {
 /**
  * @param {{ active?: string, isAdmin?: boolean, user?: object|null, onSignIn?: Function }} opts
  */
-export function renderNav({ active = "", isAdmin = false, user = null } = {}) {
+// En celular las barras de tabs se desplazan de lado: deja visible el tab activo (sin mover la página).
+export function revealActiveTab(bar, selector = ".is-active, .active") {
+  const el = bar?.querySelector(selector);
+  if (!el || bar.scrollWidth <= bar.clientWidth) return;
+  bar.scrollLeft = Math.max(0, el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2);
+}
+
+// Cache de "es admin de la plataforma" por uid (para no consultar en cada página).
+const adminCache = new Map();
+
+export function renderNav({ active = "", isAdmin, user = null } = {}) {
   let nav = document.getElementById("tnNav");
   if (!nav) {
     nav = document.createElement("nav");
@@ -63,23 +73,39 @@ export function renderNav({ active = "", isAdmin = false, user = null } = {}) {
   }
   const link = (id, href, label) => `<a class="tn-nav__link ${active === id ? "is-active" : ""}" href="${href}">${esc(label)}</a>`;
   const google = isGoogleUser(user);
+  // Si la página no lo dijo, se averigua acá: el tab Admin sale igual en todas las páginas.
+  if (isAdmin === undefined) {
+    isAdmin = google ? adminCache.get(user.uid) === true : false;
+    if (google && !adminCache.has(user.uid)) {
+      import("/torneos/js/services.js")
+        .then((m) => m.isPlatformAdmin(user.uid))
+        .then((yes) => {
+          adminCache.set(user.uid, yes);
+          if (yes) renderNav({ active, isAdmin: true, user });
+        })
+        .catch(() => adminCache.set(user.uid, false));
+    }
+  } else if (google) {
+    adminCache.set(user.uid, isAdmin === true);
+  }
   nav.innerHTML = `
     <div class="container d-flex align-items-center gap-3 py-2">
-      <a class="tn-nav__brand" href="/"><img src="/assets/favicon.svg" width="30" height="30" alt="" /><span>ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
-      <div class="d-flex gap-1 flex-grow-1 overflow-auto">
+      <a class="tn-nav__brand" href="/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
+      <div class="d-flex gap-1 flex-grow-1 overflow-auto tn-nav__tabs">
         ${link("dir", "/torneos/", EX.navTournaments)}
         ${link("team", "/torneos/equipo.html", EX.navTeam)}
-        ${google ? link("profile", "/torneos/perfil.html", EX.navProfile) : ""}
+        ${google ? link("profile", "/torneos/perfil.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
         ${link("org", "/torneos/organizar.html", EX.navOrganize)}
         ${isAdmin ? link("admin", "/torneos/admin.html", EX.navAdmin) : ""}
       </div>
       ${google
         ? `<div class="d-flex align-items-center gap-2">
             <a href="/torneos/perfil.html" title="${esc(EX.navProfile)}" class="${active === "profile" ? "is-active" : ""}">${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="${esc(EX.navProfile)}" referrerpolicy="no-referrer" />` : `<i class="bi bi-person-circle text-white fs-5"></i>`}</a>
-            <button class="btn btn-sm btn-outline-light" id="tnSignOut">${esc(EX.signOut)}</button>
+            <button class="btn btn-sm btn-outline-light" id="tnSignOut" title="${esc(EX.signOut)}"><i class="bi bi-box-arrow-right tn-nav__out-icon"></i><span class="tn-nav__out-text">${esc(EX.signOut)}</span></button>
           </div>`
-        : `<button class="btn btn-sm tn-btn-grad" id="tnSignIn">${esc(EX.signIn)}</button>`}
+        : `<button class="btn btn-sm tn-btn-grad text-nowrap" id="tnSignIn"><span class="tn-nav__out-text">${esc(EX.signIn)}</span><span class="tn-nav__in-short">${esc(EX.signInShort)}</span></button>`}
     </div>`;
+  revealActiveTab(nav.querySelector(".tn-nav__tabs"));
   nav.querySelector("#tnSignOut")?.addEventListener("click", async () => {
     await signOutUser();
     location.reload();
@@ -179,18 +205,9 @@ export function spiritPendingHtml(list = []) {
     </section>`;
 }
 
-// Disco (frisbee): brillante para el equipo con el disco, apagado para el otro
-export function discIcon(size = 28, active = true) {
-  const h = Math.round(size * 0.62);
-  const g = active ? "tnDiscOn" : "tnDiscOff";
-  return `<svg class="tn-disc ${active ? "is-on" : "is-off"}" width="${size}" height="${h}" viewBox="0 0 40 25" aria-hidden="true">
-    <defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${active ? "#ffffff" : "#d4d4d8"}"/><stop offset="1" stop-color="${active ? "#a5f3fc" : "#a1a1aa"}"/>
-    </linearGradient></defs>
-    <ellipse cx="20" cy="13.5" rx="18.5" ry="9.5" fill="url(#${g})" stroke="${active ? "#22d3ee" : "#71717a"}" stroke-width="1.6"/>
-    <ellipse cx="20" cy="12" rx="12.5" ry="5.4" fill="none" stroke="${active ? "#67e8f9" : "#a1a1aa"}" stroke-width="1.4" opacity=".9"/>
-    <ellipse cx="14" cy="9.5" rx="5" ry="1.6" fill="#fff" opacity="${active ? ".8" : ".35"}"/>
-  </svg>`;
+// Quién tiene el disco: punto verde encendido (lo tiene) o gris (no lo tiene)
+export function possessionDot(size = 12, active = true) {
+  return `<span class="tn-pos-dot ${active ? "is-on" : "is-off"}" style="width:${size}px;height:${size}px" aria-hidden="true"></span>`;
 }
 
 // Foto del jugador, o un círculo con sus iniciales
@@ -284,6 +301,8 @@ export function describePlay(play, ctx) {
       return { cls: "audit", type: EX.evBreakEnd, text: play.breakType === "halftime" ? EX.evHalftime : `${EX.evTimeout}${play.team ? ` · ${team}` : ""}` };
     case PLAY.REOPEN:
       return { cls: "audit", type: EX.evReopen, text: "" };
+    case PLAY.RATIO:
+      return { cls: "audit", type: EX.evRatio, text: `${play.letter === "F" ? EX.skFmp : EX.skMmp} · ${exf(EX.skPointN, { n: (play.point || 0) + 1 })}` };
     default:
       return { cls: "meta", type: play.type, text: "" };
   }

@@ -393,6 +393,10 @@ export function scorekeeperUrl(eid, gid, token) {
 export async function claimScorekeeper(eid, gid, token) {
   if (!auth.currentUser) await signInAnonymously(auth);
   const uid = auth.currentUser.uid;
-  await setDoc(doc(db, COL.gameClaims, `${gid}_${uid}`), { eventId: eid, gameId: gid, token, uid, createdAt: serverTimestamp() });
+  const ref = doc(db, COL.gameClaims, `${gid}_${uid}`);
+  // si ya abrió este link antes (recargó la página), el permiso ya existe: las reglas no dejan reescribirlo
+  const existing = await getDoc(ref).catch(() => null);
+  if (existing?.exists()) return uid;
+  await setDoc(ref, { eventId: eid, gameId: gid, token, uid, createdAt: serverTimestamp() });
   return uid;
 }

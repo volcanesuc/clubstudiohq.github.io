@@ -8,11 +8,13 @@ import {
   eventRules,
   feedPlays,
   mvpScore,
-  ratioForPoint,
+  findDivision,
+  needsRatio,
+  pointRatio,
   ratioLabel,
 } from "/torneos/js/model.js";
 import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/torneos/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, discIcon } from "/torneos/js/ui.js";
+import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -86,7 +88,7 @@ function render() {
       <div class="d-flex justify-content-center mb-1">${teamBadge({ ...(teamDoc(k) || {}), name: teamName(k), color: teamColor(k) }, 44)}</div>
       <div class="ev-score__name">${esc(teamName(k))}</div>
       <div class="ev-score__pts">${score[k]}</div>
-      ${live ? `<div class="ev-score__disc">${discIcon(32, calc.possession === k)}</div>` : ""}
+      ${live ? `<div class="ev-score__disc">${possessionDot(14, calc.possession === k)}</div>` : ""}
     </div>`;
   const ctx = { playersById: state.playersById, teamName };
   const feed = feedPlays(state.plays, state.rules).reverse();
@@ -103,7 +105,7 @@ function render() {
         <div class="ev-score__clock" id="gvClock">${started ? clockView(g.clock || {}, state.rules).text : esc(fmtWhen(g.startAt, { hour: "2-digit", minute: "2-digit" }) || EX.vs)}</div>
         ${live && g.clock?.pausedAt && !g.clock?.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
         ${live && g.clock?.break ? `<div class="ev-chip mt-1" id="gvBreak">${esc(g.clock.break.type === "halftime" ? EX.skBreakHalftime : exf(EX.skBreakTimeout, { team: teamName(g.clock.break.team) }))} · <span id="gvBreakClock">${clockView(g.clock, state.rules).brk?.text || ""}</span></div>` : ""}
-        ${live && g.ratioFirst ? ratioChip(ratioForPoint(calc.points.length, g.ratioFirst)) : ""}
+        ${live && needsRatio(findDivision(state.event, g.divisionId), state.rules) ? ratioChip(pointRatio(state.rules, g, state.plays, calc.points.length)) : ""}
       </div>
       ${side("B")}
     </div>
