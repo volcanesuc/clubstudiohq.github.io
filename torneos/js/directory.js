@@ -2,7 +2,7 @@
 // Directorio público de torneos publicados en la plataforma.
 import { EX } from "/torneos/js/strings.js";
 import { SURFACES, SURFACE_ICONS } from "/torneos/js/model.js";
-import { isPlatformAdmin, listPublicEvents } from "/torneos/js/services.js";
+import { isPlatformAdmin, listPublicEvents, registrationIsOpen } from "/torneos/js/services.js";
 import { esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, renderNav, showLoader, waitForUser } from "/torneos/js/ui.js";
 
 const root = document.getElementById("tnRoot");
@@ -16,7 +16,7 @@ function card(e) {
         <div class="fw-bold">${esc(e.name || "—")}</div>
         <div class="small ev-muted mt-1"><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</div>
         ${e.venue || SURFACES.includes(e.surface) ? `<div class="small ev-muted">${e.venue ? `<i class="bi bi-geo-alt"></i> ${esc(e.venue)}` : ""}${e.venue && SURFACES.includes(e.surface) ? " · " : ""}${SURFACES.includes(e.surface) ? `<i class="bi ${SURFACE_ICONS[e.surface]}"></i> ${esc(EX[`surface_${e.surface}`])}` : ""}</div>` : ""}
-        ${(e.divisions || []).length || e.registrationOpen ? `<div class="mt-2 d-flex flex-wrap gap-1">${e.registrationOpen ? `<span class="ev-chip ev-chip--ok">${esc(EX.regOpen)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}</div>` : ""}
+        ${(e.divisions || []).length || registrationIsOpen(e) ? `<div class="mt-2 d-flex flex-wrap gap-1">${registrationIsOpen(e) ? `<span class="ev-chip ev-chip--ok">${esc(EX.regOpen)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}</div>` : ""}
       </a>
     </div>`;
 }

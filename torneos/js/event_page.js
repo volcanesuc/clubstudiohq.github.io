@@ -13,7 +13,7 @@ import {
   spiritTable,
   standings,
 } from "/torneos/js/model.js";
-import { REG, listTeams, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
+import { REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration } from "/torneos/js/services.js";
 import { myRegistrationsFor } from "/torneos/js/squads.js";
 import { esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams } from "/torneos/js/ui.js";
 
@@ -67,7 +67,7 @@ function myRegistrationHtml() {
       </div>`;
   }).join("");
   // "inscribir otro" solo si me queda algún equipo sin inscribir
-  const register = e.registrationOpen && (!state.myRegs.length || state.myRegs.freeSquads > 0)
+  const register = registrationIsOpen(e) && (!state.myRegs.length || state.myRegs.freeSquads > 0)
     ?`<a class="btn btn-light btn-sm fw-bold" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>${esc(state.myRegs.length ? EX.registerAnother : EX.registerTeam)}</a>`
     : "";
   if (!items && !register) return "";

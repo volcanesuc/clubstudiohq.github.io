@@ -199,7 +199,6 @@ body.tn-body { background: #f6f5fb; color: #1d1b26; min-height: 100vh; }
   body.has-bnav { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   body.has-bnav .tn-save-bar { bottom: calc(60px + env(safe-area-inset-bottom)); }
 }
-}
 .tn-btn-grad, .btn.tn-btn-grad {
   border: 0; color: #0b0b10; font-weight: 750;
   background: linear-gradient(135deg, #7c3aed, #22d3ee);
@@ -465,9 +464,13 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .tp-place--3 { background: #ffedd5; color: #9a3412; }
 .tp-place--live { background: #fee2e2; color: #b91c1c; }
 @media (max-width: 575.98px) {
-  .tp-shelf { justify-content: center; }
-  .tp-medals { gap: .6rem; }
-  .tp-medal { width: 58px; }
+  /* celular: medallas en una fila y récord en otra, cada una a lo ancho y centrada */
+  .tp-shelf { flex-direction: column; align-items: stretch; gap: .9rem; padding: 1rem .75rem; }
+  .tp-medals, .tp-record { width: 100%; justify-content: space-around; gap: .25rem; }
+  .tp-record { padding-top: .85rem; border-top: 1px solid var(--ev-border); }
+  .tp-medal { width: auto; flex: 1 1 0; min-width: 0; }
+  .tp-medal__l { white-space: normal; line-height: 1.15; }
+  .tp-record > div { flex: 1 1 0; min-width: 0; }
   .tp-row__roles { display: none; }
   .tp-tab { padding: .45rem .75rem; font-size: .88rem; }
   .tp-tab i { display: none; }

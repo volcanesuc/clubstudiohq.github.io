@@ -36,6 +36,13 @@ service cloud.firestore {
       return organizerOf(eventData(eventId));
     }
 
+    // inscripciones abiertas y sin pasar la fecha límite (registrationDeadlineAt = fin de ese día)
+    function registrationOpenNow(eventId) {
+      let e = eventData(eventId);
+      return e.get("registrationOpen", false) == true
+        && (e.get("registrationDeadlineAt", null) == null || request.time <= e.registrationDeadlineAt);
+    }
+
     function isActive(eventId) {
       return eventData(eventId).approval.status == "approved";
     }
@@ -147,7 +154,7 @@ service cloud.firestore {
           && request.resource.data.status == "pending"
           && !("teamId" in request.resource.data)
           && isActive(eventId)
-          && eventData(eventId).get("registrationOpen", false) == true;
+          && registrationOpenNow(eventId);
 
         allow update: if isPlatformAdmin() || isOrganizer(eventId) || (
           managesEntry(resource.data)
@@ -159,7 +166,7 @@ service cloud.firestore {
           && (
             request.resource.data.status == resource.data.status
             || (resource.data.status == "rejected" && request.resource.data.status == "pending"
-                && eventData(eventId).get("registrationOpen", false) == true)
+                && registrationOpenNow(eventId))
           )
           // aprobada: nombre, color y división los cambia el organizador
           && (resource.data.status != "approved"

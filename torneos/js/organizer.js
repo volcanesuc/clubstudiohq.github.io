@@ -21,6 +21,8 @@ import {
   APPROVAL,
   REG,
   approveRegistration,
+  deadlineEnd,
+  registrationExpired,
   createEvent,
   createGameKey,
   createGames,
@@ -281,6 +283,12 @@ function publishSection(e) {
           <label class="form-check-label fw-semibold" for="eRegOpen">${esc(EX.regOpen)}</label>
         </div>
         <div class="form-text">${esc(isApproved(e) ? EX.regOpenHint : EX.regOpenNeedsActive)}</div>
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+          <label class="form-label small mb-0" for="eRegDeadline">${esc(EX.regDeadline)}</label>
+          <input class="form-control form-control-sm" style="max-width:11rem" type="date" id="eRegDeadline" value="${esc(e.registrationDeadline || "")}" />
+          ${e.registrationOpen && registrationExpired(e) ? `<span class="ev-chip ev-chip--alert">${esc(EX.regClosedByDate)}</span>` : ""}
+        </div>
+        <div class="form-text">${esc(EX.regDeadlineHint)}</div>
         ${e.registrationOpen ? linkBox("reg", registerLink(), exf(EX.waRegister, { event: e.name, url: registerLink() })) : ""}
       </div>
     </div>`, "tn-section--highlight");
@@ -432,6 +440,11 @@ function renderInfo() {
   });
   document.getElementById("ePublic").onchange = (ev) => quickSave({ isPublic: isApproved(e) && ev.target.checked });
   document.getElementById("eRegOpen").onchange = (ev) => quickSave({ registrationOpen: ev.target.checked });
+  // se guarda la fecha y el momento exacto de cierre (fin de ese día): las reglas de Firestore usan el segundo
+  document.getElementById("eRegDeadline").onchange = (ev) => {
+    const day = ev.target.value;
+    quickSave({ registrationDeadline: day || "", registrationDeadlineAt: deadlineEnd(day) });
+  };
   tab.querySelectorAll("[data-copy-link]").forEach((b) => (b.onclick = async () => {
     try {
       await navigator.clipboard.writeText(b.dataset.copyLink);

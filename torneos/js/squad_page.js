@@ -2,7 +2,7 @@
 // Página del equipo (?s=ID). Pública: roster y torneos. Admins: editar datos, roster, capitanes,
 // links de invitación (jugadores y co-admins), co-admins e inscripciones.
 import { EX, exf } from "/torneos/js/strings.js";
-import { REG, isApproved, listPublicEvents } from "/torneos/js/services.js";
+import { REG, isApproved, listPublicEvents, registrationIsOpen } from "/torneos/js/services.js";
 import {
   INVITE_ROLE,
   addSelfToRoster,
@@ -114,7 +114,7 @@ async function load() {
     state.regs = new Map(synced.map((x) => [x.eventId, x.reg]));
     state.missing = new Map(synced.map((x) => [x.eventId, x.missing]));
     const registered = new Set(tournaments.map((t) => t.eventId));
-    state.openEvents = events.filter((e) => e.registrationOpen && isApproved(e) && !registered.has(e.id));
+    state.openEvents = events.filter((e) => registrationIsOpen(e) && isApproved(e) && !registered.has(e.id));
   }
   return true;
 }
@@ -236,7 +236,7 @@ function tournamentsTab() {
     </div>` : "";
   return `
     ${spiritPendingHtml(state.spirit)}
-    <div class="tp-list-title">${esc(exf(EX.tpEventsShown, { n: state.tournaments.length }))}</div>
+    <div class="tp-list-title">${esc(state.tournaments.length === 1 ? EX.tpEventShown : exf(EX.tpEventsShown, { n: state.tournaments.length }))}</div>
     ${list ? `<div class="tp-list">${list}</div>` : `<div class="tp-empty">${esc(EX.sqNoTournaments)}</div>`}
     ${open}`;
 }
@@ -262,7 +262,8 @@ function rosterRow(m) {
   const roles = [];
   if (m.id === s.captainId) roles.push(`<span class="tp-role tp-role--cap" title="${esc(EX.captain)}"><i class="bi bi-star-fill"></i> ${esc(EX.tpCaptain)}</span>`);
   if (m.id === s.spiritCaptainId) roles.push(`<span class="tp-role tp-role--spirit" title="${esc(EX.spiritCaptain)}"><i class="bi bi-heart-fill"></i> ${esc(EX.tpSpiritCaptain)}</span>`);
-  if (m.uid && (s.ownerUids || []).includes(m.uid)) roles.push(`<span class="tp-role"><i class="bi bi-shield-check"></i> ${esc(EX.sqAdminBadge)}</span>`);
+  // quién administra el equipo solo lo ven los que están en el equipo
+  if ((isMember() || admin()) && m.uid && (s.ownerUids || []).includes(m.uid)) roles.push(`<span class="tp-role"><i class="bi bi-shield-check"></i> ${esc(EX.sqAdminBadge)}</span>`);
   const sub = [m.number !== null && m.number !== undefined && m.number !== "" ? `#${m.number}` : "", m.gender || "", m.uid ? "" : EX.tpNoAccount].filter(Boolean).join(" · ");
   const inner = `
     <span class="tp-row__av">${avatarHtml(m, 46)}${m.id === s.captainId ? `<span class="tp-crown" title="${esc(EX.captain)}"><i class="bi bi-star-fill"></i></span>` : ""}</span>

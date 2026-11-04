@@ -398,6 +398,9 @@ export const EX = {
 
   // inscripción de equipos (organizador)
   regOpen: "Inscripciones abiertas",
+  regDeadline: "Inscripciones hasta",
+  regDeadlineHint: "Después de ese día no se reciben inscripciones nuevas. Para dejar entrar a otro equipo, mové la fecha.",
+  regClosedByDate: "Cerradas: pasó la fecha",
   secPublish: "Publicación e inscripciones",
   secInfo: "Información del torneo",
   secDivisions: "Divisiones, modalidad y canchas",
@@ -586,6 +589,7 @@ export const EX = {
   tpLive: "En curso",
   tpUpcoming: "Próximo",
   tpEventsShown: "{n} torneos",
+  tpEventShown: "1 torneo",
   tpPlayersShown: "{n} jugadores",
   tpCaptain: "Capitán(a)",
   tpSpiritCaptain: "Espíritu",
@@ -642,6 +646,7 @@ export const EX = {
   pfOptional: "opcional",
   pfPhotoTap: "Tocá para agregar tu foto",
   pfMyTeams: "Mis equipos",
+  pfTeams: "Equipos",
   pfNoTeams: "Todavía no estás en ningún equipo. Pedile a tu capitán el link de invitación.",
   pfRoleAdmin: "Admin",
   pfRolePlayer: "Jugador(a)",

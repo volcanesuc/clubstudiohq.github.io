@@ -112,7 +112,7 @@ function editForm() {
 function teamsSection() {
   return `
     <section class="ev-card">
-      <h2 class="h6 fw-bold mb-3">${esc(EX.pfMyTeams)}</h2>
+      <h2 class="h6 fw-bold mb-3">${esc(state.own ? EX.pfMyTeams : EX.pfTeams)}</h2>
       ${state.squads.length ? `<div class="row g-2">${state.squads.map((s) => `
         <div class="col-12 col-md-6 col-lg-12">
           <a class="tn-team-tile" href="${esc(squadUrl(s.id))}">

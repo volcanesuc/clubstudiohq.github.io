@@ -43,6 +43,15 @@ const byStartDesc = (a, b) => String(b.startDate || "").localeCompare(String(a.s
 
 export const isApproved = (event) => event?.approval?.status === APPROVAL.APPROVED;
 
+// Fecha límite de inscripción ("YYYY-MM-DD"): cierra al terminar ese día (hora local).
+export const deadlineEnd = (day) => (/^\d{4}-\d{2}-\d{2}$/.test(day || "") ? new Date(`${day}T23:59:59`) : null);
+export const registrationExpired = (event, now = new Date()) => {
+  const end = event?.registrationDeadlineAt ? new Date(toMillis(event.registrationDeadlineAt)) : deadlineEnd(event?.registrationDeadline);
+  return !!end && now > end;
+};
+// Inscripciones abiertas: el interruptor del organizador y que no haya pasado la fecha límite
+export const registrationIsOpen = (event, now = new Date()) => event?.registrationOpen === true && !registrationExpired(event, now);
+
 /* =========================
    Configuración de la plataforma
 ========================= */

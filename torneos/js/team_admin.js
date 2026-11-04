@@ -8,6 +8,7 @@ import { EX, exf } from "/torneos/js/strings.js";
 import {
   REG,
   isApproved,
+  registrationIsOpen,
   isPlatformAdmin,
   listPublicEvents,
   loadEvent,
@@ -79,7 +80,7 @@ async function renderList() {
     listMySquads(state.user),
     listPublicEvents().catch(() => []),
   ]);
-  const open = events.filter((e) => e.registrationOpen && isApproved(e));
+  const open = events.filter((e) => registrationIsOpen(e) && isApproved(e));
   // mis inscripciones en cada torneo abierto
   const mine = new Map(await Promise.all(open.map(async (e) => [e.id, await myRegistrationsFor(state.user, e.id).catch(() => [])])));
   root.innerHTML = `
@@ -364,7 +365,7 @@ async function openRegistration(eventKey, regId, squadId) {
     if (!state.reg.squadId) return alertBox(EX.regNeedSquad, "warning");
     await useSquad(state.reg.squadId, false);
   } else {
-    if (!event.registrationOpen || !isApproved(event)) {
+    if (!registrationIsOpen(event) || !isApproved(event)) {
       alertBox(EX.registrationClosed, "warning");
       return renderList();
     }
