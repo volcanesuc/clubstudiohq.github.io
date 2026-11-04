@@ -7,6 +7,7 @@ import {
   EVENT_STATUS,
   GAME_STATUS,
   RATIO_RULES,
+  SURFACES,
   eventRules,
   parseRoster,
   rosterToText,
@@ -330,6 +331,13 @@ function renderInfo() {
           ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
           ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
           ${f("eVenue", EX.eventVenue, e.venue)}
+          <div class="col-12 col-md-6">
+            <label class="form-label small" for="eSurface">${esc(EX.eventSurface)}</label>
+            <select class="form-select" id="eSurface">
+              <option value=""></option>
+              ${SURFACES.map((id) => `<option value="${id}" ${e.surface === id ? "selected" : ""}>${esc(EX[`surface_${id}`])}</option>`).join("")}
+            </select>
+          </div>
           ${f("eAddress", EX.eventAddress, e.address)}
           ${f("eMaps", EX.eventMaps, e.mapsUrl, { col: "col-12", hint: EX.eventMapsHint })}
           <div class="col-12">
@@ -491,6 +499,7 @@ function renderInfo() {
         startDate: v("eStart"),
         endDate: v("eEnd"),
         venue: v("eVenue"),
+        surface: v("eSurface"),
         address: v("eAddress"),
         mapsUrl: v("eMaps"),
         description: v("eDesc"),

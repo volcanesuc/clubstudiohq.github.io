@@ -77,10 +77,11 @@ function renderBottomNav({ active, isAdmin, google }) {
     </a>`;
   bar.innerHTML = [
     item("dir", "/torneos/", "bi-trophy", EX.navTournaments),
+    item("clubs", "/torneos/clubes.html", "bi-shield", EX.navClubs),
     item("team", "/torneos/equipo.html", "bi-people", EX.navTeam),
     item("org", "/torneos/organizar.html", "bi-clipboard-check", EX.navOrganize),
+    // el perfil queda en la foto de arriba (la barra tiene lugar para 5)
     isAdmin ? item("admin", "/torneos/admin.html", "bi-shield-check", EX.navAdminShort) : "",
-    google ? item("profile", "/torneos/perfil.html", "bi-person-circle", EX.navProfileShort) : "",
   ].join("");
 }
 
@@ -117,6 +118,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
       <a class="tn-nav__brand" href="/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
       <div class="d-flex gap-1 flex-grow-1 overflow-auto tn-nav__tabs">
         ${link("dir", "/torneos/", EX.navTournaments)}
+        ${link("clubs", "/torneos/clubes.html", EX.navClubs)}
         ${link("team", "/torneos/equipo.html", EX.navTeam)}
         ${google ? link("profile", "/torneos/perfil.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
         ${link("org", "/torneos/organizar.html", EX.navOrganize)}

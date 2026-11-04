@@ -42,6 +42,7 @@ import {
 } from "/torneos/js/ui.js";
 import { isPlatformAdmin } from "/torneos/js/services.js";
 import { cropFromInput } from "/torneos/js/cropper.js";
+import { countryName, countryOptions, flagOf } from "/torneos/js/countries.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -133,7 +134,7 @@ function header() {
       <div class="tp-hero__body">
         <div class="tp-hero__logo">${teamBadge(s, 112)}</div>
         <h1 class="tp-hero__name">${esc(s.name)}</h1>
-        ${s.city ? `<div class="tp-hero__city"><i class="bi bi-geo-alt me-1"></i>${esc(s.city)}</div>` : ""}
+        ${s.city || s.country ? `<div class="tp-hero__city">${s.country ? `${flagOf(s.country)} ` : `<i class="bi bi-geo-alt me-1"></i>`}${esc([s.city, countryName(s.country)].filter(Boolean).join(", "))}</div>` : ""}
         <div class="tp-hero__chips">
           <span class="ev-chip"><i class="bi bi-people me-1"></i>${esc(exf(EX.playersCount, { n }))}</span>
           <span class="ev-chip">${f} F · ${n - f - state.members.filter((m) => !m.gender).length} M</span>
@@ -324,6 +325,7 @@ function editSection() {
         <div class="col-12 col-md">
           <div class="row g-2">
             <div class="col-12 col-md-6"><label class="form-label small" for="sqName">${esc(EX.teamName)}</label><input class="form-control" id="sqName" value="${esc(s.name)}" required /></div>
+            <div class="col-12 col-md-6"><label class="form-label small" for="sqCountry">${esc(EX.teamCountry)}</label><select class="form-select" id="sqCountry">${countryOptions(s.country || "", esc(EX.teamCountryPick))}</select></div>
             <div class="col-8 col-md-4"><label class="form-label small" for="sqCity">${esc(EX.teamCity)}</label><input class="form-control" id="sqCity" value="${esc(s.city || "")}" /></div>
             <div class="col-4 col-md-2"><label class="form-label small" for="sqColor">${esc(EX.teamColor)}</label><input class="form-control form-control-color w-100" type="color" id="sqColor" value="${esc(s.color || "#19473f")}" /></div>
             <div class="col-12 col-md-6"><label class="form-label small" for="sqCaptain"><i class="bi bi-star-fill text-warning me-1"></i>${esc(EX.captain)}</label><select class="form-select" id="sqCaptain">${captainOptions(s.captainId)}</select></div>
@@ -435,7 +437,7 @@ root.addEventListener("submit", (ev) => {
     const v = (id) => form.querySelector(`#${id}`).value.trim();
     if (!v("sqName")) return;
     return run(async () => {
-      const data = { name: v("sqName"), city: v("sqCity"), color: v("sqColor"), logo: state.squad.logo || "", captainId: v("sqCaptain"), spiritCaptainId: v("sqSpirit") };
+      const data = { name: v("sqName"), country: v("sqCountry"), city: v("sqCity"), color: v("sqColor"), logo: state.squad.logo || "", captainId: v("sqCaptain"), spiritCaptainId: v("sqSpirit") };
       await saveSquad(SID, data);
       Object.assign(state.squad, data);
       alertBox(EX.saved);

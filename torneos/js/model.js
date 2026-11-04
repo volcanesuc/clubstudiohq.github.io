@@ -85,6 +85,10 @@ export function eventRules(event = {}) {
   };
 }
 
+// Tipo de campo del torneo
+export const SURFACES = ["grass", "turf", "indoor", "beach", "other"];
+export const SURFACE_ICONS = { grass: "bi-tree", turf: "bi-grid-3x3", indoor: "bi-house", beach: "bi-sun", other: "bi-geo" };
+
 export const other = (side) => (side === "A" ? "B" : "A");
 
 // Minutos que ocupa cada partido en el calendario (duración + descanso)

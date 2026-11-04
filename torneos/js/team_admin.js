@@ -16,6 +16,7 @@ import {
   saveRegistration,
   withdrawRegistration,
 } from "/torneos/js/services.js";
+import { countryOptions } from "/torneos/js/countries.js";
 import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/torneos/js/squads.js";
 import {
   avatarHtml,
@@ -106,6 +107,14 @@ async function renderList() {
         <label class="form-label small" for="sqNewName">${esc(EX.sqCreate)}</label>
         <input class="form-control" id="sqNewName" placeholder="${esc(EX.teamName)}" required />
       </div>
+      <div style="min-width:10rem">
+        <label class="form-label small" for="sqNewCountry">${esc(EX.teamCountry)}</label>
+        <select class="form-select" id="sqNewCountry" required>${countryOptions("", esc(EX.teamCountryPick))}</select>
+      </div>
+      <div style="min-width:9rem">
+        <label class="form-label small" for="sqNewCity">${esc(EX.teamCity)}</label>
+        <input class="form-control" id="sqNewCity" />
+      </div>
       <button class="btn tn-btn-grad" type="submit"><i class="bi bi-plus-lg me-1"></i>${esc(EX.sqCreateBtn)}</button>
     </form>
 
@@ -134,9 +143,11 @@ async function renderList() {
   $("#sqCreate").onsubmit = (ev) => {
     ev.preventDefault();
     const name = $("#sqNewName").value.trim();
+    const country = $("#sqNewCountry").value;
     if (!name) return;
+    if (!country) return $("#sqNewCountry").focus();
     run(async () => {
-      const id = await createSquad(state.user, { name });
+      const id = await createSquad(state.user, { name, country, city: $("#sqNewCity").value.trim() });
       location.href = squadUrl(id);
     });
   };

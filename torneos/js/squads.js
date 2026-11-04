@@ -99,6 +99,7 @@ export async function createSquad(user, data) {
   await setDoc(squadRef(id), {
     name: data.name,
     city: data.city || "",
+    country: data.country || "",
     color: data.color || "#19473f",
     logo: data.logo || "",
     ownerUids: [user.uid],
@@ -420,4 +421,47 @@ export async function playerHistory(uid, squadIds = []) {
     return { event, team, ...st, games: games.length, gameRows };
   }))).filter(Boolean).sort((a, b) => String(b.event.startDate || "").localeCompare(String(a.event.startDate || "")));
   return { rows, totals: { ...sumStats(rows), tournaments: rows.length } };
+}
+
+/* =========================
+   Directorio de clubes (público)
+========================= */
+/**
+ * Todos los clubes con sus torneos y las ramas que jugaron (mixto, open, femenino…),
+ * sacadas de la división del equipo en cada torneo.
+ * @returns {Promise<{ squad, players: number, tournaments: number, genders: string[], levels: string[] }[]>}
+ */
+export async function listClubDirectory() {
+  const squads = list(await getDocs(collection(db, COL.squads)));
+  const perSquad = await Promise.all(squads.map(async (squad) => {
+    const [ptrs, members] = await Promise.all([
+      listSquadTournaments(squad.id).catch(() => []),
+      getDocs(membersCol(squad.id)).then((s) => s.size).catch(() => 0),
+    ]);
+    return { squad, ptrs, players: members };
+  }));
+
+  // cada torneo se lee una sola vez (división de cada equipo del club)
+  const eventIds = [...new Set(perSquad.flatMap((x) => x.ptrs.map((p) => p.eventId)))];
+  const events = new Map(await Promise.all(eventIds.map(async (eid) => {
+    const [event, teams] = await Promise.all([loadEvent(eid).catch(() => null), listTeams(eid).catch(() => [])]);
+    return [eid, { event, teams }];
+  })));
+
+  return perSquad.map(({ squad, ptrs, players }) => {
+    const genders = new Set();
+    const levels = new Set();
+    let tournaments = 0;
+    ptrs.forEach((p) => {
+      const ev = events.get(p.eventId);
+      const team = ev?.teams.find((t) => t.squadId === squad.id);
+      if (!ev?.event || !team) return;
+      tournaments += 1;
+      const div = (ev.event.divisions || []).find((d) => d.id === team.divisionId);
+      if (div?.gender) genders.add(div.gender);
+      else if (div?.mixed) genders.add("mixto");
+      if (div?.level) levels.add(div.level);
+    });
+    return { squad, players, tournaments, genders: [...genders], levels: [...levels] };
+  }).sort((a, b) => String(a.squad.name || "").localeCompare(String(b.squad.name || ""), "es"));
 }

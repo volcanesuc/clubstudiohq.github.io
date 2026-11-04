@@ -5,6 +5,8 @@ import { EX, exf } from "/torneos/js/strings.js";
 import {
   GAME_STATUS,
   SPIRIT_KEYS,
+  SURFACES,
+  SURFACE_ICONS,
   eventRules,
   leaders,
   playerTotals,
@@ -417,6 +419,7 @@ function render() {
       <div class="ev-hero__meta">
         ${e.startDate ? `<span><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</span>` : ""}
         ${e.venue ? `<span><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</span>` : ""}
+        ${SURFACES.includes(e.surface) ? `<span><i class="bi ${SURFACE_ICONS[e.surface]}"></i> ${esc(EX[`surface_${e.surface}`])}</span>` : ""}
         ${e.mapsUrl ? `<a class="text-white" href="${esc(e.mapsUrl)}" target="_blank" rel="noopener"><i class="bi bi-map"></i></a>` : ""}
       </div>
       ${myRegistrationHtml()}
