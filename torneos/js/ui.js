@@ -106,6 +106,10 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
         : `<button class="btn btn-sm tn-btn-grad text-nowrap" id="tnSignIn"><span class="tn-nav__out-text">${esc(EX.signIn)}</span><span class="tn-nav__in-short">${esc(EX.signInShort)}</span></button>`}
     </div>`;
   revealActiveTab(nav.querySelector(".tn-nav__tabs"));
+  if (!renderNav.spiritChecked && isGoogleUser(user)) {
+    renderNav.spiritChecked = true;
+    maybeSpiritPopup(user).catch(() => {});
+  }
   nav.querySelector("#tnSignOut")?.addEventListener("click", async () => {
     await signOutUser();
     location.reload();
@@ -367,3 +371,68 @@ export function gameRowHtml(game, { href = "", teams = null } = {}) {
 
 export const gameUrl = (eventId, gameId) => `/torneos/partido.html?event=${encodeURIComponent(eventId)}&game=${encodeURIComponent(gameId)}`;
 export const eventUrl = (event) => `/torneos/evento.html?e=${encodeURIComponent(event.slug || event.id)}`;
+
+/* =========================
+   Diálogo propio (los confirm()/alert() nativos los bloquean algunos navegadores y apps)
+========================= */
+/**
+ * @param {string} message
+ * @param {{ title?: string, ok?: string, cancel?: string|false, danger?: boolean, html?: string }} opts
+ * @returns {Promise<boolean>} true si tocaron el botón principal
+ */
+export function askConfirm(message, { title = "", ok = EX.ok || "OK", cancel = EX.cancel || "Cancelar", danger = false, html = "" } = {}) {
+  return new Promise((resolve) => {
+    const wrap = document.createElement("div");
+    wrap.className = "tn-dialog";
+    wrap.innerHTML = `
+      <div class="tn-dialog__box" role="dialog" aria-modal="true">
+        ${title ? `<div class="tn-dialog__title">${esc(title)}</div>` : ""}
+        ${message ? `<div class="tn-dialog__msg">${esc(message)}</div>` : ""}
+        ${html}
+        <div class="tn-dialog__actions">
+          ${cancel === false ? "" : `<button type="button" class="btn btn-light" data-dlg="no">${esc(cancel)}</button>`}
+          <button type="button" class="btn ${danger ? "btn-danger" : "btn-primary"}" data-dlg="yes">${esc(ok)}</button>
+        </div>
+      </div>`;
+    const close = (val) => {
+      wrap.remove();
+      document.removeEventListener("keydown", onKey);
+      resolve(val);
+    };
+    const onKey = (e) => { if (e.key === "Escape") close(false); };
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap) return close(false);
+      const b = e.target.closest("[data-dlg]");
+      if (b) close(b.dataset.dlg === "yes");
+    });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(wrap);
+    wrap.querySelector('[data-dlg="yes"]').focus();
+  });
+}
+
+export const showNotice = (message, opts = {}) => askConfirm(message, { cancel: false, ...opts });
+
+/* =========================
+   Popup: evaluaciones de espíritu pendientes (capitanes / admins del equipo)
+   Sale una vez por sesión al entrar, en cualquier página, hasta que las hagan.
+========================= */
+async function maybeSpiritPopup(user) {
+  if (!isGoogleUser(user) || location.pathname.endsWith("/espiritu.html")) return;
+  const key = `tnSpiritPopup:${user.uid}`;
+  try { if (sessionStorage.getItem(key)) return; } catch { /* sin storage: igual se muestra */ }
+  const { pendingSpirit } = await import("/torneos/js/squads.js");
+  const list = await pendingSpirit(user).catch(() => []);
+  if (!list.length) return;
+  try { sessionStorage.setItem(key, "1"); } catch { /* nada */ }
+  const go = await askConfirm("", {
+    title: exf(EX.spPendingTitle, { n: list.length }),
+    html: `<div class="small ev-muted mb-2">${esc(EX.spPopupSub)}</div><div class="tn-dialog__list">${spiritPendingHtml(list.slice(0, 5))}</div>`,
+    ok: EX.spRate,
+    cancel: EX.spLater,
+  });
+  if (go) {
+    const x = list[0];
+    location.href = `/torneos/espiritu.html?${new URLSearchParams({ event: x.eventId, game: x.game.id, side: x.side })}`;
+  }
+}

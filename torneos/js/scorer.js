@@ -7,7 +7,6 @@ import {
   AUDIT_PLAYS,
   GAME_STATUS,
   PLAY,
-  SPIRIT_KEYS,
   clockView,
   computeGameState,
   endBreak,
@@ -24,7 +23,6 @@ import {
   gameElapsedMs,
   gameSummary,
   other,
-  spiritTotal,
 } from "/torneos/js/model.js";
 import { auth } from "/torneos/js/firebase.js";
 import {
@@ -38,7 +36,7 @@ import {
   updateGame,
   updatePlay,
 } from "/torneos/js/services.js";
-import { possessionDot, esc, feedItemHtml, playerLabel } from "/torneos/js/ui.js";
+import { askConfirm, possessionDot, esc, feedItemHtml, playerLabel, showNotice } from "/torneos/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -72,6 +70,11 @@ const picker = new bootstrap.Modal($("skPicker"));
 // datos actuales del equipo (si lo renombraron o cambió de color después de crear el partido)
 const teamName = (side) => state.teams[side]?.name || (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
 const teamColor = (side) => state.teams[side]?.color || (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
+// Durante un timeout / medio tiempo, o con el marcador al objetivo, no se registran jugadas.
+const onBreak = () => !!state.game?.clock?.break;
+const gameOver = () => !!state.calc?.reachedGameTo;
+const playsLocked = () => onBreak() || gameOver();
+
 const mixedRatio = () => needsRatio(findDivision(state.event, state.game?.divisionId), state.rules);
 // mixto y la regla pide elegir al iniciar (ABBA o por punto); con proporción fija no se pregunta
 const ratioAtStart = () => mixedRatio() && ratioChosenAtStart(state.rules);
@@ -148,6 +151,7 @@ function pickPlayer({ side, title, exclude = [], extra = [] }) {
 }
 
 async function onGoal(side) {
+  if (playsLocked()) return;
   const scorerId = await pickPlayer({ side, title: EX.skPickScorer, extra: [{ value: "__none", label: EX.skUnknownPlayer }] });
   if (scorerId === null) return;
   const scorer = scorerId === "__none" ? "" : scorerId;
@@ -158,7 +162,7 @@ async function onGoal(side) {
     exclude: scorer ? [scorer] : [],
     extra: [{ value: "__none", label: EX.skNoAssist }, { value: "__callahan", label: EX.skCallahan }],
   });
-  if (assist === null) return;
+  if (assist === null || playsLocked()) return;
   record({
     type: PLAY.GOAL,
     team: side,
@@ -169,19 +173,22 @@ async function onGoal(side) {
 }
 
 async function onTurn(side, type) {
+  if (playsLocked()) return;
   const pid = await pickPlayer({ side, title: type === PLAY.DROP ? EX.skDrop : EX.skThrowaway, extra: [{ value: "__none", label: EX.skUnknownPlayer }] });
   if (pid === null) return;
   record({ type, team: side, playerId: pid === "__none" ? "" : pid });
 }
 
 async function onBlock(side) {
+  if (playsLocked()) return;
   const pid = await pickPlayer({ side, title: EX.skBlock, extra: [{ value: "__none", label: EX.skUnknownPlayer }] });
   if (pid === null) return;
   record({ type: PLAY.BLOCK, team: side, playerId: pid === "__none" ? "" : pid });
 }
 
 function onTimeout(side) {
-  if ((state.calc.timeoutsLeft[side] ?? 0) <= 0) return alert(EX.skNoTimeouts);
+  if (playsLocked()) return;
+  if ((state.calc.timeoutsLeft[side] ?? 0) <= 0) return showNotice(EX.skNoTimeouts);
   record({ type: PLAY.TIMEOUT, team: side });
   beginBreak({ type: "timeout", team: side, seconds: state.rules.timeoutSeconds });
 }
@@ -215,8 +222,8 @@ function adjustClock(deltaSec) {
    Reloj / estado del partido
 ========================= */
 async function startGame() {
-  if (!state.offenseChoice) return alert(EX.skPickOffense);
-  if (ratioAtStart() && !state.ratioChoice) return alert(EX.skPickRatio);
+  if (!state.offenseChoice) return showNotice(EX.skPickOffense);
+  if (ratioAtStart() && !state.ratioChoice) return showNotice(EX.skPickRatio);
   const now = Date.now();
   const ratio = ratioAtStart() ? { ratioFirst: state.ratioChoice } : {};
   await updateGame(EID, GID, {
@@ -265,7 +272,8 @@ function removePlay(id) {
 }
 
 async function finishGame() {
-  if (!confirm(exf(EX.skFinishConfirm, { a: state.calc.score.A, b: state.calc.score.B }))) return;
+  const ok = await askConfirm(exf(EX.skFinishConfirm, { a: state.calc.score.A, b: state.calc.score.B }), { ok: EX.skFinish, danger: true });
+  if (!ok) return;
   record({ type: PLAY.END });
   const clock = { ...endBreak(state.game.clock || {}), endedAt: Date.now() };
   await updateGame(EID, GID, { status: GAME_STATUS.FINAL, finishedAt: new Date(), clock });
@@ -358,16 +366,17 @@ function pointInfo() {
 
 function sideButtons(k) {
   const off = state.calc.possession === k;
+  const lock = playsLocked() ? "disabled" : "";
   return `
     <div class="sk-side">
       <div class="sk-side__title"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
-      <button class="sk-btn sk-btn--goal" data-act="goal" data-side="${k}"><i class="bi bi-trophy"></i>${esc(EX.skGoal)}</button>
+      <button class="sk-btn sk-btn--goal" data-act="goal" data-side="${k}" ${lock}><i class="bi bi-trophy"></i>${esc(EX.skGoal)}</button>
       <div class="d-grid gap-2" style="grid-template-columns:1fr 1fr">
-        <button class="sk-btn sk-btn--turn" data-act="drop" data-side="${k}" ${off ? "" : "data-dim"}>${esc(EX.skDrop)}</button>
-        <button class="sk-btn sk-btn--turn" data-act="throwaway" data-side="${k}" ${off ? "" : "data-dim"}>${esc(EX.skThrowaway)}</button>
+        <button class="sk-btn sk-btn--turn" data-act="drop" data-side="${k}" ${off ? "" : "data-dim"} ${lock}>${esc(EX.skDrop)}</button>
+        <button class="sk-btn sk-btn--turn" data-act="throwaway" data-side="${k}" ${off ? "" : "data-dim"} ${lock}>${esc(EX.skThrowaway)}</button>
       </div>
-      <button class="sk-btn sk-btn--block" data-act="block" data-side="${k}" ${off ? "data-dim" : ""}><i class="bi bi-shield"></i>${esc(EX.skBlock)}</button>
-      <button class="sk-btn sk-btn--to" data-act="timeout" data-side="${k}" ${state.calc.timeoutsLeft[k] > 0 ? "" : "disabled"}><i class="bi bi-stopwatch"></i>${esc(EX.skTimeout)} (${state.calc.timeoutsLeft[k]})</button>
+      <button class="sk-btn sk-btn--block" data-act="block" data-side="${k}" ${off ? "data-dim" : ""} ${lock}><i class="bi bi-shield"></i>${esc(EX.skBlock)}</button>
+      <button class="sk-btn sk-btn--to" data-act="timeout" data-side="${k}" ${state.calc.timeoutsLeft[k] > 0 && !playsLocked() ? "" : "disabled"}><i class="bi bi-stopwatch"></i>${esc(EX.skTimeout)} (${state.calc.timeoutsLeft[k]})</button>
     </div>`;
 }
 
@@ -395,7 +404,9 @@ function renderLive() {
     ${scoreHeader()}
     ${pointInfo()}
     ${breakBanner()}
-    ${state.calc.suggestHalftime && !state.game.clock?.break ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
+    ${onBreak() ? `<div class="sk-banner alert-warning mt-2 small">${esc(EX.skLockedBreak)}</div>` : ""}
+    ${gameOver() ? `<div class="sk-banner alert-success mt-2 d-flex justify-content-between align-items-center gap-2 flex-wrap"><span>${esc(exf(EX.skGameOver, { n: state.rules.gameTo, a: state.calc.score.A, b: state.calc.score.B }))}</span><button class="btn btn-sm btn-danger" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button></div>` : ""}
+    ${state.calc.suggestHalftime && !gameOver() && !state.game.clock?.break ? `<div class="sk-banner alert-info mt-2 d-flex justify-content-between align-items-center gap-2"><span>${esc(exf(EX.skHalftimeSuggest, { n: state.rules.halftimeAt }))}</span><button class="btn btn-sm btn-primary" data-act="halftime">${esc(EX.skHalftime)}</button></div>` : ""}
     <div class="sk-actions">${sideButtons("A")}${sideButtons("B")}</div>
     <div class="sk-bar">
       <button class="btn btn-outline-secondary" data-act="undo"><i class="bi bi-arrow-counterclockwise me-1"></i>${esc(EX.skUndo)}</button>
@@ -418,38 +429,11 @@ function renderLive() {
     </div>`;
 }
 
-function spiritForm(giver) {
-  const receiver = other(giver);
-  const card = state.game.spirit?.[giver] || {};
-  const labels = { rules: EX.spiritRules, fouls: EX.spiritFouls, fair: EX.spiritFair, attitude: EX.spiritAttitude, comm: EX.spiritComm };
-  return `
-    <form class="ev-card" data-spirit="${giver}">
-      <div class="fw-bold mb-1">${esc(exf(EX.spiritFrom, { team: teamName(giver), other: teamName(receiver) }))}</div>
-      ${SPIRIT_KEYS.map((k) => `
-        <div class="sk-spirit-row">
-          <div class="small">${esc(labels[k])}</div>
-          <div class="btn-group btn-group-sm" role="group">
-            ${[0, 1, 2, 3, 4].map((n) => `
-              <input type="radio" class="btn-check" name="${giver}-${k}" id="${giver}-${k}-${n}" value="${n}" ${Number(card[k] ?? 2) === n ? "checked" : ""} />
-              <label class="btn btn-outline-primary" for="${giver}-${k}-${n}">${n}</label>`).join("")}
-          </div>
-        </div>`).join("")}
-      <input class="form-control form-control-sm mt-2" name="comment" maxlength="300" placeholder="${esc(EX.spiritComment)}" value="${esc(card.comment || "")}" />
-      <div class="d-flex justify-content-between align-items-center mt-2">
-        <span class="small fw-bold" data-spirit-total>${esc(exf(EX.spiritTotal, { n: spiritTotal(card.rules !== undefined ? card : { rules: 2, fouls: 2, fair: 2, attitude: 2, comm: 2 }) }))}</span>
-        <button class="btn btn-sm btn-primary" type="submit">${esc(card.rules !== undefined ? EX.saved : EX.spiritSave)}</button>
-      </div>
-    </form>`;
-}
-
 function renderFinal() {
   return `
     ${scoreHeader()}
     <div class="d-flex justify-content-end mt-2"><button class="btn btn-sm btn-outline-secondary" data-act="reopen">${esc(EX.skReopen)}</button></div>
-    <h2 class="h5 mt-3 mb-1">${esc(EX.spiritTitle)}</h2>
-    <div class="small ev-muted mb-2">${esc(EX.spiritHint)}</div>
-    ${spiritForm("A")}
-    ${spiritForm("B")}`;
+    <div class="ev-card mt-3 small ev-muted"><i class="bi bi-heart me-1"></i>${esc(EX.skSpiritByCaptains)}</div>`;
 }
 
 let renderedMode = "";
@@ -459,12 +443,6 @@ function render() {
   document.title = `${teamName("A")} ${state.calc.score.A}–${state.calc.score.B} ${teamName("B")} · ${EX.skTitle}`;
   const notStarted = state.game.status === GAME_STATUS.SCHEDULED || !state.game.status;
   const mode = notStarted ? "pre" : isFinal() ? "final" : "live";
-  // en el final hay formularios de espíritu: no se repintan (se perdería lo que están marcando)
-  if (mode === "final" && renderedMode === "final") {
-    const header = $("tnRoot").querySelector(".ev-score");
-    if (header) header.outerHTML = scoreHeader();
-    return;
-  }
   renderedMode = mode;
   $("tnRoot").innerHTML = mode === "pre" ? renderPreGame() : mode === "final" ? renderFinal() : renderLive();
 }
@@ -472,7 +450,7 @@ function render() {
 /* =========================
    Eventos de la UI
 ========================= */
-$("tnRoot").addEventListener("click", (ev) => {
+$("tnRoot").addEventListener("click", async (ev) => {
   const off = ev.target.closest("[data-offense]");
   if (off) {
     state.offenseChoice = off.dataset.offense;
@@ -489,10 +467,10 @@ $("tnRoot").addEventListener("click", (ev) => {
     if (pointRatio(state.rules, state.game, state.plays, n) === pr.dataset.pointRatio) return;
     return record({ type: PLAY.RATIO, point: n, letter: pr.dataset.pointRatio });
   }
-  if (ev.target.closest("#skStart")) return startGame().catch((err) => alert(`${EX.error} ${err?.code || ""}`));
+  if (ev.target.closest("#skStart")) return startGame().catch((err) => showNotice(`${EX.error} ${err?.code || ""}`));
 
   const del = ev.target.closest("[data-del-play]");
-  if (del) return confirm(EX.confirmDelete) && removePlay(del.dataset.delPlay);
+  if (del) return askConfirm(EX.confirmDelete, { danger: true }).then((ok) => ok && removePlay(del.dataset.delPlay));
 
   const clockBtn = ev.target.closest("[data-clock]");
   if (clockBtn) return adjustClock(Number(clockBtn.dataset.clock));
@@ -500,7 +478,11 @@ $("tnRoot").addEventListener("click", (ev) => {
   const btn = ev.target.closest("[data-act]");
   if (!btn) return;
   const side = btn.dataset.side;
-  if (btn.hasAttribute("data-dim") && !confirm(exf(btn.dataset.act === "block" ? EX.skDimBlock : EX.skDimTurn, { team: teamName(side) }))) return;
+  if (btn.disabled) return;
+  if (btn.hasAttribute("data-dim")) {
+    const ok = await askConfirm(exf(btn.dataset.act === "block" ? EX.skDimBlock : EX.skDimTurn, { team: teamName(side) }));
+    if (!ok) return;
+  }
   switch (btn.dataset.act) {
     case "goal": return onGoal(side);
     case "drop": return onTurn(side, PLAY.DROP);
@@ -516,36 +498,6 @@ $("tnRoot").addEventListener("click", (ev) => {
     default:
   }
 });
-
-$("tnRoot").addEventListener("change", (ev) => {
-  const form = ev.target.closest("[data-spirit]");
-  if (!form) return;
-  const card = readSpirit(form);
-  form.querySelector("[data-spirit-total]").textContent = exf(EX.spiritTotal, { n: spiritTotal(card) });
-});
-
-$("tnRoot").addEventListener("submit", (ev) => {
-  const form = ev.target.closest("[data-spirit]");
-  if (!form) return;
-  ev.preventDefault();
-  const giver = form.dataset.spirit;
-  const spirit = { ...(state.game.spirit || {}), [giver]: readSpirit(form) };
-  state.game.spirit = spirit;
-  updateGame(EID, GID, { spirit })
-    .then(() => {
-      form.querySelector("[type=submit]").textContent = EX.spiritSaved;
-    })
-    .catch((err) => alert(`${EX.error} ${err?.code || ""}`));
-});
-
-function readSpirit(form) {
-  const card = {};
-  SPIRIT_KEYS.forEach((k) => {
-    card[k] = Number(form.querySelector(`input[name="${form.dataset.spirit}-${k}"]:checked`)?.value ?? 2);
-  });
-  card.comment = form.querySelector("[name=comment]").value.trim();
-  return card;
-}
 
 // reloj en vivo
 setInterval(() => {

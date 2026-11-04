@@ -25,6 +25,9 @@ function alertBox(msg, kind = "danger") {
   el.classList.toggle("d-none", !msg);
 }
 
+// WFDF: 2 es lo normal; 0, 1 o 4 (lejos de 2–3) piden explicar por qué.
+const needsJustify = (card) => SPIRIT_KEYS.some((k) => [0, 1, 4].includes(Number(card[k])));
+
 const wrap = (inner) => `<div class="mx-auto d-grid gap-3" style="max-width:640px">${inner}</div>`;
 const teamOf = (side) => (side === "A" ? state.game.teamA : state.game.teamB);
 const other = (side) => (side === "A" ? "B" : "A");
@@ -69,7 +72,10 @@ function renderForm() {
           </div>
         </div>`).join("")}
       <div class="small ev-muted text-center">${esc(EX.spLevels)}</div>
-      <textarea class="form-control" id="spComment" rows="2" maxlength="300" placeholder="${esc(EX.spiritComment)}">${esc(card.comment || "")}</textarea>
+      <div>
+        ${needsJustify(card) ? `<label class="form-label small fw-semibold text-warning-emphasis" for="spComment">${esc(EX.spJustifyLabel)}</label>` : ""}
+        <textarea class="form-control ${needsJustify(card) && !(card.comment || "").trim() ? "border-warning" : ""}" id="spComment" rows="${needsJustify(card) ? 3 : 2}" maxlength="500" placeholder="${esc(needsJustify(card) ? EX.spJustifyLabel : EX.spiritComment)}" ${needsJustify(card) ? "required" : ""}>${esc(card.comment || "")}</textarea>
+      </div>
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="sp-total"><span>${total}</span>/20</div>
         <button class="btn tn-btn-grad btn-lg px-4" type="submit"><i class="bi bi-heart-fill me-1"></i>${esc(prev ? EX.spUpdate : EX.spSubmit)}</button>
@@ -120,6 +126,12 @@ root.addEventListener("submit", async (ev) => {
   const card = {};
   SPIRIT_KEYS.forEach((k) => (card[k] = Number(state.card[k]) || 0));
   card.comment = $("#spComment").value.trim();
+  if (needsJustify(card) && !card.comment) {
+    alertBox(EX.spJustifyRequired, "warning");
+    $("#spComment").focus();
+    return;
+  }
+  alertBox("");
   card.by = state.user.uid;
   card.byName = state.user.displayName || "";
   card.at = new Date();
