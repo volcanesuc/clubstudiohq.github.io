@@ -60,6 +60,30 @@ export function revealActiveTab(bar, selector = ".is-active, .active") {
   bar.scrollLeft = Math.max(0, el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2);
 }
 
+// Celular: los tabs van en una barra fija abajo (íconos + texto), como en la app de clubes.
+function renderBottomNav({ active, isAdmin, google }) {
+  let bar = document.getElementById("tnBottomNav");
+  if (!bar) {
+    bar = document.createElement("nav");
+    bar.id = "tnBottomNav";
+    bar.className = "tn-bnav";
+    bar.setAttribute("aria-label", EX.navTournaments);
+    document.body.appendChild(bar);
+    document.body.classList.add("has-bnav");
+  }
+  const item = (id, href, icon, label) => `
+    <a class="tn-bnav__item ${active === id ? "is-active" : ""}" href="${href}" ${active === id ? 'aria-current="page"' : ""}>
+      <i class="bi ${icon}"></i><span>${esc(label)}</span>
+    </a>`;
+  bar.innerHTML = [
+    item("dir", "/torneos/", "bi-trophy", EX.navTournaments),
+    item("team", "/torneos/equipo.html", "bi-people", EX.navTeam),
+    item("org", "/torneos/organizar.html", "bi-clipboard-check", EX.navOrganize),
+    isAdmin ? item("admin", "/torneos/admin.html", "bi-shield-check", EX.navAdminShort) : "",
+    google ? item("profile", "/torneos/perfil.html", "bi-person-circle", EX.navProfileShort) : "",
+  ].join("");
+}
+
 // Cache de "es admin de la plataforma" por uid (para no consultar en cada página).
 const adminCache = new Map();
 
@@ -106,6 +130,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
         : `<button class="btn btn-sm tn-btn-grad text-nowrap" id="tnSignIn"><span class="tn-nav__out-text">${esc(EX.signIn)}</span><span class="tn-nav__in-short">${esc(EX.signInShort)}</span></button>`}
     </div>`;
   revealActiveTab(nav.querySelector(".tn-nav__tabs"));
+  renderBottomNav({ active, isAdmin, google });
   if (!renderNav.spiritChecked && isGoogleUser(user)) {
     renderNav.spiritChecked = true;
     maybeSpiritPopup(user).catch(() => {});

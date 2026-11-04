@@ -176,13 +176,29 @@ body.tn-body { background: #f6f5fb; color: #1d1b26; min-height: 100vh; }
 .tn-nav__link.is-active { color: #fff; background: rgba(255, 255, 255, .1); }
 .tn-nav__avatar { width: 30px; height: 30px; border-radius: 50%; }
 .tn-nav__out-icon, .tn-nav__in-short { display: none; }
-/* Celular: solo el logo, sin "Mi perfil" (ya está la foto) y "Salir" como ícono: más espacio para los tabs */
-@media (max-width: 575.98px) {
-  .tn-nav .container { gap: .5rem !important; padding-left: .75rem; padding-right: .75rem; }
-  .tn-nav__name, .tn-nav__link--profile, .tn-nav__out-text { display: none; }
+/* Celular: arriba solo el logo y la cuenta; los tabs van en la barra de abajo (.tn-bnav) */
+.tn-bnav { display: none; }
+@media (max-width: 767.98px) {
+  .tn-nav .container { gap: .5rem !important; padding-left: .75rem; padding-right: .75rem; justify-content: space-between; }
+  .tn-nav__name, .tn-nav__tabs, .tn-nav__out-text { display: none !important; }
   .tn-nav__out-icon, .tn-nav__in-short { display: inline; }
-  .tn-nav__link { padding: .3rem .55rem; font-size: .88rem; }
   .tn-nav #tnSignOut { padding: .2rem .45rem; }
+  .tn-bnav {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1030;
+    background: #14111f; border-top: 1px solid rgba(255, 255, 255, .08);
+    padding: .3rem .35rem calc(.3rem + env(safe-area-inset-bottom));
+  }
+  .tn-bnav__item {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .1rem;
+    padding: .35rem .15rem; border-radius: 12px; color: rgba(255, 255, 255, .6); text-decoration: none;
+  }
+  .tn-bnav__item i { font-size: 1.25rem; line-height: 1; }
+  .tn-bnav__item span { font-size: .68rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tn-bnav__item.is-active { color: #fff; background: rgba(255, 255, 255, .1); }
+  .tn-bnav__item.is-active i { color: #a78bfa; }
+  body.has-bnav { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  body.has-bnav .tn-save-bar { bottom: calc(60px + env(safe-area-inset-bottom)); }
+}
 }
 .tn-btn-grad, .btn.tn-btn-grad {
   border: 0; color: #0b0b10; font-weight: 750;
@@ -552,3 +568,7 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .tn-dialog__msg { margin-bottom: .25rem; }
 .tn-dialog__actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
 .tn-dialog__list .sp-pending { margin: 0; }
+
+/* Barras de tabs que se desplazan de lado: sin barra de scroll visible */
+.ev-tabs, .tn-nav__tabs, .sb-filters, .tp-tabs { scrollbar-width: none; }
+.ev-tabs::-webkit-scrollbar, .tn-nav__tabs::-webkit-scrollbar, .sb-filters::-webkit-scrollbar, .tp-tabs::-webkit-scrollbar { display: none; }

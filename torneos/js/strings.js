@@ -276,6 +276,7 @@ export const EX = {
   navTournaments: "Torneos",
   navOrganize: "Organizar",
   navAdmin: "Aprobaciones",
+  navAdminShort: "Admin",
   signIn: "Entrar con Google",
   signInShort: "Entrar",
   signOut: "Salir",
@@ -426,6 +427,7 @@ export const EX = {
 
   // equipos permanentes
   navProfile: "Mi perfil",
+  navProfileShort: "Perfil",
   sqCreate: "Crear un equipo",
   sqCreateBtn: "Crear equipo",
   sqNotFound: "No encontramos este equipo.",
