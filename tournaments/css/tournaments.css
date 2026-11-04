@@ -727,3 +727,17 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 }
 .wz-dayrow input { min-width: 0; }
 @media (max-width: 575.98px) { .wz-step { padding: .75rem .7rem; } }
+
+/* Organizar › Partidos: encabezados por ronda y barra para saltar */
+.tn-round-title { display: flex; align-items: center; gap: .5rem; margin: 1rem 0 .5rem; padding-bottom: .35rem; border-bottom: 2px solid color-mix(in srgb, var(--ev-main) 25%, transparent);
+  font-size: .82rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: var(--ev-main); scroll-margin-top: 70px; }
+.tn-round-nav { position: sticky; top: 56px; z-index: 5; display: flex; gap: .35rem; overflow-x: auto; padding: .5rem 0; margin: .5rem 0; background: var(--ev-bg, #f6f5fb); scrollbar-width: none; }
+.tn-round-nav::-webkit-scrollbar { display: none; }
+.tn-round-nav .sb-day { text-decoration: none; white-space: nowrap; }
+.tn-round-nav small { opacity: .7; font-weight: 600; }
+
+/* cantidad de partidos: burbuja, para que no se confunda con el número de ronda */
+.tn-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4rem; height: 1.4rem; padding: 0 .5rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--ev-main) 12%, #fff); color: var(--ev-main); font-size: .72rem; font-weight: 800; letter-spacing: 0; text-transform: none; }
+.tn-round-nav .sb-day .tn-count { margin-left: .35rem; }
+.sb-day.is-active .tn-count { background: rgba(255, 255, 255, .2); color: #fff; }

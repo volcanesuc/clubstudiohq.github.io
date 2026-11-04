@@ -1283,11 +1283,39 @@ function renderGames() {
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day).push(g);
   });
+  // dentro de cada día: grupos por ronda / fase ("Ronda 1", "Semifinal", "Final"…) con un ancla para saltar
+  const multiDiv = divisions().length > 1;
+  const roundTitle = (g) => {
+    const base = g.key ? String(g.phase || "").replace(/\s(\(\d+\)|\d+)$/, "") : g.round ? exf(EX.phaseRound, { n: g.round }) : g.phase || EX.orgOtherGames;
+    const div = multiDiv ? divisions().find((d) => d.id === gameDivision(g))?.name : "";
+    return div ? `${div} · ${base}` : base;
+  };
+  const anchors = [];
+  const daysHtml = [...byDay.entries()].map(([day, list], di) => {
+    const groups = new Map();
+    list.forEach((g) => {
+      const t = roundTitle(g);
+      if (!groups.has(t)) groups.set(t, []);
+      groups.get(t).push(g);
+    });
+    return `
+      <div class="tn-day-title">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</div>
+      ${[...groups.entries()].map(([title, games], gi) => {
+        const id = `rnd-${di}-${gi}`;
+        anchors.push({ id, title, day, n: games.length });
+        return `
+          <div class="tn-round-title" id="${id}"><span>${esc(title)}</span><span class="tn-count">${esc(games.length === 1 ? EX.orgOneGame : exf(EX.orgNGames, { n: games.length }))}</span></div>
+          ${games.map(orgGameCard).join("")}`;
+      }).join("")}`;
+  }).join("");
+  const multiDay = byDay.size > 1;
   tab.innerHTML = `
     <div class="small ev-muted">${esc(EX.linkHint)}</div>
-    ${[...byDay.entries()].map(([day, list]) => `
-      <div class="tn-day-title">${esc(day.charAt(0).toUpperCase() + day.slice(1))}</div>
-      ${list.map(orgGameCard).join("")}`).join("")}`;
+    ${anchors.length > 1 ? `
+      <nav class="tn-round-nav" aria-label="${esc(EX.orgJumpTo)}">
+        ${anchors.map((a) => `<a href="#${a.id}" class="sb-day" data-jump="${a.id}">${esc(a.title)}${multiDay ? ` <small>${esc(a.day.split(",")[0])}</small>` : ""}<span class="tn-count" title="${esc(exf(EX.orgNGames, { n: a.n }))}">${a.n}</span></a>`).join("")}
+      </nav>` : ""}
+    ${daysHtml}`;
 
   tab.onchange = (ev) => {
     const input = ev.target.closest("[data-gf]");
@@ -1302,6 +1330,13 @@ function renderGames() {
   };
 
   tab.onclick = async (ev) => {
+    const jump = ev.target.closest("[data-jump]");
+    if (jump) {
+      ev.preventDefault();
+      const el = document.getElementById(jump.dataset.jump);
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: "smooth" });
+      return;
+    }
     const copy = ev.target.closest("[data-copy]");
     if (copy) {
       try {
