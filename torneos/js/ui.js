@@ -111,6 +111,8 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
     maybeSpiritPopup(user).catch(() => {});
   }
   nav.querySelector("#tnSignOut")?.addEventListener("click", async () => {
+    // en celular "Salir" es un ícono al lado de la foto: se confirma para no salir sin querer
+    if (!(await askConfirm(EX.signOutConfirm, { ok: EX.signOut }))) return;
     await signOutUser();
     location.reload();
   });

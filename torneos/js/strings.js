@@ -279,6 +279,7 @@ export const EX = {
   signIn: "Entrar con Google",
   signInShort: "Entrar",
   signOut: "Salir",
+  signOutConfirm: "¿Cerrar sesión?",
   signInToOrganize: "Entrá con tu cuenta de Google para crear y administrar torneos.",
   myEvents: "Mis torneos",
   organizers: "Co-organizadores (correos, uno por línea)",

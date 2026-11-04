@@ -11,7 +11,7 @@
 //   game_claims/{gameId}_{uid}              sesión que reclamó un link
 //   platform_admins/{uid}                   quién aprueba torneos (se crea a mano en la consola)
 import { auth, db, COL } from "/torneos/js/firebase.js";
-import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   collection,
   deleteDoc,
@@ -390,8 +390,19 @@ export function scorekeeperUrl(eid, gid, token) {
   return `${location.origin}/torneos/planillar.html?${new URLSearchParams({ event: eid, game: gid, key: token })}`;
 }
 
+// Espera a que Firebase restaure la sesión guardada (al cargar la página auth.currentUser es null un instante).
+function authReady() {
+  return new Promise((resolve) => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      unsub();
+      resolve(u || null);
+    });
+  });
+}
+
 export async function claimScorekeeper(eid, gid, token) {
-  if (!auth.currentUser) await signInAnonymously(auth);
+  // Solo si de verdad no hay nadie: un login anónimo reemplaza la sesión de Google en todo el sitio.
+  if (!(await authReady())) await signInAnonymously(auth);
   const uid = auth.currentUser.uid;
   const ref = doc(db, COL.gameClaims, `${gid}_${uid}`);
   // si ya abrió este link antes (recargó la página), el permiso ya existe: las reglas no dejan reescribirlo
