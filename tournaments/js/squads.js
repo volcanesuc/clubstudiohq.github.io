@@ -409,13 +409,14 @@ const sumStats = (rows) => rows.reduce((t, r) => {
  * y suma sus estadísticas en los partidos jugados.
  * @returns {Promise<{ rows: object[], totals: object }>}
  */
-export async function playerHistory(uid, squadIds = []) {
+// hatEventIds: torneos hat donde se inscribió (no hay equipo permanente que los apunte)
+export async function playerHistory(uid, squadIds = [], hatEventIds = []) {
   const [pointers, claims] = await Promise.all([
     Promise.all(squadIds.map((sid) => listSquadTournaments(sid).catch(() => []))).then((l) => l.flat()),
     // torneos donde un admin le asignó un jugador (ej. importados)
     listClaimsForUser(uid).catch(() => []),
   ]);
-  const eventIds = [...new Set([...pointers, ...claims].map((p) => p.eventId))];
+  const eventIds = [...new Set([...pointers, ...claims].map((p) => p.eventId).concat(hatEventIds))];
   const claimByEvent = new Map(claims.map((c) => [c.eventId, c]));
   const rows = (await Promise.all(eventIds.map(async (eid) => {
     const [event, teams] = await Promise.all([loadEvent(eid).catch(() => null), listTeams(eid).catch(() => [])]);

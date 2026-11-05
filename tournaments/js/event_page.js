@@ -15,14 +15,15 @@ import {
   spiritTable,
   standings,
 } from "/tournaments/js/model.js";
-import { deadlineEnd, REG, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
+import { deadlineEnd, REG, isApproved, leaveHat, listMyHatEntries, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
+import { isHatEvent } from "/tournaments/js/hat.js";
 import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
 import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams, atMinutes, downloadIcs, scheduleDays, scheduleGridHtml } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "", gamesView: "list", statsView: "leaders", mvpPage: 0, statsSort: "mvp", statsQ: "", statsTeam: "" };
+const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "", gamesView: "list", statsView: "leaders", mvpPage: 0, statsSort: "mvp", statsQ: "", statsTeam: "", myHat: null };
 
 // fila de partido con nombre, color y logo actuales del equipo
 const row = (g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id), teams: state.teams });
@@ -43,12 +44,14 @@ function mapQuery(e) {
 function registrationInfoCard() {
   const e = state.event;
   const r = state.rules;
-  const fee = teamFee(e);
+  const hat = isHatEvent(e);
+  const fee = hat ? (e.fees?.playerMode && e.fees.playerMode !== "free" ? Number(e.fees.player) || 0 : 0) : teamFee(e);
   const items = [];
-  if (fee) items.push(["cash-coin", EX.feeTeam, fmtMoney(fee, e.fees?.currency || "CRC")]);
+  if (fee) items.push(["cash-coin", hat ? EX.feePlayer : EX.feeTeam, fmtMoney(fee, e.fees?.currency || "CRC")]);
   if (e.registrationDeadline) items.push(["calendar-check", EX.regDeadline, fmtDayOnly(deadlineEnd(e.registrationDeadline))]);
   if (e.rosterDeadline) items.push(["lock", EX.rosterDeadline, fmtDayOnly(deadlineEnd(e.rosterDeadline))]);
-  if (r.rosterMin || r.rosterMax) {
+  if (!hat && (r.rosterMin || r.rosterMax)) {
+
     items.push(["people", EX.roster, r.rosterMin && r.rosterMax ? `${r.rosterMin}–${r.rosterMax}` : r.rosterMin ? exf(EX.regRosterAtLeast, { n: r.rosterMin }).replace(/[()]/g, "") : exf(EX.regRosterAtMost, { n: r.rosterMax }).replace(/[()]/g, "")]);
   }
   if (!items.length && !e.fees?.info) return "";
@@ -87,7 +90,8 @@ function venueCard() {
 function waiverBanner() {
   const e = state.event;
   if (!waiverOn(e) || !state.user || !state.waivers) return "";
-  const inRoster = state.teams.some((t) => (t.players || []).some((p) => p.uid === state.user.uid));
+  // en un hat también firma quien está en el pool (todavía sin equipo)
+  const inRoster = state.teams.some((t) => (t.players || []).some((p) => p.uid === state.user.uid)) || (state.myHat || []).length > 0;
   if (!inRoster || state.waivers.get(state.user.uid)?.version === e.waiver.version) return "";
   return `
     <div class="ev-waiver-banner mt-3">
@@ -97,8 +101,43 @@ function waiverBanner() {
     </div>`;
 }
 
+// Hat: el botón "Unirme como jugador" o mi estado en el pool (en espera, con equipo, cerradas)
+function myHatHtml() {
+  const e = state.event;
+  const open = isApproved(e) && registrationIsOpen(e);
+  const join = `/tournaments/hat.html?e=${encodeURIComponent(e.id)}`;
+  const multiDiv = divisions().length > 1;
+  const divName = (id) => divisions().find((d) => d.id === id)?.name || "";
+  // con sesión: hasta saber si ya estoy en el pool no se muestra el botón (no parpadea)
+  if (state.user && state.myHat === null) return "";
+  const mine = state.myHat || [];
+  const items = mine.map((m) => {
+    const team = m.status === "assigned" ? state.teams.find((t) => t.id === m.teamId) : null;
+    if (team) {
+      return `
+        <div class="tn-my-reg">
+          ${teamBadge(team, 26)}<span class="fw-bold">${esc(exf(EX.hatMyTeamChip, { team: team.name }))}</span>
+          <button class="btn btn-light btn-sm fw-bold" data-tab="teams"><i class="bi bi-people me-1"></i>${esc(EX.hatSeeMyTeam)}</button>
+        </div>`;
+    }
+    const label = m.status === "waitlist" ? EX.hatWaitlistChip : EX.hatInHatChip;
+    return `
+      <div class="tn-my-reg">
+        <span class="ev-chip ev-chip--wait"><i class="bi bi-hourglass-split me-1"></i>${esc(label)}${multiDiv ? ` · ${esc(divName(m.divisionId))}` : ""}</span>
+        ${open ? `<a class="btn btn-light btn-sm fw-bold" href="${esc(`${join}&d=${encodeURIComponent(m.divisionId)}`)}"><i class="bi bi-pencil me-1"></i>${esc(EX.hatEditMine)}</a>` : ""}
+        <button class="btn btn-outline-light btn-sm" data-hat-leave="${esc(m.id)}">${esc(EX.hatLeave)}</button>
+      </div>`;
+  }).join("");
+  const more = !mine.length || e.hat?.multiDivision === true;
+  const cta = more && open
+    ? `<a class="btn btn-light btn-sm fw-bold" href="${esc(mine.length ? `${join}&new=1` : join)}"><i class="bi bi-person-plus me-1"></i>${esc(mine.length ? EX.hatAnotherDivision : EX.hatJoinCta)}</a>`
+    : !mine.length ? `<span class="ev-chip">${esc(EX.registrationClosedShort)}</span>` : "";
+  return `<div class="d-flex flex-wrap gap-2 mt-3">${items}${cta}</div>`;
+}
+
 function myRegistrationHtml() {
   const e = state.event;
+  if (isHatEvent(e)) return myHatHtml();
   const items = state.myRegs.map(({ squad, reg }) => {
     const edit = `/tournaments/team.html?${new URLSearchParams({ e: e.id, r: reg.id })}`;
     return `
@@ -670,6 +709,22 @@ function render() {
 }
 
 $("tnRoot").addEventListener("click", async (ev) => {
+  const hl = ev.target.closest("[data-hat-leave]");
+  if (hl) {
+    if (!confirm(EX.hatLeaveConfirm)) return;
+    showLoader();
+    try {
+      await leaveHat(state.event.id, hl.dataset.hatLeave);
+      state.myHat = (state.myHat || []).filter((m) => m.id !== hl.dataset.hatLeave);
+      render();
+    } catch (err) {
+      console.error(err);
+      alert(EX.error);
+    } finally {
+      hideLoader();
+    }
+    return;
+  }
   const wd = ev.target.closest("[data-withdraw]");
   if (wd) {
     if (!confirm(EX.regWithdrawConfirm)) return;
@@ -790,7 +845,17 @@ $("tnRoot").addEventListener("input", (ev) => {
       }).catch(() => {});
     }
     // estado de mi inscripción (no bloquea la página)
-    if (state.user) {
+    // hat: mi ficha en el pool
+    if (state.user && isHatEvent(event)) {
+      listMyHatEntries(event.id, state.user.uid).then((mine) => {
+        state.myHat = mine;
+        render();
+      }).catch(() => {
+        state.myHat = [];
+        render();
+      });
+    }
+    if (state.user && !isHatEvent(event)) {
       myRegistrationsFor(state.user, event.id).then((regs) => {
         state.myRegs = regs;
         if (regs.length) render();

@@ -439,6 +439,8 @@ async function useSquad(sid, selectAll) {
 async function openRegistration(eventKey, regId, squadId) {
   const event = (await loadEvent(eventKey).catch(() => null)) || (await loadPublicEventBySlug(eventKey).catch(() => null));
   if (!event) return alertBox(EX.eventNotFound, "warning");
+  // en un hat no se inscriben equipos: cada jugador se anota solo
+  if (event.type === "hat") return location.replace(`/tournaments/hat.html?e=${encodeURIComponent(event.id)}`);
   state.event = event;
   // jugadores que ya están en el roster de otro equipo de este torneo (se puede estar en varios equipos)
   // formulario de exención: quién del roster ya firmó

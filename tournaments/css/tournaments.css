@@ -818,3 +818,14 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .tn-div-hat { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .4rem .5rem; align-items: end; padding: .55rem .65rem; border: 1px dashed var(--ev-border); border-radius: 12px; background: #faf9fe; }
 .tn-div-hat__genders { grid-column: 1 / -1; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .tn-div-hat label.small:not(.form-check) { display: flex; flex-direction: column; gap: .15rem; color: var(--ev-muted); font-weight: 600; }
+/* inscripción al hat: pasos, opciones grandes para el dedo */
+.hat-steps { display: flex; gap: .3rem; }
+.hat-steps span { flex: 1; height: 5px; border-radius: 3px; background: var(--ev-border); }
+.hat-steps span.is-done { background: #a78bfa; }
+.hat-steps span.is-on { background: #7c3aed; }
+.hat-choice { display: flex; align-items: center; gap: .65rem; padding: .7rem .85rem; border: 1px solid var(--ev-border); border-radius: 14px; cursor: pointer; background: #fff; }
+.hat-choice:has(input:checked) { border-color: #7c3aed; background: #f5f3ff; }
+.hat-choice .form-check-input { margin: 0; flex: 0 0 auto; }
+.hat-choice--sm { padding: .5rem .7rem; font-size: .92rem; border-radius: 12px; }
+.hat-q { border: 0; margin: 0; padding: 0; }
+.hat-q__label { font-size: .95rem; font-weight: 700; margin-bottom: .4rem; float: none; width: auto; }

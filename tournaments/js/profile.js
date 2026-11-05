@@ -313,7 +313,7 @@ function renderSignIn() {
       state.spirit = list;
       if (list.length) render();
     }).catch(() => {});
-    state.history = await playerHistory(state.uid, state.profile.squadIds || []);
+    state.history = await playerHistory(state.uid, state.profile.squadIds || [], state.profile.hatEventIds || []);
     render();
   } catch (err) {
     console.error(err);

@@ -203,6 +203,12 @@ service cloud.firestore {
           // el comprobante se manda (submitted); aprobarlo o rechazarlo es del organizador
           && (request.resource.data.get("paymentStatus", "none") == resource.data.get("paymentStatus", "none")
               || (request.resource.data.paymentStatus == "submitted" && resource.data.get("paymentStatus", "none") != "approved"));
+        // el comprobante se puede mandar después: con inscripciones cerradas o ya con equipo
+        allow update: if isGoogle()
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paymentStatus", "updatedAt"])
+          && request.resource.data.paymentStatus == "submitted"
+          && resource.data.get("paymentStatus", "none") != "approved";
         allow delete: if isGoogle()
           && resource.data.uid == request.auth.uid
           && resource.data.status != "assigned";

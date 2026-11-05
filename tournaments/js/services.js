@@ -13,6 +13,7 @@
 import { auth, db, COL } from "/tournaments/js/firebase.js";
 import { onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -513,4 +514,88 @@ export async function claimScorekeeper(eid, gid, token) {
   if (existing?.exists()) return uid;
   await setDoc(ref, { eventId: eid, gameId: gid, token, uid, createdAt: serverTimestamp() });
   return uid;
+}
+
+/* =========================
+   Hat: jugadores que se inscriben solos
+========================= */
+// events/{e}/hat_players/{uid}__{divisionId}  pool (público, sin puntajes)
+// events/{e}/hat_ratings/{uid}                autoevaluación y puntajes (solo el organizador lo lee)
+// events/{e}/hat_payments/{uid}__{divisionId} comprobante de la cuota (jugador + organizador)
+// profiles/{uid}/private/info                 fecha de nacimiento (solo el jugador)
+const hatPlayersCol = (eid) => collection(db, COL.events, eid, "hat_players");
+const hatPaymentsCol = (eid) => collection(db, COL.events, eid, "hat_payments");
+const hatRatingRef = (eid, uid) => doc(db, COL.events, eid, "hat_ratings", uid);
+const privateInfoRef = (uid) => doc(db, COL.profiles, uid, "private", "info");
+const hatEntryId = (uid, divisionId) => `${uid}__${divisionId}`;
+
+export async function listHatPlayers(eid) {
+  return list(await getDocs(hatPlayersCol(eid)));
+}
+
+export async function listMyHatEntries(eid, uid) {
+  if (!uid) return [];
+  return list(await getDocs(query(hatPlayersCol(eid), where("uid", "==", uid))));
+}
+
+export async function loadMyBirthDate(uid) {
+  const snap = await getDoc(privateInfoRef(uid)).catch(() => null);
+  return snap?.exists() ? snap.data().birthDate || "" : "";
+}
+
+export async function loadMyHatPayment(eid, entryId) {
+  const snap = await getDoc(doc(hatPaymentsCol(eid), entryId)).catch(() => null);
+  return snap?.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+/**
+ * Inscribe (o actualiza) al jugador en el hat de una división, en un solo batch:
+ * ficha del pool, autoevaluación privada (si respondió), fecha de nacimiento privada, comprobante y el torneo en su perfil.
+ * Si cambió de división, borra la ficha anterior (la pareja se pierde: el organizador ve el aviso).
+ * @param {{ entry: object, prevDivisionId?: string, status?: string, rating?: { answers, selfScore }|null, birthDate: string, proof?: string }} data
+ * @returns {Promise<string>} id de la ficha
+ */
+export async function saveHatEntry(user, event, { entry, prevDivisionId = "", status = "waiting", rating = null, birthDate = "", proof = "" }) {
+  const eid = event.id;
+  const id = hatEntryId(user.uid, entry.divisionId);
+  const ref = doc(hatPlayersCol(eid), id);
+  const exists = (await getDoc(ref).catch(() => null))?.exists();
+  const batch = writeBatch(db);
+  if (prevDivisionId && prevDivisionId !== entry.divisionId) batch.delete(doc(hatPlayersCol(eid), hatEntryId(user.uid, prevDivisionId)));
+  const fields = {
+    name: entry.name || "",
+    number: entry.number ?? null,
+    gender: entry.gender || "",
+    photoURL: entry.photoURL || "",
+    jersey: { size: entry.jersey?.size || "", cut: entry.jersey?.cut || "" },
+    position: entry.position || "",
+    teammateUid: entry.teammateUid || "",
+    ...(proof ? { paymentStatus: PAYMENT.SUBMITTED } : {}),
+    updatedAt: serverTimestamp(),
+  };
+  if (exists) batch.set(ref, fields, { merge: true });
+  else batch.set(ref, { ...fields, uid: user.uid, divisionId: entry.divisionId, status, teamId: "", paymentStatus: proof ? PAYMENT.SUBMITTED : PAYMENT.NONE, createdAt: serverTimestamp() });
+  if (rating) batch.set(hatRatingRef(eid, user.uid), { uid: user.uid, answers: rating.answers, selfScore: rating.selfScore, birthDate, updatedAt: serverTimestamp() }, { merge: true });
+  if (birthDate) batch.set(privateInfoRef(user.uid), { birthDate, updatedAt: serverTimestamp() }, { merge: true });
+  if (proof) batch.set(doc(hatPaymentsCol(eid), id), { uid: user.uid, divisionId: entry.divisionId, proof, status: PAYMENT.SUBMITTED, at: serverTimestamp() });
+  batch.set(doc(db, COL.profiles, user.uid), { hatEventIds: arrayUnion(eid), updatedAt: serverTimestamp() }, { merge: true });
+  await batch.commit();
+  return id;
+}
+
+// La fecha de nacimiento cambió sin volver a responder: el organizador la ve igual (para la edad)
+export async function updateHatBirthDate(eid, uid, birthDate) {
+  await setDoc(hatRatingRef(eid, uid), { birthDate, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// Comprobante subido después de inscribirse (también con inscripciones cerradas o ya con equipo)
+export async function submitHatPayment(eid, entry, proof) {
+  const batch = writeBatch(db);
+  batch.set(doc(hatPaymentsCol(eid), entry.id), { uid: entry.uid, divisionId: entry.divisionId, proof, status: PAYMENT.SUBMITTED, at: serverTimestamp() });
+  batch.update(doc(hatPlayersCol(eid), entry.id), { paymentStatus: PAYMENT.SUBMITTED, updatedAt: serverTimestamp() });
+  await batch.commit();
+}
+
+export async function leaveHat(eid, entryId) {
+  await deleteDoc(doc(hatPlayersCol(eid), entryId));
 }

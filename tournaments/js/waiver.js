@@ -1,12 +1,12 @@
 // /tournaments/js/waiver.js
 // Formulario de exención del torneo (?e=<evento>): cada jugador del roster lo firma desde su cuenta.
 import { EX, exf } from "/tournaments/js/strings.js";
-import { listTeams, loadEvent, loadMyWaiver, loadPublicEventBySlug, signWaiver, waiverOn } from "/tournaments/js/services.js";
+import { listMyHatEntries, listTeams, loadEvent, loadMyWaiver, loadPublicEventBySlug, signWaiver, waiverOn } from "/tournaments/js/services.js";
 import { esc, eventUrl, fmtWhen, hideLoader, isGoogleUser, renderNav, showLoader, signInGoogle, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const EK = new URLSearchParams(location.search).get("e") || "";
-const state = { user: null, event: null, teams: [], mine: null };
+const state = { user: null, event: null, teams: [], mine: null, hat: [] };
 
 const alertBox = (msg, kind = "danger") => {
   const el = document.getElementById("tnAlert");
@@ -31,8 +31,9 @@ function render() {
   const e = state.event;
   const w = e.waiver;
   const myTeams = state.teams.filter((t) => (t.players || []).some((p) => p.uid === state.user.uid));
-  if (!myTeams.length) return message("🔒", EX.waiverNotInRoster);
-  const team = myTeams[0];
+  // hat: quien está en el pool firma aunque todavía no tenga equipo
+  if (!myTeams.length && !state.hat.length) return message("🔒", EX.waiverNotInRoster);
+  const team = myTeams[0] || { id: "", name: EX.hatWaiverTeam };
   const prev = state.mine;
   const current = prev && prev.version === w.version;
   const val = (k, d = "") => esc(prev?.[k] ?? d);
@@ -108,8 +109,14 @@ function render() {
       root.querySelector("#wvLogin").onclick = async () => { await signInGoogle().catch(() => {}); location.reload(); };
       return;
     }
-    const [teams, mine] = await Promise.all([listTeams(event.id), loadMyWaiver(event.id, state.user.uid).catch(() => null)]);
+    const [teams, mine, hat] = await Promise.all([
+      listTeams(event.id),
+      loadMyWaiver(event.id, state.user.uid).catch(() => null),
+      event.type === "hat" ? listMyHatEntries(event.id, state.user.uid).catch(() => []) : [],
+    ]);
     state.teams = teams;
+    state.hat = hat;
+
     state.mine = mine;
     render();
   } catch (err) {
