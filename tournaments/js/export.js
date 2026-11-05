@@ -86,15 +86,20 @@ export function tournamentTables(event, teams = [], games = []) {
 const fileBase = (event) => String(event.slug || event.name || "torneo").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
 
 export async function exportExcel(event, teams, games) {
-  await loadScript(LIBS.xlsx);
   const { sheets } = tournamentTables(event, teams, games);
+  await exportSheets(fileBase(event), sheets);
+}
+
+// Excel genérico: una hoja por tabla { name, head, rows } (ej. lista de camisetas del hat)
+export async function exportSheets(filename, sheets) {
+  await loadScript(LIBS.xlsx);
   const wb = window.XLSX.utils.book_new();
   sheets.forEach((s) => {
     const ws = window.XLSX.utils.aoa_to_sheet([s.head, ...s.rows]);
     ws["!cols"] = s.head.map((h, i) => ({ wch: Math.min(40, Math.max(String(h).length, ...s.rows.map((r) => String(r[i] ?? "").length)) + 2) }));
     window.XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
   });
-  window.XLSX.writeFile(wb, `${fileBase(event)}.xlsx`);
+  window.XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
 export async function exportPdf(event, teams, games) {

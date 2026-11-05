@@ -599,3 +599,99 @@ export async function submitHatPayment(eid, entry, proof) {
 export async function leaveHat(eid, entryId) {
   await deleteDoc(doc(hatPlayersCol(eid), entryId));
 }
+
+/* ----- Hat: organizador ----- */
+export async function listHatRatings(eid) {
+  return list(await getDocs(collection(db, COL.events, eid, "hat_ratings")));
+}
+
+export async function listHatPayments(eid) {
+  return list(await getDocs(hatPaymentsCol(eid)));
+}
+
+// Puntaje del organizador (mismo rango 0–100 que el propio); null lo borra y vuelve a contar el propio
+export async function setHatOrganizerScore(eid, uid, score) {
+  await setDoc(hatRatingRef(eid, uid), { organizerScore: score, organizerAt: serverTimestamp(), organizerBy: auth.currentUser?.uid || null }, { merge: true });
+}
+
+export async function setHatNotes(eid, uid, notes) {
+  await setDoc(hatRatingRef(eid, uid), { notes: String(notes || "").slice(0, 500) }, { merge: true });
+}
+
+export async function decideHatPayment(eid, entry, approved, note = "") {
+  const status = approved ? PAYMENT.APPROVED : PAYMENT.REJECTED;
+  const batch = writeBatch(db);
+  batch.set(doc(hatPaymentsCol(eid), entry.id), { status, note, decidedAt: serverTimestamp(), decidedBy: auth.currentUser?.uid || null }, { merge: true });
+  batch.update(doc(hatPlayersCol(eid), entry.id), { paymentStatus: status, updatedAt: serverTimestamp() });
+  await batch.commit();
+}
+
+// Pagado en efectivo u otro medio: el organizador lo marca sin comprobante
+export async function setHatPaymentStatus(eid, entry, status) {
+  await updateDoc(doc(hatPlayersCol(eid), entry.id), { paymentStatus: status, updatedAt: serverTimestamp() });
+}
+
+export async function setHatStatus(eid, entryId, status) {
+  await updateDoc(doc(hatPlayersCol(eid), entryId), { status, updatedAt: serverTimestamp() });
+}
+
+// Organizador: pasa al jugador a otra división (la ficha cambia de id; el comprobante la sigue).
+// Si ya tenía equipo, vuelve a quedar en espera; la pareja deja de contar (queda el aviso en el pool).
+export async function moveHatDivision(eid, entry, divisionId) {
+  if (!divisionId || divisionId === entry.divisionId) return;
+  const newId = hatEntryId(entry.uid, divisionId);
+  const { id: _omit, ...data } = entry;
+  const batch = writeBatch(db);
+  batch.set(doc(hatPlayersCol(eid), newId), { ...data, divisionId, status: "waiting", teamId: "", movedFrom: entry.divisionId, updatedAt: serverTimestamp() });
+  batch.delete(doc(hatPlayersCol(eid), entry.id));
+  const pay = await getDoc(doc(hatPaymentsCol(eid), entry.id)).catch(() => null);
+  if (pay?.exists()) {
+    batch.set(doc(hatPaymentsCol(eid), newId), { ...pay.data(), divisionId });
+    batch.delete(doc(hatPaymentsCol(eid), entry.id));
+  }
+  await batch.commit();
+}
+
+/* ----- Hat: armado y publicación de equipos ----- */
+// events/{e}/hat_drafts/{divisionId}: { seed, teams: [{ key, name, color, uids }], teamIds: { key: teamId }, publishedAt, changedAt }
+const hatDraftRef = (eid, divId) => doc(db, COL.events, eid, "hat_drafts", divId);
+
+export async function loadHatDraft(eid, divId) {
+  const snap = await getDoc(hatDraftRef(eid, divId));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveHatDraft(eid, divId, draft) {
+  await setDoc(hatDraftRef(eid, divId), { ...draft, changedAt: serverTimestamp() });
+}
+
+/**
+ * Publica los equipos de UNA división: crea o actualiza sus equipos del torneo (sin squadId ni inscripción:
+ * existen solo en este torneo) con el roster normal { id: uid, uid, name, number, gender }, borra los que ya no están
+ * y marca a cada jugador del pool como asignado (o de vuelta en espera si quedó sin equipo). Los puntajes no se copian.
+ * @param {object[]} entries fichas del pool de esa división
+ * @param {string[]} removeTeamIds equipos publicados antes que ya no existen en el borrador (sin partidos)
+ */
+export async function publishHatDivision(eid, divisionId, draft, entries, removeTeamIds = []) {
+  const byUid = new Map(entries.map((p) => [p.uid, p]));
+  const teamIds = {};
+  const assigned = new Map();
+  const batch = writeBatch(db);
+  draft.teams.forEach((t) => {
+    const id = draft.teamIds?.[t.key] || randomId("tm");
+    teamIds[t.key] = id;
+    const players = t.uids.map((u) => byUid.get(u)).filter(Boolean)
+      .map((p) => ({ id: p.uid, uid: p.uid, name: p.name || "", number: p.number ?? null, gender: p.gender || "" }));
+    players.forEach((p) => assigned.set(p.uid, id));
+    batch.set(doc(teamsCol(eid), id), { name: t.name || "", color: t.color || "", divisionId, players, hat: true, updatedAt: serverTimestamp() }, { merge: true });
+  });
+  removeTeamIds.forEach((id) => batch.delete(doc(teamsCol(eid), id)));
+  entries.forEach((p) => {
+    const tid = assigned.get(p.uid);
+    if (tid && (p.status !== "assigned" || p.teamId !== tid)) batch.update(doc(hatPlayersCol(eid), p.id), { status: "assigned", teamId: tid, updatedAt: serverTimestamp() });
+    if (!tid && p.status === "assigned") batch.update(doc(hatPlayersCol(eid), p.id), { status: "waiting", teamId: "", updatedAt: serverTimestamp() });
+  });
+  batch.set(hatDraftRef(eid, divisionId), { ...draft, teamIds, publishedAt: serverTimestamp(), changedAt: serverTimestamp() });
+  await batch.commit();
+  return teamIds;
+}

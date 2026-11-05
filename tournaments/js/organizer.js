@@ -205,7 +205,7 @@ function renderEvent() {
 async function renderHatTab() {
   const tab = document.getElementById("evTab");
   const { renderHat } = await import("/tournaments/js/organizer_hat.js");
-  await renderHat(tab, { state, run, alertBox, divisions, fields, reloadData, renderEvent });
+  await run(() => renderHat(tab, { state, run, alertBox, divisions, fields, reloadData, renderEvent }));
 }
 
 /* ---------- Info y reglas ---------- */
