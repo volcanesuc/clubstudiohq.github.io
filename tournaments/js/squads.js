@@ -21,6 +21,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId, spiritTable, standings } from "/tournaments/js/model.js";
 import { listGames, listTeams, loadEvent, loadRegistration, rosterLocked } from "/tournaments/js/services.js";
+import { listClaimsForUser } from "/tournaments/js/imports.js";
 
 const SPIRIT_WINDOW_DAYS = 21; // después de esto ya no se recuerda la evaluación pendiente
 
@@ -330,8 +331,10 @@ export async function squadResults(sid, pointers) {
     const ids = new Set(divTeams.map((t) => t.id));
     const divGames = games.filter((g) => !g.phase && ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
     const table = standings(divTeams, divGames);
-    const rank = table.findIndex((r) => r.team.id === team.id) + 1;
-    const me = table[rank - 1] || { w: 0, l: 0, played: 0 };
+    const groupRank = table.findIndex((r) => r.team.id === team.id) + 1;
+    const me = table[groupRank - 1] || { w: 0, l: 0, played: 0 };
+    // puesto final después de la llave (si el torneo lo tiene), si no el de la tabla de grupos
+    const rank = Number(team.finalPlace) > 0 ? Number(team.finalPlace) : groupRank;
     const spirit = spiritTable(divTeams, games.filter((g) => ids.has(g.teamA?.id) || ids.has(g.teamB?.id)));
     return {
       ...base,
@@ -407,22 +410,29 @@ const sumStats = (rows) => rows.reduce((t, r) => {
  * @returns {Promise<{ rows: object[], totals: object }>}
  */
 export async function playerHistory(uid, squadIds = []) {
-  const pointers = (await Promise.all(squadIds.map((sid) => listSquadTournaments(sid).catch(() => [])))).flat();
-  const eventIds = [...new Set(pointers.map((p) => p.eventId))];
+  const [pointers, claims] = await Promise.all([
+    Promise.all(squadIds.map((sid) => listSquadTournaments(sid).catch(() => []))).then((l) => l.flat()),
+    // torneos donde un admin le asignó un jugador (ej. importados)
+    listClaimsForUser(uid).catch(() => []),
+  ]);
+  const eventIds = [...new Set([...pointers, ...claims].map((p) => p.eventId))];
   const rows = (await Promise.all(eventIds.map(async (eid) => {
     const [event, teams] = await Promise.all([loadEvent(eid).catch(() => null), listTeams(eid).catch(() => [])]);
-    const team = teams.find((t) => (t.players || []).some((p) => p.id === uid));
+    // su ficha: id = uid (se unió con su cuenta) o una ficha con su uid asignado
+    const isMe = (p) => p.id === uid || p.uid === uid;
+    const team = teams.find((t) => (t.players || []).some(isMe));
     if (!event || !team) return null;
+    const pid = team.players.find(isMe).id;
     const games = (await listGames(eid).catch(() => []))
       .filter((g) => g.status !== GAME_STATUS.SCHEDULED && (g.teamA?.id === team.id || g.teamB?.id === team.id));
     const st = games.reduce((t, g) => {
-      const p = g.playerStats?.[uid] || {};
+      const p = g.playerStats?.[pid] || {};
       ["goals", "assists", "blocks", "turns", "callahans"].forEach((k) => (t[k] += p[k] || 0));
       return t;
     }, { goals: 0, assists: 0, blocks: 0, turns: 0, callahans: 0 });
     const gameRows = games
       .sort((a, b) => (a.startAt?.toMillis?.() || 0) - (b.startAt?.toMillis?.() || 0))
-      .map((g) => ({ game: g, side: g.teamA?.id === team.id ? "A" : "B", stats: g.playerStats?.[uid] || {} }));
+      .map((g) => ({ game: g, side: g.teamA?.id === team.id ? "A" : "B", stats: g.playerStats?.[pid] || {} }));
     return { event, team, ...st, games: games.length, gameRows };
   }))).filter(Boolean).sort((a, b) => String(b.event.startDate || "").localeCompare(String(a.event.startDate || "")));
   return { rows, totals: { ...sumStats(rows), tournaments: rows.length } };

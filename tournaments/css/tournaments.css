@@ -741,3 +741,11 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
   background: color-mix(in srgb, var(--ev-main) 12%, #fff); color: var(--ev-main); font-size: .72rem; font-weight: 800; letter-spacing: 0; text-transform: none; }
 .tn-round-nav .sb-day .tn-count { margin-left: .35rem; }
 .sb-day.is-active .tn-count { background: rgba(255, 255, 255, .2); color: #fff; }
+
+/* ===== admin: importar y jugadores ===== */
+.pa-stat--light { background: #faf9fe; border-color: var(--ev-border); color: #1f1446; min-width: 92px; padding: .45rem .7rem; }
+.pa-stat--light .pa-stat__l { color: var(--ev-muted); opacity: 1; }
+.st-final { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem; padding: .75rem 1rem 1rem; }
+.st-final__row { display: flex; align-items: center; gap: .6rem; padding: .5rem .65rem; border: 1px solid var(--ev-border); border-radius: 14px; background: #fff; min-width: 0; }
+.st-final__row.is-top { background: linear-gradient(135deg, #fef9c3, #fff); border-color: #fde68a; }
+.st-final__pos { font-weight: 900; font-size: 1.1rem; width: 2rem; text-align: center; font-variant-numeric: tabular-nums; }

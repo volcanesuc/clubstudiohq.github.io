@@ -244,8 +244,23 @@ function standingsTab() {
         </div>
       </section>`;
   };
+  // puesto final después de la llave (ej. torneos importados): se muestra arriba de la tabla de grupos
+  const placed = teams.filter((t) => Number(t.finalPlace) > 0).sort((a, b) => a.finalPlace - b.finalPlace);
+  const medal = (n) => ({ 1: "🥇", 2: "🥈", 3: "🥉" })[n] || n;
+  const finalCard = placed.length ? `
+    <section class="st-card">
+      <header class="st-card__head"><div><div class="st-card__title">${esc(EX.finalStandings)}</div><div class="st-card__sub">${esc(divName)}</div></div></header>
+      <div class="st-final">${placed.map((t) => `
+        <div class="st-final__row ${t.finalPlace <= 3 ? "is-top" : ""}">
+          <span class="st-final__pos">${medal(t.finalPlace)}</span>
+          ${teamBadge(t, 28)}
+          <div class="min-w-0"><div class="st-team__name text-truncate">${esc(t.name)}</div>${t.city ? `<div class="st-team__sub">${esc(t.city)}</div>` : ""}</div>
+        </div>`).join("")}
+      </div>
+    </section>` : "";
   return `
     <div class="sb-toolbar">${divisionPicker()}</div>
+    ${finalCard}
     ${teams.length ? pools.map(table).join("") : `<div class="ev-card ev-muted">${esc(EX.noStats)}</div>`}
     ${teams.length ? `<div class="st-legend">${esc(EX.standLegend)}</div>` : ""}`;
 }
