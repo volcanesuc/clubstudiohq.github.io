@@ -861,3 +861,20 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .hat-chip__score { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hat-dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: .35rem; vertical-align: middle; }
 .ev-chip--warn { background: #fff3cd; color: #664d03; }
+
+/* Crear torneo por etapas */
+.cr-wrap { max-width: 34rem; margin: 0 auto; }
+.tn-seg--full { display: flex; width: 100%; flex-wrap: wrap; }
+.tn-seg--full .btn { flex: 1 1 0; white-space: nowrap; }
+.tn-seg .btn { margin: 0; }
+.cr-type-help { font-size: .85rem; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: .6rem .8rem; color: #3b2f63; }
+.cr-upload { display: inline-flex; flex-direction: column; align-items: center; gap: .5rem; cursor: pointer; padding: .5rem 1rem; }
+.cr-upload__icon { width: 4rem; height: 4rem; border-radius: 50%; background: var(--bs-tertiary-bg); display: grid; place-items: center; font-size: 1.4rem; }
+.cr-summary dd { margin-bottom: .3rem; }
+/* divisiones en Crear torneo: una tarjeta por división, numerada */
+.cr-divs #eDivRows { counter-reset: crdiv; }
+.cr-divs .tn-div-item { counter-increment: crdiv; background: #fff; border: 1px solid var(--ev-border); border-top: 3px solid #7c3aed; border-radius: 16px; padding: 2.4rem .9rem .9rem; margin-bottom: .75rem; position: relative; }
+.cr-divs .tn-div-item::before { content: "División #" counter(crdiv); position: absolute; top: .7rem; left: .9rem; font-weight: 700; font-size: .95rem; }
+.cr-divs .tn-div-row [data-div-del] { position: absolute; top: .4rem; right: .5rem; }
+.cr-divs .tn-div-row { grid-template-columns: 1fr 1fr; }
+.cr-rules summary { cursor: pointer; }
