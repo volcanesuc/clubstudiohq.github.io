@@ -11,6 +11,7 @@ import {
   SURFACES,
   eventRules,
   parseRoster,
+  randomId,
   rosterToText,
   slotMinutes,
   slugify,
@@ -743,10 +744,19 @@ function teamCard(t = {}) {
         </div>
         <div class="col-6 col-md-1"><label class="form-label small">${esc(EX.teamPool)}</label><input class="form-control" data-f="pool" maxlength="3" value="${esc(t.pool || "")}" title="${esc(EX.teamPoolHint)}" /></div>
         <div class="col-6 col-md-1"><label class="form-label small">${esc(EX.teamSeed)}</label><input class="form-control" data-f="seed" type="number" min="1" max="999" value="${esc(t.seed || "")}" title="${esc(EX.teamSeedHint)}" /></div>
-        <div class="col-12">
-          <label class="form-label small">${esc(EX.roster)} · <span class="ev-muted">${esc(exf(EX.playersCount, { n: (t.players || []).length }))}</span></label>
-          <textarea class="form-control" data-f="roster" rows="${Math.min(10, Math.max(3, (t.players || []).length + 1))}" placeholder="${esc(EX.rosterHint)}">${esc(rosterToText(t.players || []))}</textarea>
-          <div class="form-text">${esc(EX.rosterHint)}</div>
+        <div class="col-12" data-roster>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="form-label small mb-0">${esc(EX.roster)} · <span class="ev-muted" data-roster-count>${esc(exf(EX.playersCount, { n: (t.players || []).length }))}</span></span>
+            <button type="button" class="btn btn-sm btn-link ms-auto p-0" data-roster-bulk><i class="bi bi-card-text me-1"></i>${esc(EX.rosterBulk)}</button>
+          </div>
+          <div data-roster-list>
+            <div class="tn-roster" data-roster-rows>${(t.players || []).map(rosterRow).join("")}</div>
+            <button type="button" class="btn btn-sm btn-light mt-2" data-roster-add><i class="bi bi-plus-lg me-1"></i>${esc(EX.rosterAdd)}</button>
+          </div>
+          <div class="d-none" data-roster-bulkbox>
+            <textarea class="form-control" data-f="roster" rows="${Math.min(12, Math.max(4, (t.players || []).length + 1))}" placeholder="${esc(EX.rosterHint)}"></textarea>
+            <div class="form-text">${esc(EX.rosterHint)}</div>
+          </div>
         </div>
         ${t.id ? captainSelect("captainId", EX.captain, t) + captainSelect("spiritCaptainId", EX.spiritCaptain, t) : ""}
         <div class="col-12 d-flex justify-content-between gap-2">
@@ -755,6 +765,39 @@ function teamCard(t = {}) {
         </div>
       </div>
     </form>`;
+}
+
+// Roster: una fila por jugador (número, nombre, F/M). "Editar en bloque" cambia a texto, una línea por jugador.
+function rosterRow(p = {}) {
+  return `
+    <div class="tn-roster__row" data-pid="${esc(p.id || "")}">
+      <input class="form-control form-control-sm tn-roster__num" type="number" min="0" max="999" data-r="number" value="${esc(p.number ?? "")}" placeholder="#" aria-label="${esc(EX.rosterNumber)}" />
+      <input class="form-control form-control-sm" data-r="name" value="${esc(p.name || "")}" placeholder="${esc(EX.rosterName)}" aria-label="${esc(EX.rosterName)}" />
+      <select class="form-select form-select-sm tn-roster__g" data-r="gender" aria-label="${esc(EX.rosterGender)}">
+        <option value="">—</option>
+        ${["F", "M"].map((g) => `<option ${p.gender === g ? "selected" : ""}>${g}</option>`).join("")}
+      </select>
+      <span class="tn-roster__acc">${p.uid ? `<i class="bi bi-person-check-fill text-success" title="${esc(EX.rosterLinked)}"></i>` : ""}</span>
+      <button type="button" class="btn btn-sm btn-light text-danger" data-roster-del aria-label="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+}
+
+// jugadores según lo que muestra la tarjeta (filas o texto), conservando cuenta, foto y demás de los que ya estaban
+function readRoster(form, prevPlayers = []) {
+  const box = form.querySelector("[data-roster]");
+  if (!box.querySelector("[data-roster-bulkbox]").classList.contains("d-none")) {
+    return parseRoster(box.querySelector("[data-f=roster]").value, prevPlayers);
+  }
+  const byId = new Map(prevPlayers.map((p) => [p.id, p]));
+  return [...box.querySelectorAll("[data-roster-rows] .tn-roster__row")]
+    .map((row) => {
+      const r = (k) => row.querySelector(`[data-r=${k}]`).value.trim();
+      const name = r("name");
+      if (!name) return null;
+      const num = r("number");
+      return { ...(byId.get(row.dataset.pid) || {}), id: row.dataset.pid || randomId("p"), number: num === "" ? null : Number(num), name, gender: ["F", "M"].includes(r("gender")) ? r("gender") : "" };
+    })
+    .filter(Boolean);
 }
 
 function renderTeams() {
@@ -783,7 +826,7 @@ function renderTeams() {
         divisionId: val("divisionId"),
         pool: val("pool").toUpperCase(),
         seed: Number(val("seed")) || null,
-        players: parseRoster(form.querySelector("[data-f=roster]").value, prev?.players || []),
+        players: readRoster(form, prev?.players || []),
       };
       if (prev) {
         team.captainId = form.querySelector("[data-f=captainId]")?.value || "";
@@ -798,7 +841,38 @@ function renderTeams() {
   });
 
   tab.addEventListener("click", (ev) => {
+    // roster: agregar / quitar fila y cambiar entre filas y texto en bloque
+    const roster = ev.target.closest("[data-roster]");
+    if (roster) {
+      const rows = roster.querySelector("[data-roster-rows]");
+      const count = () => (roster.querySelector("[data-roster-count]").textContent = exf(EX.playersCount, { n: rows.querySelectorAll(".tn-roster__row").length }));
+      if (ev.target.closest("[data-roster-add]")) {
+        rows.insertAdjacentHTML("beforeend", rosterRow());
+        rows.lastElementChild.querySelector("[data-r=number]").focus();
+        return count();
+      }
+      if (ev.target.closest("[data-roster-del]")) {
+        ev.target.closest(".tn-roster__row").remove();
+        return count();
+      }
+      const bulkBtn = ev.target.closest("[data-roster-bulk]");
+      if (bulkBtn) {
+        const form = roster.closest("[data-team]");
+        const prev = state.teams.find((t) => t.id === form.dataset.team)?.players || [];
+        const list = roster.querySelector("[data-roster-list]");
+        const bulk = roster.querySelector("[data-roster-bulkbox]");
+        const toBulk = bulk.classList.contains("d-none");
+        const players = readRoster(form, prev);
+        if (toBulk) roster.querySelector("[data-f=roster]").value = rosterToText(players);
+        else rows.innerHTML = players.map(rosterRow).join("");
+        list.classList.toggle("d-none", toBulk);
+        bulk.classList.toggle("d-none", !toBulk);
+        bulkBtn.innerHTML = `<i class="bi ${toBulk ? "bi-list-ul" : "bi-card-text"} me-1"></i>${esc(toBulk ? EX.rosterRows : EX.rosterBulk)}`;
+        return count();
+      }
+    }
     const pay = ev.target.closest("[data-pay-approve],[data-pay-reject]");
+
     if (pay) {
       const ok = !!pay.dataset.payApprove;
       const rid = pay.dataset.payApprove || pay.dataset.payReject;
@@ -973,7 +1047,8 @@ function wizardDefaults() {
   }
   const days = evDays.map((day) => ({ day, on: true, start: "08:00", end: "18:00", ...(saved.days || []).find((x) => x.day === day) }));
   return {
-    kind: saved.kind || (evDays.length > 4 ? "league" : "tournament"),
+    // un hat se juega como torneo (equipos armados para ese fin de semana), nunca como liga por defecto
+    kind: saved.kind || (!isHatEvent(e) && evDays.length > 4 ? "league" : "tournament"),
     format: saved.format || e.format || "round_robin",
     thirdPlace: !!saved.thirdPlace,
     advance: saved.advance || 2,

@@ -102,6 +102,13 @@ export const EX = {
   roster: "Roster",
   rosterHint: "Un jugador por línea: número, nombre, género (M/F). Ej: 7, Ana Mora, F",
   playersCount: "{n} jugadores",
+  rosterBulk: "Editar en bloque",
+  rosterRows: "Ver como lista",
+  rosterAdd: "Agregar jugador",
+  rosterNumber: "Número",
+  rosterName: "Nombre",
+  rosterGender: "Género",
+  rosterLinked: "Tiene cuenta en ClubStudioHQ",
   noTeams: "Todavía no hay equipos.",
 
   // calendario / formatos
