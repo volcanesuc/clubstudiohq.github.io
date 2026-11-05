@@ -646,8 +646,8 @@ function renderInfo() {
         venue: v("eVenue"),
         surface: v("eSurface"),
         country: v("eCountry"),
-        type: formType(),
-        ...(formType() === "hat" ? {
+        type: segValue(document, "eType") === "hat" ? "hat" : "",
+        ...(segValue(document, "eType") === "hat" ? {
  hat: { ...(e.hat || {}), multiDivision: document.getElementById("eHatMulti").checked } } : {}),
         fees: {
           team: Math.max(0, Number(v("eFeeTeam")) || 0),
