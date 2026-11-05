@@ -18,6 +18,7 @@ import {
 import { GAME_MODES, HAT_AGE_DEFAULTS } from "/tournaments/js/divisions-config.js";
 import { PLAYER_FEE_MODES, hatGenders, isHatEvent } from "/tournaments/js/hat.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
+import { renderCreate, segHtml, segValue } from "/tournaments/js/create_event.js";
 import { getFormat, listFormats } from "/tournaments/js/formats.js";
 import { buildSchedule, playDays, scheduleWarnings } from "/tournaments/js/scheduler.js";
 import { APPROVAL, REG, approveRegistration, deadlineEnd, registrationExpired, rosterLocked, createEvent, createGameKey, createGames, deleteEvent, deleteGame, deleteTeam, deleteUnplayedGames, isApproved, isUnplayed, isPlatformAdmin, listGameKeys, listGames, listMyEvents, listRegistrations, rejectRegistration, listTeams, loadDivisionOptions, loadEvent, requestApproval, saveEvent, saveTeam, scorekeeperUrl, updateGame, CURRENCIES, PAYMENT, decideRegistrationPayment, fmtMoney, teamFee, listWaiverStatus, waiverOn, waiverVersion } from "/tournaments/js/services.js";
@@ -73,7 +74,6 @@ async function renderList() {
         <div class="ev-muted">${esc(EX.dirSubtitle)}</div>
       </div>
       <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-outline-primary" id="evNewHat" title="${esc(EX.hatNewHint)}"><i class="bi bi-shuffle me-1"></i>${esc(EX.hatNew)}</button>
         <button class="btn btn-primary" id="evNew"><i class="bi bi-plus-lg me-1"></i>${esc(EX.newEvent)}</button>
       </div>
     </div>
@@ -88,23 +88,12 @@ async function renderList() {
         <i class="bi bi-chevron-right ev-muted"></i>
       </a>`).join("") : `<div class="ev-card ev-muted">${esc(EX.noEvents)}</div>`}`;
 
-  // Nuevo torneo: se crea con las reglas por defecto (7v7, roster mínimo 7) y abre el editor completo,
-  // donde se ajusta todo: fechas, sede, divisiones, tiempos, medio tiempo, caps, roster, proporción…
-  const create = (type) => run(async () => {
-    const id = await createEvent(state.user, {
-      name: type === "hat" ? EX.hatNew : EX.newEvent,
-      ...(type === "hat" ? { type: "hat", hat: { multiDivision: false }, fees: { team: 0, player: 0, playerMode: "free", currency: "CRC", info: "" } } : {}),
-      slug: `evento-${Date.now().toString(36)}`,
-      status: EVENT_STATUS.DRAFT,
-      divisions: [{ id: "open", name: "Open" }],
-      fields: ["Cancha 1"],
-      rules: { ...DEFAULT_RULES },
-      format: "round_robin",
-    });
-    await openEvent(id);
+  // Nuevo torneo: por etapas (create_event.js): tipo (por equipos o hat), fechas, divisiones, cuotas y reglas
+  $("#evNew").onclick = () => run(async () => {
+    state.event = null;
+    state.divOptions = state.divOptions || (await loadDivisionOptions());
+    renderCreate({ state, run, alertBox, divisionRow, readDivisions, bindDivisionRows, openEvent, renderList, root });
   });
-  $("#evNew").onclick = () => create("team");
-  $("#evNewHat").onclick = () => create("hat");
   root.querySelectorAll("[data-open]").forEach((a) => (a.onclick = (ev) => {
     ev.preventDefault();
     run(() => openEvent(a.dataset.open));
@@ -252,10 +241,9 @@ function divisionRow(d = {}) {
     </div>`;
 }
 
-function readDivisions() {
+function readDivisions(hatOn = segValue(document, "eType") === "hat") {
   const opts = state.divOptions;
   const used = new Set();
-  const hatOn = document.getElementById("eType")?.value === "hat";
   const n = (box, k) => {
     const raw = box.querySelector(`[data-hat=${k}]`)?.value ?? "";
     return raw === "" ? null : Math.max(0, Number(raw) || 0);
@@ -273,7 +261,7 @@ function readDivisions() {
     if (hatOn) {
       const box = item.querySelector("[data-div-hat]");
       const genders = ["F", "M"].filter((x) => box.querySelector(`[data-hat-g=${x}]`).checked);
-      const prev = (state.event.divisions || []).find((x) => x.id === id)?.hat || {};
+      const prev = (state.event?.divisions || []).find((x) => x.id === id)?.hat || {};
       div.hat = {
         ...prev, // cantidad de equipos y lo demás que guarda la pestaña Hat
         // si coincide con lo que sale de la rama no se guarda: así sigue a la rama si después cambia
@@ -287,6 +275,38 @@ function readDivisions() {
     }
     return div;
   });
+}
+
+// filas de división: al cambiar la rama o la categoría, F/M y edades del hat siguen a la nueva
+// (si eran las que salían de la anterior). Lo usan Info y reglas y Crear torneo.
+function bindDivisionRows() {
+  // al cambiar la categoría, las edades del hat siguen a la nueva (si eran las de la anterior)
+  document.getElementById("eDivRows").onchange = (ev) => {
+    // al cambiar la rama, F/M siguen a la nueva (si eran los de la anterior)
+    const gsel = ev.target.closest("[data-div=gender]");
+    if (gsel) {
+      const box = gsel.closest("[data-div-item]").querySelector("[data-div-hat]");
+      const checks = [...box.querySelectorAll("[data-hat-g]")];
+      const cur = checks.filter((c) => c.checked).map((c) => c.dataset.hatG).join();
+      if (cur === hatGenders({ gender: gsel.dataset.prev }).join()) {
+        const next = hatGenders({ gender: gsel.value });
+        checks.forEach((c) => (c.checked = next.includes(c.dataset.hatG)));
+      }
+      gsel.dataset.prev = gsel.value;
+      return;
+    }
+    const sel = ev.target.closest("[data-div=level]");
+    if (!sel) return;
+    const box = sel.closest("[data-div-item]").querySelector("[data-div-hat]");
+    const prev = HAT_AGE_DEFAULTS[sel.dataset.prev || ""] || {};
+    const next = HAT_AGE_DEFAULTS[sel.value] || {};
+    ["minAge", "maxAge"].forEach((k) => {
+      const input = box.querySelector(`[data-hat=${k}]`);
+      if (input.value === "" || Number(input.value) === prev[k]) input.value = next[k] ?? "";
+    });
+    sel.dataset.prev = sel.value;
+  };
+  document.querySelectorAll("[data-div=level],[data-div=gender]").forEach((sel) => (sel.dataset.prev = sel.value));
 }
 
 function publishSection(e) {
@@ -360,11 +380,8 @@ function renderInfo() {
             <div class="form-text">${esc(EX.eventImageHint)}</div>
           </div>
           <div class="col-12">
-            <label class="form-label small" for="eType">${esc(EX.eventType)}</label>
-            <select class="form-select" id="eType">
-              <option value="team">${esc(EX.eventTypeTeam)}</option>
-              <option value="hat" ${isHatEvent(e) ? "selected" : ""}>${esc(EX.eventTypeHat)}</option>
-            </select>
+            <div class="form-label small">${esc(EX.eventType)}</div>
+            ${segHtml("eType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "bi-shuffle"]], isHatEvent(e) ? "hat" : "team", { full: true, label: EX.eventType })}
             <div class="form-text">${esc(EX.eventTypeHint)}</div>
           </div>
           ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
@@ -581,9 +598,9 @@ function renderInfo() {
   }));
 
   // tipo de torneo: la clase is-hat muestra u oculta los campos del hat sin repintar
-  document.getElementById("eType").onchange = (ev) => {
-    document.getElementById("evInfoForm").classList.toggle("is-hat", ev.target.value === "hat");
-  };
+  document.querySelectorAll('input[name="eType"]').forEach((r) => (r.onchange = () => {
+    document.getElementById("evInfoForm").classList.toggle("is-hat", segValue(document, "eType") === "hat");
+  }));
 
   // divisiones
   document.getElementById("eDivAdd").onclick = () => {
@@ -599,33 +616,7 @@ function renderInfo() {
     if (inUse && !confirm(EX.divInUse)) return;
     row.remove();
   };
-  // al cambiar la categoría, las edades del hat siguen a la nueva (si eran las de la anterior)
-  document.getElementById("eDivRows").onchange = (ev) => {
-    // al cambiar la rama, F/M siguen a la nueva (si eran los de la anterior)
-    const gsel = ev.target.closest("[data-div=gender]");
-    if (gsel) {
-      const box = gsel.closest("[data-div-item]").querySelector("[data-div-hat]");
-      const checks = [...box.querySelectorAll("[data-hat-g]")];
-      const cur = checks.filter((c) => c.checked).map((c) => c.dataset.hatG).join();
-      if (cur === hatGenders({ gender: gsel.dataset.prev }).join()) {
-        const next = hatGenders({ gender: gsel.value });
-        checks.forEach((c) => (c.checked = next.includes(c.dataset.hatG)));
-      }
-      gsel.dataset.prev = gsel.value;
-      return;
-    }
-    const sel = ev.target.closest("[data-div=level]");
-    if (!sel) return;
-    const box = sel.closest("[data-div-item]").querySelector("[data-div-hat]");
-    const prev = HAT_AGE_DEFAULTS[sel.dataset.prev || ""] || {};
-    const next = HAT_AGE_DEFAULTS[sel.value] || {};
-    ["minAge", "maxAge"].forEach((k) => {
-      const input = box.querySelector(`[data-hat=${k}]`);
-      if (input.value === "" || Number(input.value) === prev[k]) input.value = next[k] ?? "";
-    });
-    sel.dataset.prev = sel.value;
-  };
-  document.querySelectorAll("[data-div=level],[data-div=gender]").forEach((sel) => (sel.dataset.prev = sel.value));
+  bindDivisionRows();
   document.getElementById("rMode").onchange = (ev) => {
     document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
     // si el mínimo era el de la modalidad anterior, sigue a la nueva (7v7 → 7, 5v5 → 5)
@@ -655,8 +646,9 @@ function renderInfo() {
         venue: v("eVenue"),
         surface: v("eSurface"),
         country: v("eCountry"),
-        type: v("eType") === "hat" ? "hat" : "",
-        ...(v("eType") === "hat" ? { hat: { ...(e.hat || {}), multiDivision: document.getElementById("eHatMulti").checked } } : {}),
+        type: segValue(document, "eType") === "hat" ? "hat" : "",
+        ...(segValue(document, "eType") === "hat" ? {
+ hat: { ...(e.hat || {}), multiDivision: document.getElementById("eHatMulti").checked } } : {}),
         fees: {
           team: Math.max(0, Number(v("eFeeTeam")) || 0),
           player: Math.max(0, Number(v("eFeePlayer")) || 0),

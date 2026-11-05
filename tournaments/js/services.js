@@ -188,7 +188,7 @@ export async function createEvent(user, data) {
     ownerEmail: (user.email || "").toLowerCase(),
     ownerName: user.displayName || "",
     organizerUids: [user.uid],
-    organizerEmails: [],
+    organizerEmails: data.organizerEmails || [], // co-organizadores (Crear torneo, etapa 5)
     isPublic: false,
     approval: { status: APPROVAL.NONE },
     createdAt: serverTimestamp(),
