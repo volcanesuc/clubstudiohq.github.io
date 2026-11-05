@@ -1,18 +1,18 @@
 # ClubStudioHQ
 
-Landing de la plataforma (`index.html`) y módulo de **Torneos** (`/torneos/`), abierto a cualquier organizador
+Landing de la plataforma (`index.html`) y módulo de **Torneos** (`/tournaments/`), abierto a cualquier organizador
 (no hace falta tener un club en ClubStudioHQ).
 
 ## Torneos
 
 | Página | Para quién |
 |---|---|
-| `/torneos/` | Público: torneos publicados |
-| `/torneos/organizar.html` | Organizadores (entrar con Google): equipos, calendario, links de planillero |
-| `/torneos/evento.html?e=<link>` | Público: resumen, posiciones, estadísticas (MVP), partidos, equipos, espíritu |
-| `/torneos/partido.html?event=&game=` | Público: marcador y jugadas en vivo |
-| `/torneos/planillar.html?event=&game=&key=` | Planillero (link por partido, sin cuenta) |
-| `/torneos/admin.html` | Admins de la plataforma: aprobar torneos, importar torneos y asignar cuentas a jugadores |
+| `/tournaments/` | Público: torneos publicados |
+| `/tournaments/organize.html` | Organizadores (entrar con Google): equipos, calendario, links de planillero |
+| `/tournaments/event.html?e=<link>` | Público: resumen, posiciones, estadísticas (MVP), partidos, equipos, espíritu |
+| `/tournaments/game.html?event=&game=` | Público: marcador y jugadas en vivo |
+| `/tournaments/score.html?event=&game=&key=` | Planillero (link por partido, sin cuenta) |
+| `/tournaments/admin.html` | Admins de la plataforma: aprobar torneos, importar torneos y asignar cuentas a jugadores |
 
 **Flujo:** cualquiera con Google crea un torneo (borrador privado) → arma equipos y calendario →
 *Solicitar activación* → un admin lo aprueba con plan (prueba gratis o pagado, con vencimiento opcional) →
@@ -50,9 +50,9 @@ estadísticas) no cambia.
 
 ## Importar torneos y jugadores sin cuenta
 
-1. `python tools/import_ultie.py <torneo>` (ej. `ciuf2025` de ultie.org) genera `torneos/data/imports/<torneo>.json`
+1. `python tools/import_ultie.py <torneo>` (ej. `ciuf2025` de ultie.org) genera `tournaments/data/imports/<torneo>.json`
    y lo agrega a `index.json`: equipos, rosters, partidos con cada gol/asistencia/timeout y espíritu.
-2. En `/torneos/admin.html` > **Importar** se elige el archivo, se ve el resumen y se importa: el torneo queda
+2. En `/tournaments/admin.html` > **Importar** se elige el archivo, se ve el resumen y se importa: el torneo queda
    activo, público y terminado (con puestos finales). Volver a importar actualiza sin perder cuentas asignadas.
 3. En **Jugadores**, el admin asigna a cada jugador sin cuenta la cuenta de una persona (tiene que haber entrado
    una vez). Sus estadísticas aparecen en su perfil. Sirve también para jugadores cargados a mano por un organizador.

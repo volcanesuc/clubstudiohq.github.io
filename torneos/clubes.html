@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex" />
+  <title>ClubStudioHQ</title>
+  <script>
+    // Dirección vieja (en español): redirige a la nueva conservando parámetros y #pestaña.
+    (function () {
+      var map = {"rama": "division", "cat": "level", "pais": "country"};
+      var q = new URLSearchParams(location.search);
+      Object.keys(map).forEach(function (k) {
+        if (q.has(k)) { q.set(map[k], q.get(k)); q.delete(k); }
+      });
+      
+      var qs = q.toString();
+      location.replace("/tournaments/clubs.html" + (qs ? "?" + qs : "") + location.hash);
+    })();
+  </script>
+  <meta http-equiv="refresh" content="0; url=/tournaments/clubs.html" />
+</head>
+<body></body>
+</html>

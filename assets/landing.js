@@ -1,9 +1,9 @@
 // /assets/landing.js
 // Portada: datos reales de la plataforma de torneos (torneo destacado en vivo + carrusel de torneos publicados).
 // Si Firebase no responde, la portada sigue funcionando sin esta sección.
-import { listPublicEvents, listTeams, subscribeGames } from "/torneos/js/services.js";
-import { GAME_STATUS, standings } from "/torneos/js/model.js";
-import { esc, eventUrl, fmtDateRange, fmtTimeOnly, fmtWhen, gameUrl, teamBadge, toMillis, withLiveTeams } from "/torneos/js/ui.js";
+import { listPublicEvents, listTeams, subscribeGames } from "/tournaments/js/services.js";
+import { GAME_STATUS, standings } from "/tournaments/js/model.js";
+import { esc, eventUrl, fmtDateRange, fmtTimeOnly, fmtWhen, gameUrl, teamBadge, toMillis, withLiveTeams } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, "0");
@@ -92,7 +92,7 @@ function renderFeatured(e, teams, games) {
         </div>
         <div class="d-flex flex-wrap gap-2 mt-3">
           <a class="btn btn-lp" href="${esc(url)}">${phaseOf(e) === "live" ? "Seguir en vivo" : "Ver torneo"} <i class="bi bi-arrow-right ms-1"></i></a>
-          ${e.registrationOpen ? `<a class="btn btn-lp-ghost" href="/torneos/equipo.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>Inscribir mi equipo</a>` : ""}
+          ${e.registrationOpen ? `<a class="btn btn-lp-ghost" href="/tournaments/team.html?e=${encodeURIComponent(e.id)}"><i class="bi bi-person-plus me-1"></i>Inscribir mi equipo</a>` : ""}
         </div>
       </div>
       <div class="lp-feat__body">

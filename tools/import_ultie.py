@@ -1,12 +1,12 @@
 """Convierte un torneo de ultie.org al formato de importación de ClubStudioHQ.
 
 Uso:
-    python tools/import_ultie.py ciuf2025            # -> torneos/data/imports/ciuf2025.json
+    python tools/import_ultie.py ciuf2025            # -> tournaments/data/imports/ciuf2025.json
     python tools/import_ultie.py ciuf2025 --out x.json
 
 Lee la API pública de ultie (GraphQL) y arma un JSON con el torneo, sus equipos con roster,
 los partidos con cada gol/asistencia/timeout/medio tiempo y las evaluaciones de espíritu.
-Ese JSON se carga desde /torneos/admin.html > Importar (admin de la plataforma): el navegador
+Ese JSON se carga desde /tournaments/admin.html > Importar (admin de la plataforma): el navegador
 calcula marcadores y estadísticas con la misma lógica que el planillero.
 
 Los ids son estables (u + id de ultie), así que volver a importar actualiza en vez de duplicar
@@ -304,10 +304,10 @@ def main():
     ap.add_argument("--out", help="archivo de salida")
     args = ap.parse_args()
     data = convert(args.slug)
-    out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "torneos" / "data" / "imports" / f"{args.slug}.json"
+    out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "tournaments" / "data" / "imports" / f"{args.slug}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    # lista que muestra /torneos/admin.html > Importar
+    # lista que muestra /tournaments/admin.html > Importar
     index = out.parent / "index.json"
     items = json.loads(index.read_text(encoding="utf-8")).get("imports", []) if index.exists() else []
     items = [i for i in items if i.get("file") != out.name]
