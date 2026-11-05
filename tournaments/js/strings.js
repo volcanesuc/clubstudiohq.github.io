@@ -102,6 +102,13 @@ export const EX = {
   roster: "Roster",
   rosterHint: "Un jugador por línea: número, nombre, género (M/F). Ej: 7, Ana Mora, F",
   playersCount: "{n} jugadores",
+  rosterBulk: "Editar en bloque",
+  rosterRows: "Ver como lista",
+  rosterAdd: "Agregar jugador",
+  rosterNumber: "Número",
+  rosterName: "Nombre",
+  rosterGender: "Género",
+  rosterLinked: "Tiene cuenta en ClubStudioHQ",
   noTeams: "Todavía no hay equipos.",
 
   // calendario / formatos
@@ -762,6 +769,8 @@ export const EX = {
   crEndBefore: "La fecha de fin es antes del inicio.",
   crNeedField: "Agregá al menos una cancha.",
   crDiscard: "¿Salir sin crear el torneo? Se pierde lo que llenaste.",
+  infoMore: "Más opciones",
+  infoDeadlinesMoved: "Los plazos de inscripción y roster están en Fechas y plazos, abajo.",
 
 
 

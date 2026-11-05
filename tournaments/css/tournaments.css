@@ -878,3 +878,7 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .cr-divs .tn-div-row [data-div-del] { position: absolute; top: .4rem; right: .5rem; }
 .cr-divs .tn-div-row { grid-template-columns: 1fr 1fr; }
 .cr-rules summary { cursor: pointer; }
+/* roster del equipo: una fila por jugador */
+.tn-roster { display: flex; flex-direction: column; gap: .3rem; max-height: 26rem; overflow-y: auto; }
+.tn-roster__row { display: grid; grid-template-columns: 4.2rem 1fr 4.2rem 1.2rem auto; gap: .35rem; align-items: center; }
+.tn-roster__acc { text-align: center; }
