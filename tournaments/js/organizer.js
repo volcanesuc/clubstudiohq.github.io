@@ -9,6 +9,7 @@ import {
   GAME_STATUS,
   RATIO_RULES,
   SURFACES,
+  SURFACE_ICONS,
   eventRules,
   parseRoster,
   randomId,
@@ -334,18 +335,7 @@ function publishSection(e) {
           <label class="form-check-label fw-semibold" for="eRegOpen">${esc(EX.regOpen)}</label>
         </div>
         <div class="form-text">${esc(isApproved(e) ? EX.regOpenHint : EX.regOpenNeedsActive)}</div>
-        <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
-          <label class="form-label small mb-0" for="eRegDeadline">${esc(EX.regDeadline)}</label>
-          <input class="form-control form-control-sm" style="max-width:11rem" type="date" id="eRegDeadline" value="${esc(e.registrationDeadline || "")}" />
-          ${e.registrationOpen && registrationExpired(e) ? `<span class="ev-chip ev-chip--alert">${esc(EX.regClosedByDate)}</span>` : ""}
-        </div>
-        <div class="form-text">${esc(EX.regDeadlineHint)}</div>
-        <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
-          <label class="form-label small mb-0" for="eRosterDeadline">${esc(EX.rosterDeadline)}</label>
-          <input class="form-control form-control-sm" style="max-width:11rem" type="date" id="eRosterDeadline" value="${esc(e.rosterDeadline || "")}" />
-          ${rosterLocked(e) ? `<span class="ev-chip"><i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)}</span>` : ""}
-        </div>
-        <div class="form-text">${esc(EX.rosterDeadlineHint)}</div>
+        <div class="form-text">${esc(EX.infoDeadlinesMoved)}</div>
         ${e.registrationOpen ? linkBox("reg", registerLink(), exf(EX.waRegister, { event: e.name, url: registerLink() })) : ""}
       </div>
     </div>`, "tn-section--highlight");
@@ -365,7 +355,7 @@ function renderInfo() {
   tab.innerHTML = `
     ${publishSection(e)}
     <form id="evInfoForm" class="mt-3 ${isHatEvent(e) ? "is-hat" : ""}">
-      ${section("info-circle", EX.secInfo, `
+      ${section("info-circle", EX.crStep_basics, `
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label small">${esc(EX.eventImage)}</label>
@@ -380,11 +370,6 @@ function renderInfo() {
             </div>
             <div class="form-text">${esc(EX.eventImageHint)}</div>
           </div>
-          <div class="col-12">
-            <div class="form-label small">${esc(EX.eventType)}</div>
-            ${segHtml("eType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "bi-shuffle"]], isHatEvent(e) ? "hat" : "team", { full: true, label: EX.eventType })}
-            <div class="form-text">${esc(EX.eventTypeHint)}</div>
-          </div>
           ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
           <div class="col-12 col-md-4">
             <label class="form-label small" for="eStatus">${esc(EX.eventStatus)}</label>
@@ -394,31 +379,125 @@ function renderInfo() {
               <option value="finished">${esc(EX.statusFinished)}</option>
             </select>
           </div>
-          <div class="col-12 col-md-6">
-            <label class="form-label small" for="eSlug">${esc(EX.eventSlug)}</label>
-            <div class="input-group"><span class="input-group-text small">/tournaments/event.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
+          <div class="col-12">
+            <label class="form-label small" for="eSlug">${esc(EX.crSlug)}</label>
+            <div class="input-group"><span class="input-group-text small">…/event.html?e=</span><input class="form-control" id="eSlug" value="${esc(e.slug || "")}" /></div>
           </div>
-          ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6 col-md-3" })}
-          ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6 col-md-3" })}
-          ${f("eVenue", EX.eventVenue, e.venue)}
-          <div class="col-12 col-md-6">
-            <label class="form-label small" for="eSurface">${esc(EX.eventSurface)}</label>
-            <select class="form-select" id="eSurface">
-              <option value=""></option>
-              ${SURFACES.map((id) => `<option value="${id}" ${e.surface === id ? "selected" : ""}>${esc(EX[`surface_${id}`])}</option>`).join("")}
-            </select>
+          <div class="col-12">
+            <div class="form-label small">${esc(EX.eventType)}</div>
+            ${segHtml("eType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "bi-shuffle"]], isHatEvent(e) ? "hat" : "team", { full: true, label: EX.eventType })}
+            <div class="form-text">${esc(EX.eventTypeHint)}</div>
+          </div>
+          <div class="col-12">
+            <div class="form-label small">${esc(EX.eventSurface)}</div>
+            ${segHtml("eSurface", SURFACES.map((s) => [s, EX[`crSurface_${s}`] || EX[`surface_${s}`], SURFACE_ICONS[s]]), e.surface || "", { full: true, label: EX.eventSurface })}
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label small" for="eCountry">${esc(EX.teamCountry)}</label>
             <select class="form-select" id="eCountry">${countryOptions(e.country || "", esc(EX.teamCountryPick))}</select>
           </div>
+        </div>`)}
+
+      ${section("diagram-3", EX.crStep_divisions, `
+        <div class="cr-divs">
+          <div id="eDivRows">${divisions().map(divisionRow).join("")}</div>
+          <button type="button" class="btn btn-light w-100 fw-semibold text-primary" id="eDivAdd"><i class="bi bi-plus-lg me-1"></i>${esc(EX.divAdd)}</button>
+          <div class="form-text">${esc(EX.divHint)}</div>
+          <div class="tn-hat-only mt-2">
+            <div class="form-text mt-0">${esc(EX.hatDivHint)}</div>
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" id="eHatMulti" ${e.hat?.multiDivision ? "checked" : ""} />
+              <label class="form-check-label" for="eHatMulti">${esc(EX.hatMultiDivision)}</label>
+            </div>
+            <div class="form-text">${esc(EX.hatMultiDivisionHint)}</div>
+          </div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-12">
+            <div class="form-label small">${esc(EX.ruleMode)}</div>
+            ${segHtml("rMode", [...GAME_MODES.filter((m) => m.players).map((m) => [m.id, m.id]), ["other", EX.crModeOther]], mode.id, { full: true, label: EX.ruleMode })}
+            <input class="form-control mt-2 ${mode.id === "other" ? "" : "d-none"}" style="max-width:9rem" id="rPlayers" type="number" min="1" max="15" value="${esc(r.playersOnField)}" aria-label="${esc(EX.rulePlayers)}" placeholder="${esc(EX.rulePlayers)}" />
+            <div class="form-text">${esc(EX.ruleModeHint)}</div>
+          </div>
+          <div class="col-6 tn-team-only"><label class="form-label small" for="rRosterMin">${esc(EX.ruleRosterMin)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMin" value="${esc(r.rosterMin)}" /></div>
+          <div class="col-6 tn-team-only"><label class="form-label small" for="rRosterMax">${esc(EX.ruleRosterMax)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMax" value="${esc(r.rosterMax || "")}" placeholder="${esc(EX.ruleRosterNoMax)}" /></div>
+          <div class="col-12 mt-0 tn-team-only"><div class="form-text">${esc(EX.ruleRosterHint)}</div></div>
+          <div class="col-12">
+            <label class="form-label small" for="rRatioRule">${esc(EX.ruleRatio)}</label>
+            <select class="form-select" id="rRatioRule">${RATIO_RULES.map((id) => `<option value="${id}" ${r.ratioRule === id ? "selected" : ""}>${esc(EX[`ruleRatio_${id}`])}</option>`).join("")}</select>
+            <select class="form-select mt-2 ${r.ratioRule === "fixed" ? "" : "d-none"}" id="rRatioFixed" aria-label="${esc(EX.ruleRatio_fixed)}">
+              <option value="M" ${r.ratioFixed === "M" ? "selected" : ""}>${esc(EX.ruleRatioFixedM)}</option>
+              <option value="F" ${r.ratioFixed === "F" ? "selected" : ""}>${esc(EX.ruleRatioFixedF)}</option>
+            </select>
+            <div class="form-text">${esc(EX.ruleRatioHint)}</div>
+          </div>
+        </div>`)}
+
+      ${section("calendar-event", EX.crStep_dates, `
+        <div class="row g-3">
+          ${f("eStart", EX.eventStart, e.startDate, { type: "date", col: "col-6" })}
+          ${f("eEnd", EX.eventEnd, e.endDate, { type: "date", col: "col-6" })}
+          <div class="col-12 col-md-6">
+            <label class="form-label small" for="eRegDeadline">${esc(EX.regDeadline)}</label>
+            <input class="form-control" type="date" id="eRegDeadline" value="${esc(e.registrationDeadline || "")}" />
+            ${e.registrationOpen && registrationExpired(e) ? `<span class="ev-chip ev-chip--alert mt-1">${esc(EX.regClosedByDate)}</span>` : ""}
+            <div class="form-text">${esc(isHatEvent(e) ? EX.crRegDeadlineHatHint : EX.regDeadlineHint)}</div>
+          </div>
+          <div class="col-12 col-md-6 tn-team-only">
+            <label class="form-label small" for="eRosterDeadline">${esc(EX.rosterDeadline)}</label>
+            <input class="form-control" type="date" id="eRosterDeadline" value="${esc(e.rosterDeadline || "")}" />
+            ${rosterLocked(e) ? `<span class="ev-chip mt-1"><i class="bi bi-lock-fill me-1"></i>${esc(EX.rosterLockedShort)}</span>` : ""}
+            <div class="form-text">${esc(EX.rosterDeadlineHint)}</div>
+          </div>
+        </div>`)}
+
+      ${section("geo-alt", EX.crStep_venue, `
+        <div class="row g-3">
+          ${f("eVenue", EX.eventVenue, e.venue)}
           ${f("eAddress", EX.eventAddress, e.address)}
           ${f("eMaps", EX.eventMaps, e.mapsUrl, { col: "col-12", hint: EX.eventMapsHint })}
-          <div class="col-12">
+          <div class="col-12 col-md-6">
+            <label class="form-label small" for="eFields">${esc(EX.eventFields)}</label>
+            <textarea class="form-control" id="eFields" rows="3">${esc(fields().join("\n"))}</textarea>
+            <div class="form-text">${esc(EX.crFieldsHint)}</div>
+          </div>
+          <div class="col-12 col-md-6">
             <label class="form-label small" for="eDesc">${esc(EX.eventDescription)}</label>
             <textarea class="form-control" id="eDesc" rows="3">${esc(e.description || "")}</textarea>
           </div>
         </div>`)}
+
+      ${section("cash-coin", EX.crStep_signup, `
+        <div class="row g-3">
+          <div class="col-12 tn-hat-only">
+            <div class="form-label small">${esc(EX.feePlayerMode)}</div>
+            ${segHtml("eFeePlayerMode", PLAYER_FEE_MODES.map((m) => [m, EX[`crPayMode_${m}`]]), e.fees?.playerMode || "free", { full: true, label: EX.feePlayerMode })}
+            <div class="form-text" id="eFeeModeHelp">${esc(EX[`feePlayerMode_${e.fees?.playerMode || "free"}`])}</div>
+          </div>
+          <div class="col-7 col-md-4 tn-team-only">
+            <label class="form-label small" for="eFeeTeam">${esc(EX.feeTeam)}</label>
+            <input class="form-control" id="eFeeTeam" type="number" min="0" step="any" value="${esc(e.fees?.team || "")}" placeholder="0" />
+          </div>
+          <div class="col-7 col-md-4 tn-hat-only" data-fee-amount>
+            <label class="form-label small" for="eFeePlayer">${esc(EX.feePlayer)}</label>
+            <input class="form-control" id="eFeePlayer" type="number" min="0" step="any" value="${esc(e.fees?.player || "")}" placeholder="0" />
+          </div>
+          <div class="col-5 col-md-3">
+            <label class="form-label small" for="eFeeCurrency">${esc(EX.feeCurrency)}</label>
+            <select class="form-select" id="eFeeCurrency">${CURRENCIES.map((c) => `<option ${(e.fees?.currency || "CRC") === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small" for="eFeeInfo">${esc(EX.feeInfo)}</label>
+            <textarea class="form-control" id="eFeeInfo" rows="2" placeholder="${esc(EX.feeInfoPh)}">${esc(e.fees?.info || "")}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label small" for="eOrganizers">${esc(EX.organizers)}</label>
+            <textarea class="form-control" id="eOrganizers" rows="2" placeholder="${esc(EX.crOrganizersPh)}" ${e.ownerUid === state.user.uid ? "" : "disabled"}>${esc((e.organizerEmails || []).join("\n"))}</textarea>
+            <div class="form-text">${esc(EX.organizersHint)}</div>
+          </div>
+        </div>`)}
+
+      <div class="tn-info-more small ev-muted fw-semibold mt-4 mb-2">${esc(EX.infoMore)}</div>
 
       ${section("file-earmark-check", EX.secWaiver, `
         <div class="form-check form-switch mb-2">
@@ -432,70 +511,6 @@ function renderInfo() {
           <div class="col-12 d-flex flex-wrap gap-3">
             ${[["eWaiverEm", "askEmergency", EX.waiverAskEmergency], ["eWaiverBirth", "askBirth", EX.waiverAskBirth], ["eWaiverMed", "askMedical", EX.waiverAskMedical]].map(([id, k, l]) => `
               <div class="form-check"><input class="form-check-input" type="checkbox" id="${id}" ${(e.waiver ? e.waiver[k] : k !== "askMedical") ? "checked" : ""} /><label class="form-check-label small" for="${id}">${esc(l)}</label></div>`).join("")}
-          </div>
-        </div>`)}
-
-      ${section("cash-coin", EX.secFees, `
-        <div class="row g-3">
-          <div class="col-7 col-md-4 tn-team-only">
-            <label class="form-label small" for="eFeeTeam">${esc(EX.feeTeam)}</label>
-            <input class="form-control" id="eFeeTeam" type="number" min="0" step="any" value="${esc(e.fees?.team || "")}" placeholder="0" />
-          </div>
-          <div class="col-5 col-md-3">
-            <label class="form-label small" for="eFeeCurrency">${esc(EX.feeCurrency)}</label>
-            <select class="form-select" id="eFeeCurrency">${CURRENCIES.map((c) => `<option ${(e.fees?.currency || "CRC") === c ? "selected" : ""}>${c}</option>`).join("")}</select>
-          </div>
-          <div class="col-7 col-md-4 tn-hat-only">
-            <label class="form-label small" for="eFeePlayer">${esc(EX.feePlayer)}</label>
-            <input class="form-control" id="eFeePlayer" type="number" min="0" step="any" value="${esc(e.fees?.player || "")}" placeholder="0" />
-          </div>
-          <div class="col-12 col-md-8 tn-hat-only">
-            <label class="form-label small" for="eFeePlayerMode">${esc(EX.feePlayerMode)}</label>
-            <select class="form-select" id="eFeePlayerMode">${PLAYER_FEE_MODES.map((m) => `<option value="${m}" ${(e.fees?.playerMode || "free") === m ? "selected" : ""}>${esc(EX[`feePlayerMode_${m}`])}</option>`).join("")}</select>
-          </div>
-          <div class="col-12">
-            <label class="form-label small" for="eFeeInfo">${esc(EX.feeInfo)}</label>
-            <textarea class="form-control" id="eFeeInfo" rows="2" placeholder="${esc(EX.feeInfoPh)}">${esc(e.fees?.info || "")}</textarea>
-          </div>
-        </div>`)}
-
-      ${section("diagram-3", EX.secDivisions, `
-        <div class="row g-4">
-          <div class="col-12 col-lg-7">
-            <label class="form-label small">${esc(EX.eventDivisions)}</label>
-            <div id="eDivRows">${divisions().map(divisionRow).join("")}</div>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="eDivAdd"><i class="bi bi-plus-lg me-1"></i>${esc(EX.divAdd)}</button>
-            <div class="form-text">${esc(EX.divHint)}</div>
-            <div class="tn-hat-only mt-2">
-              <div class="form-text mt-0">${esc(EX.hatDivHint)}</div>
-              <div class="form-check form-switch mt-2">
-                <input class="form-check-input" type="checkbox" id="eHatMulti" ${e.hat?.multiDivision ? "checked" : ""} />
-                <label class="form-check-label" for="eHatMulti">${esc(EX.hatMultiDivision)}</label>
-              </div>
-              <div class="form-text">${esc(EX.hatMultiDivisionHint)}</div>
-            </div>
-          </div>
-          <div class="col-12 col-lg-5">
-            <label class="form-label small" for="rMode">${esc(EX.ruleMode)}</label>
-            <div class="d-flex gap-2">
-              <select class="form-select" id="rMode">${GAME_MODES.map((m) => `<option value="${esc(m.id)}" ${m.id === mode.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select>
-              <input class="form-control ${mode.id === "other" ? "" : "d-none"}" style="max-width:7rem" id="rPlayers" type="number" min="1" max="15" value="${esc(r.playersOnField)}" aria-label="${esc(EX.rulePlayers)}" placeholder="${esc(EX.rulePlayers)}" />
-            </div>
-            <div class="form-text">${esc(EX.ruleModeHint)}</div>
-            <div class="row g-2 mt-1">
-              <div class="col-6"><label class="form-label small" for="rRosterMin">${esc(EX.ruleRosterMin)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMin" value="${esc(r.rosterMin)}" /></div>
-              <div class="col-6"><label class="form-label small" for="rRosterMax">${esc(EX.ruleRosterMax)}</label><input class="form-control" type="number" min="0" max="99" id="rRosterMax" value="${esc(r.rosterMax || "")}" placeholder="${esc(EX.ruleRosterNoMax)}" /></div>
-            </div>
-            <div class="form-text">${esc(EX.ruleRosterHint)}</div>
-            <label class="form-label small mt-3" for="rRatioRule">${esc(EX.ruleRatio)}</label>
-            <select class="form-select" id="rRatioRule">${RATIO_RULES.map((id) => `<option value="${id}" ${r.ratioRule === id ? "selected" : ""}>${esc(EX[`ruleRatio_${id}`])}</option>`).join("")}</select>
-            <select class="form-select mt-2 ${r.ratioRule === "fixed" ? "" : "d-none"}" id="rRatioFixed" aria-label="${esc(EX.ruleRatio_fixed)}">
-              <option value="M" ${r.ratioFixed === "M" ? "selected" : ""}>${esc(EX.ruleRatioFixedM)}</option>
-              <option value="F" ${r.ratioFixed === "F" ? "selected" : ""}>${esc(EX.ruleRatioFixedF)}</option>
-            </select>
-            <div class="form-text">${esc(EX.ruleRatioHint)}</div>
-            <label class="form-label small mt-3" for="eFields">${esc(EX.eventFields)}</label>
-            <textarea class="form-control" id="eFields" rows="3">${esc(fields().join("\n"))}</textarea>
           </div>
         </div>`)}
 
@@ -535,10 +550,6 @@ function renderInfo() {
           ${f("mT", EX.mvpTurns, r.mvp.turns, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
         </div>`)}
 
-      ${section("people", EX.organizers, `
-        <textarea class="form-control" id="eOrganizers" rows="2" ${e.ownerUid === state.user.uid ? "" : "disabled"}>${esc((e.organizerEmails || []).join("\n"))}</textarea>
-        <div class="form-text">${esc(EX.organizersHint)}</div>`)}
-
       <div class="tn-save-bar d-flex justify-content-between flex-wrap gap-2">
         <button type="button" class="btn btn-outline-danger ${e.ownerUid === state.user.uid ? "" : "invisible"}" id="eDelete"><i class="bi bi-trash me-1"></i>${esc(EX.delete)}</button>
         <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>${esc(EX.save)}</button>
@@ -558,15 +569,6 @@ function renderInfo() {
   });
   document.getElementById("ePublic").onchange = (ev) => quickSave({ isPublic: isApproved(e) && ev.target.checked });
   document.getElementById("eRegOpen").onchange = (ev) => quickSave({ registrationOpen: ev.target.checked });
-  // se guarda la fecha y el momento exacto de cierre (fin de ese día): las reglas de Firestore usan el segundo
-  document.getElementById("eRosterDeadline").onchange = (ev) => {
-    const day = ev.target.value;
-    quickSave({ rosterDeadline: day || "", rosterDeadlineAt: deadlineEnd(day) });
-  };
-  document.getElementById("eRegDeadline").onchange = (ev) => {
-    const day = ev.target.value;
-    quickSave({ registrationDeadline: day || "", registrationDeadlineAt: deadlineEnd(day) });
-  };
   tab.querySelectorAll("[data-copy-link]").forEach((b) => (b.onclick = async () => {
     try {
       await navigator.clipboard.writeText(b.dataset.copyLink);
@@ -618,7 +620,18 @@ function renderInfo() {
     row.remove();
   };
   bindDivisionRows();
-  document.getElementById("rMode").onchange = (ev) => {
+  // modalidad y forma de pago (botones segmentados)
+  const infoForm = document.getElementById("evInfoForm");
+  const feeAmount = () => infoForm.querySelector("[data-fee-amount]").classList.toggle("d-none", segValue(infoForm, "eFeePlayerMode") === "free");
+  feeAmount();
+  infoForm.addEventListener("change", (ev) => {
+    if (ev.target.name === "eFeePlayerMode") {
+      feeAmount();
+      document.getElementById("eFeeModeHelp").textContent = EX[`feePlayerMode_${ev.target.value}`];
+    }
+    if (ev.target.name === "rMode") onMode(ev);
+  });
+  const onMode = (ev) => {
     document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
     // si el mínimo era el de la modalidad anterior, sigue a la nueva (7v7 → 7, 5v5 → 5)
     const minEl = document.getElementById("rRosterMin");
@@ -633,7 +646,7 @@ function renderInfo() {
   document.getElementById("evInfoForm").onsubmit = (ev) => {
     ev.preventDefault();
     run(async () => {
-      const modeId = v("rMode");
+      const modeId = segValue(document, "rMode");
       const modeDef = GAME_MODES.find((m) => m.id === modeId) || GAME_MODES[0];
       const data = {
         name: v("eName"),
@@ -645,7 +658,12 @@ function renderInfo() {
         startDate: v("eStart"),
         endDate: v("eEnd"),
         venue: v("eVenue"),
-        surface: v("eSurface"),
+        surface: segValue(document, "eSurface"),
+        // se guarda el día y el momento exacto de cierre (fin de ese día): las reglas de Firestore usan el segundo
+        registrationDeadline: v("eRegDeadline"),
+        registrationDeadlineAt: deadlineEnd(v("eRegDeadline")),
+        rosterDeadline: v("eRosterDeadline"),
+        rosterDeadlineAt: deadlineEnd(v("eRosterDeadline")),
         country: v("eCountry"),
         type: segValue(document, "eType") === "hat" ? "hat" : "",
         ...(segValue(document, "eType") === "hat" ? {
@@ -653,7 +671,7 @@ function renderInfo() {
         fees: {
           team: Math.max(0, Number(v("eFeeTeam")) || 0),
           player: Math.max(0, Number(v("eFeePlayer")) || 0),
-          playerMode: PLAYER_FEE_MODES.includes(v("eFeePlayerMode")) ? v("eFeePlayerMode") : "free",
+          playerMode: PLAYER_FEE_MODES.includes(segValue(document, "eFeePlayerMode")) ? segValue(document, "eFeePlayerMode") : "free",
           currency: v("eFeeCurrency") || "CRC",
           info: v("eFeeInfo"),
         },

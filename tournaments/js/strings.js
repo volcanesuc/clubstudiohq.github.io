@@ -769,6 +769,8 @@ export const EX = {
   crEndBefore: "La fecha de fin es antes del inicio.",
   crNeedField: "Agregá al menos una cancha.",
   crDiscard: "¿Salir sin crear el torneo? Se pierde lo que llenaste.",
+  infoMore: "Más opciones",
+  infoDeadlinesMoved: "Los plazos de inscripción y roster están en Fechas y plazos, abajo.",
 
 
 
