@@ -20,3 +20,20 @@ export const GAME_MODES = [
   { id: "3v3", label: "3 vs 3", players: 3 },
   { id: "other", label: "Otra", players: null },
 ];
+
+// Torneos hat: edades por categoría para precargar la elegibilidad de cada división.
+// No son cortes oficiales de ninguna federación: el organizador los edita en cada división.
+export const HAT_AGE_DEFAULTS = {
+  Masters: { minAge: 33 },
+  "Grand Masters": { minAge: 40 },
+  "Sub-24": { maxAge: 23 },
+  "Sub-20": { maxAge: 19 },
+  "Sub-17": { maxAge: 16 },
+};
+
+// Camisetas del hat: talla y corte
+export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+export const JERSEY_CUTS = [
+  { id: "hombre", label: "Hombre" },
+  { id: "mujer", label: "Mujer" },
+];

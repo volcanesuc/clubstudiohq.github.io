@@ -806,3 +806,15 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .st-final__row.is-top-1 .st-final__pos { background: linear-gradient(135deg, #fde047, #f59e0b); color: #4a2a00; }
 .st-final__row.is-top-2 .st-final__pos { background: linear-gradient(135deg, #e5e7eb, #9ca3af); color: #1f2937; }
 .st-final__row.is-top-3 .st-final__pos { background: linear-gradient(135deg, #fdba74, #c2410c); color: #fff; }
+
+/* ===== Hat ===== */
+/* campos que solo aplican a torneos hat: el formulario de info lleva .is-hat */
+.tn-hat-only { display: none; }
+.is-hat .tn-hat-only { display: block; }
+.is-hat .tn-team-only { display: none; }
+.tn-div-item { margin-bottom: .6rem; }
+.tn-div-item .tn-div-row { margin-bottom: .35rem; }
+.is-hat .tn-div-hat { display: grid; }
+.tn-div-hat { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .4rem .5rem; align-items: end; padding: .55rem .65rem; border: 1px dashed var(--ev-border); border-radius: 12px; background: #faf9fe; }
+.tn-div-hat__genders { grid-column: 1 / -1; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.tn-div-hat label.small:not(.form-check) { display: flex; flex-direction: column; gap: .15rem; color: var(--ev-muted); font-weight: 600; }

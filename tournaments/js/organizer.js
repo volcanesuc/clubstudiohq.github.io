@@ -15,7 +15,8 @@ import {
   slotMinutes,
   slugify,
 } from "/tournaments/js/model.js";
-import { GAME_MODES } from "/tournaments/js/divisions-config.js";
+import { GAME_MODES, HAT_AGE_DEFAULTS } from "/tournaments/js/divisions-config.js";
+import { PLAYER_FEE_MODES, hatGenders, isHatEvent } from "/tournaments/js/hat.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
 import { getFormat, listFormats } from "/tournaments/js/formats.js";
 import { buildSchedule, playDays, scheduleWarnings } from "/tournaments/js/scheduler.js";
@@ -71,7 +72,10 @@ async function renderList() {
         <h1 class="h3 fw-bold mb-1">${esc(EX.myEvents)}</h1>
         <div class="ev-muted">${esc(EX.dirSubtitle)}</div>
       </div>
-      <button class="btn btn-primary" id="evNew"><i class="bi bi-plus-lg me-1"></i>${esc(EX.newEvent)}</button>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-outline-primary" id="evNewHat" title="${esc(EX.hatNewHint)}"><i class="bi bi-shuffle me-1"></i>${esc(EX.hatNew)}</button>
+        <button class="btn btn-primary" id="evNew"><i class="bi bi-plus-lg me-1"></i>${esc(EX.newEvent)}</button>
+      </div>
     </div>
     ${events.length ? events.map((e) => `
       <a class="ev-card ev-event-item" href="?id=${esc(e.id)}" data-open="${esc(e.id)}">
@@ -86,9 +90,10 @@ async function renderList() {
 
   // Nuevo torneo: se crea con las reglas por defecto (7v7, roster mínimo 7) y abre el editor completo,
   // donde se ajusta todo: fechas, sede, divisiones, tiempos, medio tiempo, caps, roster, proporción…
-  $("#evNew").onclick = () => run(async () => {
+  const create = (type) => run(async () => {
     const id = await createEvent(state.user, {
-      name: EX.newEvent,
+      name: type === "hat" ? EX.hatNew : EX.newEvent,
+      ...(type === "hat" ? { type: "hat", hat: { multiDivision: false }, fees: { team: 0, player: 0, playerMode: "free", currency: "CRC", info: "" } } : {}),
       slug: `evento-${Date.now().toString(36)}`,
       status: EVENT_STATUS.DRAFT,
       divisions: [{ id: "open", name: "Open" }],
@@ -98,6 +103,8 @@ async function renderList() {
     });
     await openEvent(id);
   });
+  $("#evNew").onclick = () => create("team");
+  $("#evNewHat").onclick = () => create("hat");
   root.querySelectorAll("[data-open]").forEach((a) => (a.onclick = (ev) => {
     ev.preventDefault();
     run(() => openEvent(a.dataset.open));
@@ -141,15 +148,22 @@ async function reloadData() {
 }
 
 const pendingRegs = () => state.regs.filter((r) => r.status === REG.PENDING);
-const registerLink = () => `${location.origin}/tournaments/team.html?e=${encodeURIComponent(state.event.id)}`;
+// link para inscribirse: en un hat cada jugador se anota solo
+const registerLink = () => (isHatEvent(state.event)
+  ? `${location.origin}/tournaments/hat.html?e=${encodeURIComponent(state.event.id)}`
+  : `${location.origin}/tournaments/team.html?e=${encodeURIComponent(state.event.id)}`);
 
 const divisions = () => (state.event.divisions?.length ? state.event.divisions : [{ id: "open", name: "Open" }]);
 const fields = () => state.event.fields || [];
 
 function renderEvent() {
   const e = state.event;
+  // hat: pestaña con el pool de jugadores, el armado de equipos y publicar (organizer_hat.js)
+  const hat = isHatEvent(e);
+  if (!hat && state.tab === "hat") state.tab = "info";
   const tabs = [
     ["info", EX.tabInfo],
+    ...(hat ? [["hat", EX.hatTab]] : []),
     ["teams", `${EX.tabTeams} (${state.teams.length})${pendingRegs().length ? ` · ${pendingRegs().length} 🔔` : ""}`],
     ["schedule", EX.tabSchedule],
     ["games", `${EX.tabGames} (${state.games.length})`],
@@ -183,10 +197,19 @@ function renderEvent() {
     renderEvent();
   }));
 
-  ({ info: renderInfo, teams: renderTeams, schedule: renderSchedule, games: renderGames })[state.tab]();
+  ({ info: renderInfo, hat: renderHatTab, teams: renderTeams, schedule: renderSchedule, games: renderGames })[state.tab]();
+}
+
+/* ---------- Hat ---------- */
+// Pool de jugadores, armado de equipos y publicar: en su propio módulo (se carga solo en torneos hat)
+async function renderHatTab() {
+  const tab = document.getElementById("evTab");
+  const { renderHat } = await import("/tournaments/js/organizer_hat.js");
+  await renderHat(tab, { state, run, alertBox, divisions, fields, reloadData, renderEvent });
 }
 
 /* ---------- Info y reglas ---------- */
+
 const section = (icon, title, body, extra = "") => `
   <section class="tn-section ${extra}">
     <h2 class="tn-section__title"><i class="bi bi-${icon}"></i>${esc(title)}</h2>
@@ -199,7 +222,13 @@ function divisionRow(d = {}) {
   const name = String(d.name || "").toLowerCase();
   const level = d.level || opts.levels.find((l) => name.startsWith(l.toLowerCase())) || opts.levels[0];
   const gender = d.gender || opts.genders.find((g) => name.includes(g.name.toLowerCase()))?.id || opts.genders[0].id;
+  // hat: quién puede inscribirse en la división (rama, edades), cupo y cuota propia
+  const h = d.hat || {};
+  const ageDef = HAT_AGE_DEFAULTS[level] || {};
+  const genders = hatGenders({ ...d, gender });
+  const num = (k, v, ph, attrs = 'min="0"') => `<input class="form-control form-control-sm" type="number" ${attrs} data-hat="${k}" value="${esc(v ?? "")}" placeholder="${esc(ph)}" />`;
   return `
+    <div class="tn-div-item" data-div-item>
     <div class="tn-div-row" data-div-row data-id="${esc(d.id || "")}">
       <select class="form-select" data-div="level" aria-label="${esc(EX.divLevel)}">
         ${opts.levels.map((l) => `<option ${l === level ? "selected" : ""}>${esc(l)}</option>`).join("")}
@@ -208,13 +237,31 @@ function divisionRow(d = {}) {
         ${opts.genders.map((g) => `<option value="${esc(g.id)}" ${g.id === gender ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
       </select>
       <button type="button" class="btn btn-light text-danger" data-div-del title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="tn-div-hat tn-hat-only" data-div-hat>
+      <div class="tn-div-hat__genders">
+        <span class="small ev-muted">${esc(EX.hatDivGenders)}</span>
+        ${["F", "M"].map((g) => `<label class="form-check form-check-inline small mb-0"><input class="form-check-input" type="checkbox" data-hat-g="${g}" ${genders.includes(g) ? "checked" : ""} /> ${g}</label>`).join("")}
+      </div>
+      <label class="small">${esc(EX.hatDivMinAge)}${num("minAge", h.minAge ?? ageDef.minAge, "—", 'min="0" max="99"')}</label>
+      <label class="small">${esc(EX.hatDivMaxAge)}${num("maxAge", h.maxAge ?? ageDef.maxAge, "—", 'min="0" max="99"')}</label>
+      <label class="small">${esc(EX.hatDivAgeRef)}<input class="form-control form-control-sm" type="date" data-hat="ageRef" value="${esc(h.ageRef || "")}" title="${esc(EX.hatDivAgeRefHint)}" /></label>
+      <label class="small">${esc(EX.hatDivCapacity)}${num("capacity", h.capacity || "", EX.hatNoLimit)}</label>
+      <label class="small">${esc(EX.hatDivFee)}${num("fee", h.fee ?? "", EX.hatDivFeeSame, 'min="0" step="any"')}</label>
+    </div>
     </div>`;
 }
 
 function readDivisions() {
   const opts = state.divOptions;
   const used = new Set();
-  return [...document.querySelectorAll("[data-div-row]")].map((row) => {
+  const hatOn = document.getElementById("eType")?.value === "hat";
+  const n = (box, k) => {
+    const raw = box.querySelector(`[data-hat=${k}]`)?.value ?? "";
+    return raw === "" ? null : Math.max(0, Number(raw) || 0);
+  };
+  return [...document.querySelectorAll("[data-div-item]")].map((item) => {
+    const row = item.querySelector("[data-div-row]");
     const level = row.querySelector("[data-div=level]").value;
     const g = opts.genders.find((x) => x.id === row.querySelector("[data-div=gender]").value) || opts.genders[0];
     const name = `${level} ${g.name}`;
@@ -222,7 +269,23 @@ function readDivisions() {
     let id = row.dataset.id || slugify(name) || "open";
     while (used.has(id)) id += "-2";
     used.add(id);
-    return { id, name, level, gender: g.id, mixed: !!g.mixed };
+    const div = { id, name, level, gender: g.id, mixed: !!g.mixed };
+    if (hatOn) {
+      const box = item.querySelector("[data-div-hat]");
+      const genders = ["F", "M"].filter((x) => box.querySelector(`[data-hat-g=${x}]`).checked);
+      const prev = (state.event.divisions || []).find((x) => x.id === id)?.hat || {};
+      div.hat = {
+        ...prev, // cantidad de equipos y lo demás que guarda la pestaña Hat
+        // si coincide con lo que sale de la rama no se guarda: así sigue a la rama si después cambia
+        genders: genders.join() === hatGenders({ gender: g.id }).join() ? null : genders,
+        minAge: n(box, "minAge"),
+        maxAge: n(box, "maxAge"),
+        ageRef: box.querySelector("[data-hat=ageRef]").value || "",
+        capacity: n(box, "capacity"),
+        fee: n(box, "fee"),
+      };
+    }
+    return div;
   });
 }
 
@@ -280,7 +343,7 @@ function renderInfo() {
   const tab = document.getElementById("evTab");
   tab.innerHTML = `
     ${publishSection(e)}
-    <form id="evInfoForm" class="mt-3">
+    <form id="evInfoForm" class="mt-3 ${isHatEvent(e) ? "is-hat" : ""}">
       ${section("info-circle", EX.secInfo, `
         <div class="row g-3">
           <div class="col-12">
@@ -295,6 +358,14 @@ function renderInfo() {
               </div>
             </div>
             <div class="form-text">${esc(EX.eventImageHint)}</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small" for="eType">${esc(EX.eventType)}</label>
+            <select class="form-select" id="eType">
+              <option value="team">${esc(EX.eventTypeTeam)}</option>
+              <option value="hat" ${isHatEvent(e) ? "selected" : ""}>${esc(EX.eventTypeHat)}</option>
+            </select>
+            <div class="form-text">${esc(EX.eventTypeHint)}</div>
           </div>
           ${f("eName", EX.eventName, e.name, { col: "col-12 col-md-8" })}
           <div class="col-12 col-md-4">
@@ -348,7 +419,7 @@ function renderInfo() {
 
       ${section("cash-coin", EX.secFees, `
         <div class="row g-3">
-          <div class="col-7 col-md-4">
+          <div class="col-7 col-md-4 tn-team-only">
             <label class="form-label small" for="eFeeTeam">${esc(EX.feeTeam)}</label>
             <input class="form-control" id="eFeeTeam" type="number" min="0" step="any" value="${esc(e.fees?.team || "")}" placeholder="0" />
           </div>
@@ -356,7 +427,14 @@ function renderInfo() {
             <label class="form-label small" for="eFeeCurrency">${esc(EX.feeCurrency)}</label>
             <select class="form-select" id="eFeeCurrency">${CURRENCIES.map((c) => `<option ${(e.fees?.currency || "CRC") === c ? "selected" : ""}>${c}</option>`).join("")}</select>
           </div>
-          <div class="col-12 col-md-5 d-flex align-items-end"><div class="form-text m-0">${esc(EX.feePlayerLater)}</div></div>
+          <div class="col-7 col-md-4 tn-hat-only">
+            <label class="form-label small" for="eFeePlayer">${esc(EX.feePlayer)}</label>
+            <input class="form-control" id="eFeePlayer" type="number" min="0" step="any" value="${esc(e.fees?.player || "")}" placeholder="0" />
+          </div>
+          <div class="col-12 col-md-8 tn-hat-only">
+            <label class="form-label small" for="eFeePlayerMode">${esc(EX.feePlayerMode)}</label>
+            <select class="form-select" id="eFeePlayerMode">${PLAYER_FEE_MODES.map((m) => `<option value="${m}" ${(e.fees?.playerMode || "free") === m ? "selected" : ""}>${esc(EX[`feePlayerMode_${m}`])}</option>`).join("")}</select>
+          </div>
           <div class="col-12">
             <label class="form-label small" for="eFeeInfo">${esc(EX.feeInfo)}</label>
             <textarea class="form-control" id="eFeeInfo" rows="2" placeholder="${esc(EX.feeInfoPh)}">${esc(e.fees?.info || "")}</textarea>
@@ -370,6 +448,14 @@ function renderInfo() {
             <div id="eDivRows">${divisions().map(divisionRow).join("")}</div>
             <button type="button" class="btn btn-sm btn-outline-primary" id="eDivAdd"><i class="bi bi-plus-lg me-1"></i>${esc(EX.divAdd)}</button>
             <div class="form-text">${esc(EX.divHint)}</div>
+            <div class="tn-hat-only mt-2">
+              <div class="form-text mt-0">${esc(EX.hatDivHint)}</div>
+              <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="eHatMulti" ${e.hat?.multiDivision ? "checked" : ""} />
+                <label class="form-check-label" for="eHatMulti">${esc(EX.hatMultiDivision)}</label>
+              </div>
+              <div class="form-text">${esc(EX.hatMultiDivisionHint)}</div>
+            </div>
           </div>
           <div class="col-12 col-lg-5">
             <label class="form-label small" for="rMode">${esc(EX.ruleMode)}</label>
@@ -494,6 +580,11 @@ function renderInfo() {
     renderInfo();
   }));
 
+  // tipo de torneo: la clase is-hat muestra u oculta los campos del hat sin repintar
+  document.getElementById("eType").onchange = (ev) => {
+    document.getElementById("evInfoForm").classList.toggle("is-hat", ev.target.value === "hat");
+  };
+
   // divisiones
   document.getElementById("eDivAdd").onclick = () => {
     document.getElementById("eDivRows").insertAdjacentHTML("beforeend", divisionRow({}));
@@ -501,13 +592,40 @@ function renderInfo() {
   document.getElementById("eDivRows").onclick = (ev) => {
     const del = ev.target.closest("[data-div-del]");
     if (!del) return;
-    if (document.querySelectorAll("[data-div-row]").length <= 1) return alertBox(EX.divNeedOne, "warning");
-    const row = del.closest("[data-div-row]");
-    const id = row.dataset.id;
+    if (document.querySelectorAll("[data-div-item]").length <= 1) return alertBox(EX.divNeedOne, "warning");
+    const row = del.closest("[data-div-item]");
+    const id = row.querySelector("[data-div-row]").dataset.id;
     const inUse = id && (state.teams.some((t) => t.divisionId === id) || state.games.some((g) => g.divisionId === id));
     if (inUse && !confirm(EX.divInUse)) return;
     row.remove();
   };
+  // al cambiar la categoría, las edades del hat siguen a la nueva (si eran las de la anterior)
+  document.getElementById("eDivRows").onchange = (ev) => {
+    // al cambiar la rama, F/M siguen a la nueva (si eran los de la anterior)
+    const gsel = ev.target.closest("[data-div=gender]");
+    if (gsel) {
+      const box = gsel.closest("[data-div-item]").querySelector("[data-div-hat]");
+      const checks = [...box.querySelectorAll("[data-hat-g]")];
+      const cur = checks.filter((c) => c.checked).map((c) => c.dataset.hatG).join();
+      if (cur === hatGenders({ gender: gsel.dataset.prev }).join()) {
+        const next = hatGenders({ gender: gsel.value });
+        checks.forEach((c) => (c.checked = next.includes(c.dataset.hatG)));
+      }
+      gsel.dataset.prev = gsel.value;
+      return;
+    }
+    const sel = ev.target.closest("[data-div=level]");
+    if (!sel) return;
+    const box = sel.closest("[data-div-item]").querySelector("[data-div-hat]");
+    const prev = HAT_AGE_DEFAULTS[sel.dataset.prev || ""] || {};
+    const next = HAT_AGE_DEFAULTS[sel.value] || {};
+    ["minAge", "maxAge"].forEach((k) => {
+      const input = box.querySelector(`[data-hat=${k}]`);
+      if (input.value === "" || Number(input.value) === prev[k]) input.value = next[k] ?? "";
+    });
+    sel.dataset.prev = sel.value;
+  };
+  document.querySelectorAll("[data-div=level],[data-div=gender]").forEach((sel) => (sel.dataset.prev = sel.value));
   document.getElementById("rMode").onchange = (ev) => {
     document.getElementById("rPlayers").classList.toggle("d-none", ev.target.value !== "other");
     // si el mínimo era el de la modalidad anterior, sigue a la nueva (7v7 → 7, 5v5 → 5)
@@ -537,7 +655,15 @@ function renderInfo() {
         venue: v("eVenue"),
         surface: v("eSurface"),
         country: v("eCountry"),
-        fees: { team: Math.max(0, Number(v("eFeeTeam")) || 0), currency: v("eFeeCurrency") || "CRC", info: v("eFeeInfo") },
+        type: v("eType") === "hat" ? "hat" : "",
+        ...(v("eType") === "hat" ? { hat: { ...(e.hat || {}), multiDivision: document.getElementById("eHatMulti").checked } } : {}),
+        fees: {
+          team: Math.max(0, Number(v("eFeeTeam")) || 0),
+          player: Math.max(0, Number(v("eFeePlayer")) || 0),
+          playerMode: PLAYER_FEE_MODES.includes(v("eFeePlayerMode")) ? v("eFeePlayerMode") : "free",
+          currency: v("eFeeCurrency") || "CRC",
+          info: v("eFeeInfo"),
+        },
         waiver: {
           enabled: document.getElementById("eWaiverOn").checked,
           title: v("eWaiverTitle") || EX.waiverDefaultTitle,
@@ -643,10 +769,10 @@ function renderTeams() {
   const tab = document.getElementById("evTab");
   tab.innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="small ev-muted">${esc(EX.teamPoolHint)} ${esc(EX.teamsOnlyByRegistration)}</div>
+      <div class="small ev-muted">${esc(EX.teamPoolHint)} ${esc(isHatEvent(state.event) ? EX.hatTeamsFromTab : EX.teamsOnlyByRegistration)}</div>
     </div>
-    ${paymentsSection()}
-    ${requestsSection()}
+    ${isHatEvent(state.event) ? "" : paymentsSection()}
+    ${isHatEvent(state.event) ? "" : requestsSection()}
     <div id="evTeams">${state.teams.length ? state.teams.map(teamCard).join("") : `<div class="ev-card ev-muted">${esc(EX.noTeams)}</div>`}</div>`;
 
 

@@ -90,6 +90,11 @@ service cloud.firestore {
       return inv != null && inv.data.squadId == squadId;
     }
 
+    // torneo hat: cada jugador se inscribe solo y el organizador arma los equipos
+    function isHat(eventId) {
+      return eventData(eventId).get("type", "") == "hat";
+    }
+
     function isScorekeeper(gameId) {
       return signedIn()
         && exists(/databases/$(database)/documents/game_claims/$(gameId + "_" + request.auth.uid));
@@ -170,6 +175,70 @@ service cloud.firestore {
         allow read: if canRead(eventId);
         allow create, update: if isGoogle() && request.auth.uid == uid && request.resource.data.uid == uid;
         allow delete: if isPlatformAdmin() || isOrganizer(eventId);
+      }
+
+      /* ----- Hat ----- */
+      // pool de jugadores (uno por división): lo ve quien ve el torneo, sin puntajes ni datos privados.
+      // id = {uid}__{divisionId}. El jugador lo crea y edita mientras las inscripciones están abiertas
+      // y todavía no tiene equipo; el estado (en espera / lista de espera / asignado) es del organizador.
+      match /hat_players/{entryId} {
+        allow read: if canRead(eventId);
+        allow write: if isPlatformAdmin() || isOrganizer(eventId);
+        allow create: if isGoogle()
+          && request.resource.data.uid == request.auth.uid
+          && entryId == request.auth.uid + "__" + request.resource.data.divisionId
+          && isHat(eventId)
+          && isActive(eventId)
+          && registrationOpenNow(eventId)
+          && request.resource.data.status in ["waiting", "waitlist"]
+          && request.resource.data.get("teamId", "") == ""
+          && request.resource.data.get("paymentStatus", "none") in ["none", "submitted"];
+        allow update: if isGoogle()
+          && resource.data.uid == request.auth.uid
+          && resource.data.status != "assigned"
+          && registrationOpenNow(eventId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "name", "number", "gender", "photoURL", "jersey", "position", "teammateUid", "paymentStatus", "updatedAt"
+          ])
+          // el comprobante se manda (submitted); aprobarlo o rechazarlo es del organizador
+          && (request.resource.data.get("paymentStatus", "none") == resource.data.get("paymentStatus", "none")
+              || (request.resource.data.paymentStatus == "submitted" && resource.data.get("paymentStatus", "none") != "approved"));
+        allow delete: if isGoogle()
+          && resource.data.uid == request.auth.uid
+          && resource.data.status != "assigned";
+      }
+
+      // autoevaluación y puntajes del hat: PRIVADO. Solo el organizador los lee; el jugador manda
+      // sus respuestas (y su fecha de nacimiento) pero nunca las vuelve a leer ni toca el puntaje del organizador.
+      match /hat_ratings/{uid} {
+        allow read, write: if isPlatformAdmin() || isOrganizer(eventId);
+        allow create: if isGoogle()
+          && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && isHat(eventId)
+          && registrationOpenNow(eventId)
+          && request.resource.data.keys().hasOnly(["uid", "answers", "selfScore", "birthDate", "updatedAt"]);
+        allow update: if isGoogle()
+          && request.auth.uid == uid
+          && registrationOpenNow(eventId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["answers", "selfScore", "birthDate", "updatedAt"]);
+      }
+
+      // comprobante de pago de la cuota por jugador: lo ven el jugador y el organizador
+      match /hat_payments/{entryId} {
+        allow read: if isPlatformAdmin() || isOrganizer(eventId)
+          || (signedIn() && resource.data.uid == request.auth.uid);
+        allow write: if isPlatformAdmin() || isOrganizer(eventId);
+        allow create, update: if isGoogle()
+          && request.resource.data.uid == request.auth.uid
+          && entryId == request.auth.uid + "__" + request.resource.data.divisionId
+          && request.resource.data.status == "submitted"
+          && (resource == null || resource.data.get("status", "none") != "approved");
+      }
+
+      // borradores de equipos (armado y cambios antes de publicar): solo el organizador
+      match /hat_drafts/{divisionId} {
+        allow read, write: if isPlatformAdmin() || isOrganizer(eventId);
       }
 
       match /registrations/{regId} {
@@ -328,7 +397,13 @@ service cloud.firestore {
     match /profiles/{uid} {
       allow read: if true;
       allow write: if isGoogle() && request.auth.uid == uid;
+
+      // datos privados del jugador (fecha de nacimiento): solo él
+      match /private/{docId} {
+        allow read, write: if isGoogle() && request.auth.uid == uid;
+      }
     }
+
 
     // cuenta asignada a un jugador sin cuenta de un torneo (ej. importado); id = {eventId}__{playerId}.
     // Público para que el perfil muestre el torneo; solo un admin de la plataforma lo asigna o lo quita.
