@@ -92,7 +92,7 @@ export function eventRules(event = {}) {
 
 // Tipo de campo del torneo
 export const SURFACES = ["grass", "turf", "indoor", "beach", "other"];
-// tn-ic-*: íconos propios (tournaments.css) para cancha de césped vista desde arriba y gimnasio
+// tn-ic-*: íconos propios (tournaments.css): cancha de césped vista desde arriba y gimnasio (edificio)
 export const SURFACE_ICONS = { grass: "tn-ic tn-ic-field", turf: "bi-grid-3x3", indoor: "tn-ic tn-ic-gym", beach: "bi-sun", other: "bi-geo" };
 
 // ¿el roster cumple el mínimo y máximo del torneo? "" si sí, o "min" / "max".
