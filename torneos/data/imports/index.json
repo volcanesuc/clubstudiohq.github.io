@@ -1,0 +1,10 @@
+{
+ "imports": [
+  {
+   "file": "ciuf2025.json",
+   "name": "Copa de Invierno 2025",
+   "source": "https://ultie.org/ciuf2025",
+   "startDate": "2025-10-25"
+  }
+ ]
+}

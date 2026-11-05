@@ -19,4 +19,5 @@ export const COL = {
   squads: "squads", // squads/{id}: equipos permanentes (dueños, roster en members/, invitaciones, torneos)
   squadInvites: "squad_invites", // squad_invites/{token}: link para unirse a un equipo (jugador o co-admin)
   profiles: "profiles", // profiles/{uid}: perfil del jugador (foto, número, equipos)
+  playerClaims: "player_claims", // player_claims/{eventId}__{playerId}: cuenta asignada por un admin a un jugador importado
 };

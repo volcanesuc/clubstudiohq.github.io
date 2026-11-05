@@ -264,7 +264,8 @@ service cloud.firestore {
       // torneos donde se inscribió (público, para historial)
       match /tournaments/{eventId} {
         allow read: if true;
-        allow write: if isSquadAdmin(squadId);
+        // admin de la plataforma: vincula un equipo de un torneo importado con este equipo
+        allow write: if isSquadAdmin(squadId) || isPlatformAdmin();
       }
     }
 
@@ -281,6 +282,14 @@ service cloud.firestore {
     match /profiles/{uid} {
       allow read: if true;
       allow write: if isGoogle() && request.auth.uid == uid;
+    }
+
+    // cuenta asignada a un jugador sin cuenta de un torneo (ej. importado); id = {eventId}__{playerId}.
+    // Público para que el perfil muestre el torneo; solo un admin de la plataforma lo asigna o lo quita.
+    match /player_claims/{claimId} {
+      allow read: if true;
+      allow write: if isPlatformAdmin()
+        && (request.resource == null || claimId == request.resource.data.eventId + "__" + request.resource.data.playerId);
     }
 
     /* =========================
