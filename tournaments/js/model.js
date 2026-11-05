@@ -184,7 +184,8 @@ export function parseRoster(text, existing = []) {
         gender = (parts[1] || "").toUpperCase().slice(0, 1);
       }
       const prev = byKey.get(`${number ?? ""}|${name.toLowerCase()}`);
-      return { id: prev?.id || randomId("p"), number, name, gender: ["M", "F"].includes(gender) ? gender : "" };
+      // conserva lo que no está en el texto (cuenta asignada, foto, origen del import)
+      return { ...(prev || {}), id: prev?.id || randomId("p"), number, name, gender: ["M", "F"].includes(gender) ? gender : "" };
     });
 }
 

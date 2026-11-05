@@ -22,7 +22,7 @@ import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRo
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "", gamesView: "list" };
+const state = { event: null, rules: eventRules({}), teams: [], games: [], tab: location.hash.replace("#", "") || "overview", division: "", user: null, myRegs: [], gameFilter: "all", gameDay: "", gamesView: "list", statsView: "leaders", mvpPage: 0, statsSort: "mvp", statsQ: "", statsTeam: "" };
 
 // fila de partido con nombre, color y logo actuales del equipo
 const row = (g) => gameRowHtml(g, { href: gameUrl(state.event.id, g.id), teams: state.teams });
@@ -246,13 +246,12 @@ function standingsTab() {
   };
   // puesto final después de la llave (ej. torneos importados): se muestra arriba de la tabla de grupos
   const placed = teams.filter((t) => Number(t.finalPlace) > 0).sort((a, b) => a.finalPlace - b.finalPlace);
-  const medal = (n) => ({ 1: "🥇", 2: "🥈", 3: "🥉" })[n] || n;
   const finalCard = placed.length ? `
     <section class="st-card">
       <header class="st-card__head"><div><div class="st-card__title">${esc(EX.finalStandings)}</div><div class="st-card__sub">${esc(divName)}</div></div></header>
       <div class="st-final">${placed.map((t) => `
-        <div class="st-final__row ${t.finalPlace <= 3 ? "is-top" : ""}">
-          <span class="st-final__pos">${medal(t.finalPlace)}</span>
+        <div class="st-final__row ${t.finalPlace <= 3 ? `is-top is-top-${t.finalPlace}` : ""}">
+          <span class="st-final__pos">${t.finalPlace}</span>
           ${teamBadge(t, 28)}
           <div class="min-w-0"><div class="st-team__name text-truncate">${esc(t.name)}</div>${t.city ? `<div class="st-team__sub">${esc(t.city)}</div>` : ""}</div>
         </div>`).join("")}
@@ -291,36 +290,65 @@ function statsTab() {
   const sub = (p) => `${teamBadge(teamById.get(p.teamId) || { name: p.teamName }, 16)}<span class="text-truncate">${esc(p.teamName || "")}</span>`;
   const link = (p, inner) => (p.uid ? `<a class="text-reset text-decoration-none" href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}">${inner}</a>` : inner);
 
-  // MVP del torneo: tarjeta grande con foto y sus números
-  const mvp = leaders(totals, "mvp", 1)[0];
-  const hero = mvp && mvp.mvp > 0 ? `
-    <section class="lb-hero">
-      ${link(mvp, `<span class="lb-hero__photo">${avatarHtml(person(mvp), 88)}<span class="lb-hero__crown"><i class="bi bi-trophy-fill"></i></span></span>`)}
-      <div class="min-w-0 flex-grow-1">
-        <div class="lb-hero__kicker">${esc(EX.leaderMvp)}</div>
-        <div class="lb-hero__name">${link(mvp, esc(playerLabel(mvp)))}</div>
-        <div class="lb-hero__team">${sub(mvp)}</div>
-        <div class="lb-hero__stats">
-          ${[["goals", EX.heroGoals], ["assists", EX.heroAssists], ["blocks", EX.heroBlocks]].map(([k, l]) => `<div><b>${mvp[k] || 0}</b><span>${esc(l)}</span></div>`).join("")}
-        </div>
-      </div>
-    </section>` : "";
+  // ranking general por puntaje MVP (desempate: goles, asistencias, nombre)
+  const ranked = totals.slice().sort((a, b) => (b.mvp || 0) - (a.mvp || 0) || (b.goals || 0) - (a.goals || 0) || (b.assists || 0) - (a.assists || 0) || String(a.name).localeCompare(String(b.name)));
+  const rankOf = new Map(ranked.map((p, i) => [p.id, i + 1]));
+  const toggle = `
+    <div class="pa-seg">
+      <button type="button" class="btn ${state.statsView !== "all" ? "is-on" : ""}" data-sview="leaders"><i class="bi bi-trophy me-1"></i>${esc(EX.stLeaders)}</button>
+      <button type="button" class="btn ${state.statsView === "all" ? "is-on" : ""}" data-sview="all"><i class="bi bi-list-ol me-1"></i>${esc(EX.stAllPlayers)}</button>
+    </div>`;
+  const head = `<div class="sb-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between">${divisionPicker()}${toggle}</div>`;
+  if (state.statsView === "all") return head + allPlayersTable(ranked, rankOf, teamById, person, link);
+
+  // MVP: 5 tarjetas por página; el mejor de la página al centro (4 · 2 · 1 · 3 · 5)
+  const PER = 5;
+  const pages = Math.max(1, Math.ceil(ranked.length / PER));
+  const page = Math.min(state.mvpPage || 0, pages - 1);
+  const chip = (label, v) => `<span class="mv-chip"><span>${esc(label)}</span><b>${v || 0}</b></span>`;
+  const card = (p, i) => {
+    const rank = rankOf.get(p.id);
+    const cls = rank === 1 ? "is-first" : rank === 2 ? "is-second" : i === 0 ? "is-best" : "";
+    return `
+      <article class="mv-card ${cls} mv-pos-${i}">
+        ${rank === 1 ? `<span class="mv-crown"><i class="bi bi-trophy-fill"></i></span>` : ""}
+        <div class="mv-photo">${link(p, avatarHtml(person(p), i === 0 ? 84 : 68))}</div>
+        <div class="mv-name">${link(p, esc(p.name || "—"))}</div>
+        <div class="mv-team">${esc(p.teamName || "")}</div>
+        <div class="mv-rank">#${rank}</div>
+        <div class="mv-label">${esc(EX.stStats)}</div>
+        <div class="mv-chips">${chip(EX.heroGoals, p.goals)}${chip(EX.stAssistShort, p.assists)}${chip(EX.stBlockShort, p.blocks)}${chip(EX.leaderMvp, p.mvp)}</div>
+      </article>`;
+  };
+  const first = Math.max(0, Math.min(page - 2, pages - 5));
+  const nums = Array.from({ length: Math.min(5, pages) }, (_, i) => first + i);
+  const mvpPanel = `
+    <section class="mv-panel">
+      <header class="mv-head"><h3>${esc(EX.leaderMvp)}</h3><span>${esc(exf(EX.stPageOf, { n: page + 1, total: pages }))}</span></header>
+      <div class="mv-row">${ranked.slice(page * PER, page * PER + PER).map(card).join("")}</div>
+      ${pages > 1 ? `
+        <nav class="mv-pager">
+          <button type="button" data-mvp-page="${page - 1}" ${page === 0 ? "disabled" : ""} aria-label="${esc(EX.stPrev)}"><i class="bi bi-chevron-left"></i></button>
+          ${nums.map((n) => `<button type="button" class="${n === page ? "is-on" : ""}" data-mvp-page="${n}">${n + 1}</button>`).join("")}
+          <button type="button" data-mvp-page="${page + 1}" ${page >= pages - 1 ? "disabled" : ""} aria-label="${esc(EX.stNext)}"><i class="bi bi-chevron-right"></i></button>
+        </nav>` : ""}
+    </section>`;
 
   // Líderes por categoría: el primero destacado y el top 5 debajo
   const board = (title, key, icon) => {
     const rows = leaders(totals, key, 5).filter((p) => (p[key] || 0) > 0);
     if (!rows.length) return "";
-    const [first, ...rest] = rows;
+    const [top, ...rest] = rows;
     return `
       <section class="lb-card">
         <h3 class="lb-card__title"><i class="bi bi-${icon}"></i>${esc(title)}</h3>
         <div class="lb-top">
-          ${link(first, avatarHtml(person(first), 56))}
+          ${link(top, avatarHtml(person(top), 56))}
           <div class="min-w-0 flex-grow-1">
-            <div class="lb-top__name text-truncate">${link(first, esc(playerLabel(first)))}</div>
-            <div class="lb-team">${sub(first)}</div>
+            <div class="lb-top__name text-truncate">${link(top, esc(playerLabel(top)))}</div>
+            <div class="lb-team">${sub(top)}</div>
           </div>
-          <div class="lb-top__val">${first[key]}</div>
+          <div class="lb-top__val">${top[key]}</div>
         </div>
         ${rest.map((p, i) => `
           <div class="lb-row">
@@ -337,14 +365,62 @@ function statsTab() {
 
   // las pérdidas no se muestran como "líderes" (nadie quiere ganar esa)
   return `
-    <div class="sb-toolbar">${divisionPicker()}</div>
-    ${hero}
+    ${head}
+    ${mvpPanel}
     <div class="lb-grid">
       ${board(EX.leaderMvp, "mvp", "star-fill")}
       ${board(EX.leaderGoals, "goals", "bullseye")}
       ${board(EX.leaderAssists, "assists", "send-fill")}
       ${board(EX.leaderBlocks, "blocks", "shield-fill")}
     </div>
+    <div class="text-center mt-3"><button type="button" class="btn btn-outline-dark btn-sm" data-sview="all"><i class="bi bi-list-ol me-1"></i>${esc(EX.stSeeAll)}</button></div>
+    <div class="small ev-muted mt-2 text-center">${esc(EX.mvpHint)}</div>`;
+}
+
+// Todos los jugadores del torneo: buscar, filtrar por equipo y ordenar por columna
+const STAT_COLS = [["games", "stGP"], ["goals", "stG"], ["assists", "stA"], ["blocks", "stB"], ["turns", "stT"], ["callahans", "stC"], ["mvp", "stMvp"]];
+function allPlayersTable(ranked, rankOf, teamById, person, link) {
+  const q = (state.statsQ || "").trim().toLowerCase();
+  const key = state.statsSort || "mvp";
+  const teamsIn = [...new Map(ranked.map((p) => [p.teamId, teamById.get(p.teamId) || { id: p.teamId, name: p.teamName }])).values()]
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const rows = ranked
+    .filter((p) => (!state.statsTeam || p.teamId === state.statsTeam) && (!q || `${p.name} ${p.teamName} ${p.number ?? ""}`.toLowerCase().includes(q)))
+    .sort((a, b) => (key === "name" ? String(a.name).localeCompare(String(b.name)) : (b[key] || 0) - (a[key] || 0) || rankOf.get(a.id) - rankOf.get(b.id)));
+  const th = (k, label, cls = "num") => `<th class="${cls} st-sort ${key === k ? "is-on" : ""}" data-ssort="${k}" title="${esc(EX[`${label}Long`] || EX[label])}">${esc(EX[label])}${key === k ? ' <i class="bi bi-caret-down-fill"></i>' : ""}</th>`;
+  return `
+    <section class="st-card">
+      <header class="st-card__head flex-wrap">
+        <div><div class="st-card__title">${esc(EX.stAllPlayers)}</div><div class="st-card__sub">${esc(exf(EX.stCount, { n: rows.length }))}</div></div>
+        <div class="d-flex flex-wrap gap-2">
+          <input class="form-control form-control-sm st-search" id="stQ" type="search" placeholder="${esc(EX.stSearch)}" value="${esc(state.statsQ || "")}" />
+          <select class="form-select form-select-sm w-auto" id="stTeam">
+            <option value="">${esc(EX.stAllTeams)}</option>
+            ${teamsIn.map((t) => `<option value="${esc(t.id)}" ${t.id === state.statsTeam ? "selected" : ""}>${esc(t.name)}</option>`).join("")}
+          </select>
+        </div>
+      </header>
+      <div class="table-responsive">
+        <table class="st-table st-all">
+          <thead><tr><th class="st-pos">#</th>${th("name", "stPlayer", "st-team")}${STAT_COLS.map(([k, l]) => th(k, l)).join("")}</tr></thead>
+          <tbody>${rows.map((p) => `
+            <tr>
+              <td class="st-pos"><span class="st-rank">${rankOf.get(p.id)}</span></td>
+              <td class="st-team">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                  ${link(p, avatarHtml(person(p), 30))}
+                  <div class="min-w-0">
+                    <div class="st-team__name">${link(p, esc(playerLabel(p)))}</div>
+                    <div class="lb-team">${teamBadge(teamById.get(p.teamId) || { name: p.teamName }, 14)}<span class="text-truncate">${esc(p.teamName || "")}</span></div>
+                  </div>
+                </div>
+              </td>
+              ${STAT_COLS.map(([k]) => `<td class="num ${k === key ? "fw-bold" : ""}">${p[k] || 0}</td>`).join("")}
+            </tr>`).join("") || `<tr><td colspan="${STAT_COLS.length + 2}" class="text-center ev-muted py-3">${esc(EX.stNoMatch)}</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </section>
     <div class="small ev-muted mt-2">${esc(EX.mvpHint)}</div>`;
 }
 
@@ -610,6 +686,21 @@ $("tnRoot").addEventListener("click", async (ev) => {
     }
     return;
   }
+  const sv = ev.target.closest("[data-sview]");
+  if (sv) {
+    state.statsView = sv.dataset.sview;
+    return render();
+  }
+  const mp = ev.target.closest("[data-mvp-page]");
+  if (mp) {
+    state.mvpPage = Math.max(0, Number(mp.dataset.mvpPage) || 0);
+    return render();
+  }
+  const ss = ev.target.closest("[data-ssort]");
+  if (ss) {
+    state.statsSort = ss.dataset.ssort;
+    return render();
+  }
   const gf = ev.target.closest("[data-gfilter]");
   if (gf) {
     state.gameFilter = gf.dataset.gfilter;
@@ -651,9 +742,26 @@ $("tnRoot").addEventListener("click", async (ev) => {
 });
 
 $("tnRoot").addEventListener("change", (ev) => {
+  if (ev.target.id === "stTeam") {
+    state.statsTeam = ev.target.value;
+    return render();
+  }
   if (ev.target.id !== "evpDivision") return;
   state.division = ev.target.value;
+  state.mvpPage = 0;
+  state.statsTeam = "";
   render();
+});
+
+// buscador de la tabla de jugadores: repinta y deja el cursor donde estaba
+$("tnRoot").addEventListener("input", (ev) => {
+  if (ev.target.id !== "stQ") return;
+  state.statsQ = ev.target.value;
+  const pos = ev.target.selectionStart;
+  render();
+  const input = document.getElementById("stQ");
+  input?.focus();
+  input?.setSelectionRange(pos, pos);
 });
 
 (async function init() {

@@ -416,13 +416,16 @@ export async function playerHistory(uid, squadIds = []) {
     listClaimsForUser(uid).catch(() => []),
   ]);
   const eventIds = [...new Set([...pointers, ...claims].map((p) => p.eventId))];
+  const claimByEvent = new Map(claims.map((c) => [c.eventId, c]));
   const rows = (await Promise.all(eventIds.map(async (eid) => {
     const [event, teams] = await Promise.all([loadEvent(eid).catch(() => null), listTeams(eid).catch(() => [])]);
-    // su ficha: id = uid (se unió con su cuenta) o una ficha con su uid asignado
-    const isMe = (p) => p.id === uid || p.uid === uid;
-    const team = teams.find((t) => (t.players || []).some(isMe));
+    // su ficha: id = uid (se unió con su cuenta), una ficha con su uid asignado,
+    // o la ficha que un admin le asignó (player_claims), aunque el roster haya perdido el uid
+    const claim = claimByEvent.get(eid);
+    const isMe = (t) => (p) => p.id === uid || p.uid === uid || (claim && t.id === claim.teamId && p.id === claim.playerId);
+    const team = teams.find((t) => (t.players || []).some(isMe(t)));
     if (!event || !team) return null;
-    const pid = team.players.find(isMe).id;
+    const pid = team.players.find(isMe(team)).id;
     const games = (await listGames(eid).catch(() => []))
       .filter((g) => g.status !== GAME_STATUS.SCHEDULED && (g.teamA?.id === team.id || g.teamB?.id === team.id));
     const st = games.reduce((t, g) => {
