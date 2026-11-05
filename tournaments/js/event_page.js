@@ -487,6 +487,8 @@ function teamsTab() {
               </div>
               ${href ? `<i class="bi bi-chevron-right ev-muted"></i>` : ""}
             </div>
+            ${t.hat && (t.players || []).length ? `
+              <div class="small mt-2 ev-team-roster">${(t.players || []).map((p) => `<span class="${state.user?.uid && p.uid === state.user.uid ? "fw-bold" : ""}">${esc(p.name)}${p.number !== null && p.number !== undefined && p.number !== "" ? ` <span class="ev-muted">#${esc(p.number)}</span>` : ""}</span>`).join(" · ")}</div>` : ""}
           </${tag}>
         </div>`;
       }).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}

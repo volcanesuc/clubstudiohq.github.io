@@ -651,3 +651,47 @@ export async function moveHatDivision(eid, entry, divisionId) {
   }
   await batch.commit();
 }
+
+/* ----- Hat: armado y publicación de equipos ----- */
+// events/{e}/hat_drafts/{divisionId}: { seed, teams: [{ key, name, color, uids }], teamIds: { key: teamId }, publishedAt, changedAt }
+const hatDraftRef = (eid, divId) => doc(db, COL.events, eid, "hat_drafts", divId);
+
+export async function loadHatDraft(eid, divId) {
+  const snap = await getDoc(hatDraftRef(eid, divId));
+  return snap.exists() ? snap.data() : null;
+}
+
+export async function saveHatDraft(eid, divId, draft) {
+  await setDoc(hatDraftRef(eid, divId), { ...draft, changedAt: serverTimestamp() });
+}
+
+/**
+ * Publica los equipos de UNA división: crea o actualiza sus equipos del torneo (sin squadId ni inscripción:
+ * existen solo en este torneo) con el roster normal { id: uid, uid, name, number, gender }, borra los que ya no están
+ * y marca a cada jugador del pool como asignado (o de vuelta en espera si quedó sin equipo). Los puntajes no se copian.
+ * @param {object[]} entries fichas del pool de esa división
+ * @param {string[]} removeTeamIds equipos publicados antes que ya no existen en el borrador (sin partidos)
+ */
+export async function publishHatDivision(eid, divisionId, draft, entries, removeTeamIds = []) {
+  const byUid = new Map(entries.map((p) => [p.uid, p]));
+  const teamIds = {};
+  const assigned = new Map();
+  const batch = writeBatch(db);
+  draft.teams.forEach((t) => {
+    const id = draft.teamIds?.[t.key] || randomId("tm");
+    teamIds[t.key] = id;
+    const players = t.uids.map((u) => byUid.get(u)).filter(Boolean)
+      .map((p) => ({ id: p.uid, uid: p.uid, name: p.name || "", number: p.number ?? null, gender: p.gender || "" }));
+    players.forEach((p) => assigned.set(p.uid, id));
+    batch.set(doc(teamsCol(eid), id), { name: t.name || "", color: t.color || "", divisionId, players, hat: true, updatedAt: serverTimestamp() }, { merge: true });
+  });
+  removeTeamIds.forEach((id) => batch.delete(doc(teamsCol(eid), id)));
+  entries.forEach((p) => {
+    const tid = assigned.get(p.uid);
+    if (tid && (p.status !== "assigned" || p.teamId !== tid)) batch.update(doc(hatPlayersCol(eid), p.id), { status: "assigned", teamId: tid, updatedAt: serverTimestamp() });
+    if (!tid && p.status === "assigned") batch.update(doc(hatPlayersCol(eid), p.id), { status: "waiting", teamId: "", updatedAt: serverTimestamp() });
+  });
+  batch.set(hatDraftRef(eid, divisionId), { ...draft, teamIds, publishedAt: serverTimestamp(), changedAt: serverTimestamp() });
+  await batch.commit();
+  return teamIds;
+}

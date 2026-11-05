@@ -840,3 +840,24 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .hat-row--bad td:first-child { box-shadow: inset 3px 0 0 #f59e0b; }
 .hat-detail td { background: #faf9fe; white-space: normal; }
 .hat-jerseys td { padding: .25rem .4rem; }
+
+/* Hat: armado de equipos (tablero) */
+.hat-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; }
+.hat-team { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-top: 4px solid var(--team, #19473f); border-radius: .75rem; padding: .5rem; min-height: 6rem; transition: box-shadow .15s, background .15s; }
+.hat-team--loose { border-top-color: var(--bs-secondary-color); border-style: dashed; }
+.hat-board.is-picking .hat-team { cursor: pointer; }
+.hat-board.is-picking .hat-team:hover, .hat-team.is-over { box-shadow: 0 0 0 2px var(--team, #19473f); background: var(--bs-tertiary-bg); }
+.hat-team__head { display: flex; gap: .4rem; align-items: center; margin-bottom: .25rem; }
+.hat-team__color { width: 2.2rem; height: 2rem; padding: .15rem; flex: none; }
+.hat-team__stats { font-size: .75rem; color: var(--bs-secondary-color); margin-bottom: .35rem; }
+.hat-team__list { display: flex; flex-direction: column; gap: .25rem; }
+.hat-chip { display: flex; align-items: center; gap: .35rem; width: 100%; text-align: start; border: 1px solid var(--bs-border-color); background: var(--bs-body-bg); border-radius: .5rem; padding: .3rem .45rem; font-size: .85rem; cursor: grab; user-select: none; }
+.hat-chip:hover { background: var(--bs-tertiary-bg); }
+.hat-chip.is-sel { outline: 2px solid var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+.hat-chip__g { flex: none; width: 1.3rem; height: 1.3rem; border-radius: 50%; display: inline-grid; place-items: center; font-size: .7rem; font-weight: 700; color: #fff; }
+.hat-chip--f .hat-chip__g { background: #c2417a; }
+.hat-chip--m .hat-chip__g { background: #2563eb; }
+.hat-chip__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hat-chip__score { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hat-dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: .35rem; vertical-align: middle; }
+.ev-chip--warn { background: #fff3cd; color: #664d03; }
