@@ -15,11 +15,11 @@ import { esc } from "/tournaments/js/ui.js";
  * @param {string} name nombre del grupo de radios
  * @param {[string, string, string?][]} options [valor, texto, icono bootstrap]
  */
-export function segHtml(name, options, value, { full = false, label = "" } = {}) {
+export function segHtml(name, options, value, { full = false, label = "", disabled = [] } = {}) {
   return `
     <div class="pa-seg tn-seg ${full ? "tn-seg--full" : ""}" role="radiogroup" ${label ? `aria-label="${esc(label)}"` : ""}>
       ${options.map(([v, text, icon]) => `
-        <input type="radio" class="btn-check" name="${esc(name)}" id="${esc(`${name}_${v}`)}" value="${esc(v)}" ${v === value ? "checked" : ""} autocomplete="off" />
+        <input type="radio" class="btn-check" name="${esc(name)}" id="${esc(`${name}_${v}`)}" value="${esc(v)}" ${v === value ? "checked" : ""} ${disabled.includes(v) ? "disabled" : ""} autocomplete="off" />
         <label class="btn" for="${esc(`${name}_${v}`)}">${icon ? `<i class="bi ${esc(icon)} me-1"></i>` : ""}${esc(text)}</label>`).join("")}
     </div>`;
 }
@@ -121,7 +121,7 @@ function basicsHtml() {
         </div>
         <div class="col-12">
           <div class="form-label small fw-semibold">${esc(EX.eventType)}</div>
-          ${segHtml("crType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "bi-shuffle"]], d.type, { full: true, label: EX.eventType })}
+          ${segHtml("crType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "tn-ic tn-ic-hat"]], d.type, { full: true, label: EX.eventType })}
           <div class="cr-type-help mt-2" id="crTypeHelp">${isHat() ? EX.crTypeHatHelp : EX.crTypeTeamHelp}</div>
         </div>
         <div class="col-12">

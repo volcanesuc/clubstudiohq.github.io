@@ -385,8 +385,8 @@ function renderInfo() {
           </div>
           <div class="col-12">
             <div class="form-label small">${esc(EX.eventType)}</div>
-            ${segHtml("eType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "bi-shuffle"]], isHatEvent(e) ? "hat" : "team", { full: true, label: EX.eventType })}
-            <div class="form-text">${esc(EX.eventTypeHint)}</div>
+            ${segHtml("eType", [["team", EX.crTypeTeam, "bi-people"], ["hat", EX.crTypeHat, "tn-ic tn-ic-hat"]], isHatEvent(e) ? "hat" : "team", { full: true, label: EX.eventType, disabled: isHatEvent(e) ? ["team"] : [] })}
+            <div class="form-text">${esc(isHatEvent(e) ? EX.hatTypeLocked : EX.eventTypeHint)}</div>
           </div>
           <div class="col-12">
             <div class="form-label small">${esc(EX.eventSurface)}</div>
@@ -550,8 +550,19 @@ function renderInfo() {
           ${f("mT", EX.mvpTurns, r.mvp.turns, { type: "number", col: "col-6 col-md-3", attrs: 'step="0.5"' })}
         </div>`)}
 
+      ${e.ownerUid === state.user.uid ? `
+        <section class="tn-section tn-danger">
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="flex-grow-1">
+              <div class="fw-bold">${esc(EX.deleteEventTitle)}</div>
+              <div class="small ev-muted">${esc(EX.deleteEventHint)}</div>
+            </div>
+            <button type="button" class="btn btn-outline-danger" id="eDelete"><i class="bi bi-trash me-1"></i>${esc(EX.deleteEventTitle)}</button>
+          </div>
+        </section>` : ""}
+
       <div class="tn-save-bar d-flex justify-content-between flex-wrap gap-2">
-        <button type="button" class="btn btn-outline-danger ${e.ownerUid === state.user.uid ? "" : "invisible"}" id="eDelete"><i class="bi bi-trash me-1"></i>${esc(EX.delete)}</button>
+        <button type="button" class="btn btn-light" id="eCancel"><i class="bi bi-arrow-left me-1"></i>${esc(EX.infoBack)}</button>
         <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>${esc(EX.save)}</button>
       </div>
     </form>`;
@@ -665,8 +676,9 @@ function renderInfo() {
         rosterDeadline: v("eRosterDeadline"),
         rosterDeadlineAt: deadlineEnd(v("eRosterDeadline")),
         country: v("eCountry"),
-        type: segValue(document, "eType") === "hat" ? "hat" : "",
-        ...(segValue(document, "eType") === "hat" ? {
+        // un hat no vuelve a ser por equipos (jugadores sueltos, equipos del armado)
+        type: isHatEvent(e) || segValue(document, "eType") === "hat" ? "hat" : "",
+        ...(isHatEvent(e) || segValue(document, "eType") === "hat" ? {
  hat: { ...(e.hat || {}), multiDivision: document.getElementById("eHatMulti").checked } } : {}),
         fees: {
           team: Math.max(0, Number(v("eFeeTeam")) || 0),
@@ -718,14 +730,24 @@ function renderInfo() {
     });
   };
 
-  document.getElementById("eDelete").onclick = () => {
-    if (!confirm(EX.confirmDelete)) return;
+  // Volver: a la lista de eventos sin guardar (pregunta si hay cambios)
+  let dirty = false;
+  const infoFormEl = document.getElementById("evInfoForm");
+  infoFormEl.addEventListener("input", () => (dirty = true));
+  infoFormEl.addEventListener("change", () => (dirty = true));
+  document.getElementById("eCancel").onclick = () => {
+    if (dirty && !confirm(EX.infoDiscard)) return;
+    run(renderList);
+  };
+
+  document.getElementById("eDelete")?.addEventListener("click", () => {
+    if (!confirm(exf(EX.deleteEventConfirm, { name: e.name || "" }))) return;
     run(async () => {
       await deleteEvent(e.id);
       state.event = null;
       await renderList();
     });
-  };
+  });
 }
 
 /* ---------- Equipos ---------- */
