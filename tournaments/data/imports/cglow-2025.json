@@ -4,7 +4,7 @@
   "provider": "ultie",
   "url": "https://ultie.org/cglow-2025",
   "eventId": 333,
-  "fetchedAt": "2026-11-05T23:52:31Z"
+  "fetchedAt": "2026-11-05T23:58:33Z"
  },
  "event": {
   "id": "evu333",
@@ -32,6 +32,10 @@
    "gameTo": 13,
    "halftimeAt": 7,
    "gameMinutes": 90
+  },
+  "type": "hat",
+  "hat": {
+   "multiDivision": false
   }
  },
  "teams": [
@@ -201,6 +205,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3884
@@ -372,6 +377,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3881
@@ -543,6 +549,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3919
@@ -715,6 +722,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3882
@@ -898,6 +906,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3920
@@ -1082,6 +1091,7 @@
      }
     }
    ],
+   "hat": true,
    "source": {
     "provider": "ultie",
     "teamId": 3883
