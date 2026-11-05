@@ -615,7 +615,8 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .lb-hero__stats { display: flex; gap: 1.25rem; margin-top: .55rem; }
 .lb-hero__stats b { display: block; font-size: 1.3rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .lb-hero__stats span { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; opacity: .8; font-weight: 700; }
-.lb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
+.lb-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; }
+.lb-grid > .lb-card { flex: 1 1 260px; max-width: 340px; }
 .lb-card { background: #fff; border: 1px solid var(--ev-border); border-radius: 18px; padding: .9rem 1rem; min-width: 0; }
 .lb-card__title { display: flex; align-items: center; gap: .45rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ev-muted); font-weight: 800; margin: 0 0 .7rem; }
 .lb-card__title i { color: var(--ev-main); }
@@ -631,7 +632,7 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
   .lb-hero { padding: 1rem; gap: .85rem; }
   .lb-hero__photo .tn-avatar { width: 68px !important; height: 68px !important; }
   .lb-hero__name { font-size: 1.15rem; }
-  .lb-grid { grid-template-columns: 1fr; }
+  .lb-grid > .lb-card { max-width: none; }
 }
 
 /* Mi equipo: tarjetas de equipo grandes; crear equipo discreto */
@@ -749,3 +750,59 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .st-final__row { display: flex; align-items: center; gap: .6rem; padding: .5rem .65rem; border: 1px solid var(--ev-border); border-radius: 14px; background: #fff; min-width: 0; }
 .st-final__row.is-top { background: linear-gradient(135deg, #fef9c3, #fff); border-color: #fde68a; }
 .st-final__pos { font-weight: 900; font-size: 1.1rem; width: 2rem; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ===== MVP: carrusel de tarjetas (5 por página, el mejor al centro) ===== */
+.pa-seg .btn.is-on { background: #1f1446; color: #fff; }
+.mv-panel { background: #171923; color: #fff; border-radius: 22px; padding: 1.1rem 1.1rem 1rem; margin-bottom: 1rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); }
+.mv-head { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.mv-head h3 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: .02em; }
+.mv-head span { font-size: .8rem; color: #9ca3af; font-weight: 600; }
+.mv-row { display: flex; gap: .75rem; justify-content: center; align-items: flex-end; overflow-x: auto; scroll-snap-type: x mandatory; padding: 1.1rem .1rem .35rem; }
+.mv-card { position: relative; flex: 0 0 200px; scroll-snap-align: center; background: #22252f; border: 1px solid #2f3341; border-radius: 18px; padding: 1rem .8rem .85rem; text-align: center; min-width: 0; }
+.mv-card.mv-pos-0 { flex-basis: 220px; padding-top: 1.35rem; padding-bottom: 1.1rem; }
+.mv-card.is-best { border-color: #3d4252; }
+.mv-card.is-first { background: linear-gradient(180deg, rgba(31, 224, 127, .2), #1d2b25 70%); border: 2px solid #1fe07f; box-shadow: 0 0 0 4px rgba(31, 224, 127, .12), 0 12px 30px rgba(31, 224, 127, .15); }
+.mv-card.is-second { background: linear-gradient(180deg, rgba(139, 92, 246, .28), #262238 75%); border-color: #6d4fd8; }
+.mv-crown { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #fde047, #f59e0b); color: #4a2a00; font-size: 1rem; box-shadow: 0 4px 12px rgba(245, 158, 11, .45); }
+.mv-photo { display: flex; justify-content: center; margin-bottom: .55rem; }
+.mv-photo .tn-avatar { border: 3px solid rgba(255, 255, 255, .12); }
+.mv-card.is-first .mv-photo .tn-avatar { border-color: #1fe07f; }
+.mv-name { font-weight: 800; font-size: .98rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-team { color: #1fe07f; font-size: .78rem; font-weight: 700; margin-top: .1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-rank { font-size: 1.35rem; font-weight: 900; margin: .35rem 0 .45rem; font-variant-numeric: tabular-nums; }
+.mv-card.is-first .mv-rank { color: #1fe07f; }
+.mv-label { font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; font-weight: 800; margin-bottom: .35rem; text-align: left; }
+.mv-chips { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+.mv-chip { display: flex; min-width: 0; white-space: nowrap; justify-content: space-between; align-items: center; gap: .3rem; background: rgba(255, 255, 255, .06); border-radius: 9px; padding: .3rem .5rem; font-size: .72rem; color: #cbd5e1; }
+.mv-chip b { color: #fff; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.mv-card.is-first .mv-chip { background: rgba(31, 224, 127, .12); }
+.mv-pager { display: flex; justify-content: center; gap: .35rem; margin-top: .9rem; }
+.mv-pager button { min-width: 2.1rem; height: 2.1rem; border-radius: 10px; border: 1px solid #2f3341; background: #22252f; color: #e5e7eb; font-weight: 800; font-size: .85rem; }
+.mv-pager button:hover:not(:disabled) { border-color: #1fe07f; }
+.mv-pager button.is-on { background: #1fe07f; border-color: #1fe07f; color: #0b1f14; }
+.mv-pager button:disabled { opacity: .35; }
+@media (min-width: 1100px) {
+  .mv-row { overflow: visible; }
+  .mv-pos-0 { order: 3; }
+  .mv-pos-1 { order: 2; }
+  .mv-pos-2 { order: 4; }
+  .mv-pos-3 { order: 1; }
+  .mv-pos-4 { order: 5; }
+  .mv-card { flex: 1 1 0; max-width: 200px; }
+  .mv-card.mv-pos-0 { flex-grow: 1.2; max-width: 235px; }
+}
+@media (max-width: 1099.98px) { .mv-row { justify-content: flex-start; } }
+
+/* tabla de todos los jugadores */
+.st-search { width: 14rem; }
+.st-all th.st-sort { cursor: pointer; user-select: none; }
+.st-all th.st-sort.is-on { color: #1f1446; }
+.st-all td.num, .st-all th.num { text-align: center; font-variant-numeric: tabular-nums; }
+.st-all .st-team { max-width: 16rem; }
+
+/* posiciones finales: número en vez de medalla */
+.st-final__row .st-final__pos { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: rgba(0, 0, 0, .05); color: #3b3651; font-size: .95rem; }
+.st-final__row.is-top-1 .st-final__pos { background: linear-gradient(135deg, #fde047, #f59e0b); color: #4a2a00; }
+.st-final__row.is-top-2 .st-final__pos { background: linear-gradient(135deg, #e5e7eb, #9ca3af); color: #1f2937; }
+.st-final__row.is-top-3 .st-final__pos { background: linear-gradient(135deg, #fdba74, #c2410c); color: #fff; }

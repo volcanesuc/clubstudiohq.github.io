@@ -12,6 +12,7 @@ import {
   listAllSquads,
   listBundledImports,
   loadBundledImport,
+  repairEventClaims,
   unassignPlayerAccount,
   unlinkTeamFromSquad,
   validateImport,
@@ -331,6 +332,8 @@ async function loadPlayersEvent(eid) {
     state.profiles ? state.profiles : listAllProfiles().catch(() => []),
     state.squads ? state.squads : listAllSquads().catch(() => []),
   ]);
+  // fichas asignadas que perdieron el uid (ej. roster editado): se reparan solas
+  if (id) await repairEventClaims(id, teams).catch((err) => console.warn("[claims]", err));
   state.pl.teams = teams;
   state.profiles = profiles;
   state.squads = squads;

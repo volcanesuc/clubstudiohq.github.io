@@ -273,6 +273,25 @@ async function setPlayerUid(eid, teamId, playerId, uid) {
 }
 
 /**
+ * Admin: vuelve a poner el uid en las fichas que tienen asignación (player_claims) pero lo perdieron
+ * (ej. alguien editó el roster). Devuelve cuántas fichas reparó.
+ */
+export async function repairEventClaims(eid, teams) {
+  const claims = await listEventClaims(eid);
+  let fixed = 0;
+  for (const c of claims) {
+    const team = teams.find((t) => t.id === c.teamId);
+    const player = (team?.players || []).find((x) => x.id === c.playerId);
+    if (!player || player.uid === c.uid) continue;
+    if (player.uid) continue; // otra cuenta asignada a mano: no se pisa
+    await setPlayerUid(eid, team.id, player.id, c.uid);
+    player.uid = c.uid;
+    fixed += 1;
+  }
+  return fixed;
+}
+
+/**
  * Admin: asigna la cuenta `profile` (profiles/{uid}) al jugador `playerId` del equipo `team` en el torneo `event`.
  * El jugador conserva su id y estadísticas; su ficha queda con uid y su perfil muestra el torneo.
  */
