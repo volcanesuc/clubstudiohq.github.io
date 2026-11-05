@@ -770,6 +770,12 @@ export const EX = {
   crNeedField: "Agregá al menos una cancha.",
   crDiscard: "¿Salir sin crear el torneo? Se pierde lo que llenaste.",
   infoMore: "Más opciones",
+  infoBack: "Volver",
+  infoDiscard: "Tenés cambios sin guardar. ¿Salir igual?",
+  deleteEventTitle: "Borrar torneo",
+  deleteEventHint: "Se borra el torneo con sus equipos, partidos y resultados. No se puede deshacer.",
+  deleteEventConfirm: "¿Borrar «{name}»? Se borran equipos, partidos y resultados. No se puede deshacer.",
+  hatTypeLocked: "Un hat no se puede pasar a torneo por equipos: los jugadores se inscribieron solos y los equipos se arman en la pestaña Hat.",
   infoDeadlinesMoved: "Los plazos de inscripción y roster están en Fechas y plazos, abajo.",
 
 
