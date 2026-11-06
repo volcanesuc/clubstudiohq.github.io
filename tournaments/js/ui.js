@@ -177,6 +177,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
     </div>`;
   revealActiveTab(nav.querySelector(".tn-nav__tabs"));
   renderBottomNav({ active, isAdmin, google });
+  renderFooter();
   if (google) refreshTeamBadge(user);
   if (!renderNav.spiritChecked && isGoogleUser(user)) {
     renderNav.spiritChecked = true;
@@ -197,6 +198,25 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
       console.warn("[torneos] login:", err?.code || err);
     }
   });
+}
+
+// Pie de página: documentación, privacidad y redes (una sola vez por página)
+function renderFooter() {
+  if (document.getElementById("tnFooter") || document.body.dataset.noFooter !== undefined) return;
+  const year = new Date().getFullYear();
+  document.body.insertAdjacentHTML("beforeend", `
+    <footer class="tn-footer" id="tnFooter">
+      <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <a class="tn-footer__brand" href="/"><img src="/assets/favicon.svg" width="24" height="24" alt="" /> ClubStudio<b>HQ</b></a>
+        <nav class="tn-footer__links">
+          <a href="/docs/">${esc(EX.ftDocs)}</a>
+          <a href="/privacidad.html">${esc(EX.ftPrivacy)}</a>
+          <a href="/#precios">${esc(EX.ftPricing)}</a>
+          <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener"><i class="bi bi-instagram me-1"></i>@clubstudiohq</a>
+        </nav>
+        <div class="tn-footer__copy">© ${year} ClubStudioHQ</div>
+      </div>
+    </footer>`);
 }
 
 // Avisos sin leer de los equipos que administro (ej. un jugador nuevo): número sobre "Mi equipo".
