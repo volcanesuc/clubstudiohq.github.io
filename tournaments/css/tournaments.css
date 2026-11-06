@@ -302,6 +302,23 @@ body.tn-busy::before {
 .sk-choice { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .sk-choice .btn { padding: .75rem .5rem; font-weight: 700; }
 .sk-point-info { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-top: .5rem; }
+/* planillero: marcador con el color de cada equipo (A → B) y sus escudos */
+.ev-score.sk-score {
+  background: linear-gradient(rgba(15, 12, 30, .38), rgba(15, 12, 30, .38)), linear-gradient(100deg, var(--ca) 0%, var(--ca) 22%, var(--cb) 78%, var(--cb) 100%);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+.sk-crest { display: flex; justify-content: center; margin-bottom: .3rem; }
+.sk-crest .tn-team-badge { box-shadow: 0 0 0 2px rgba(255, 255, 255, .9); text-shadow: none; }
+/* columnas: tarjeta con la franja y el escudo del equipo; la que ataca queda remarcada */
+.sk-col { background: #fff; border: 1px solid var(--ev-border); border-radius: 16px; padding: 0 8px 8px; overflow: hidden; align-content: start; }
+.sk-col__head { display: flex; align-items: center; gap: .4rem; margin: 0 -8px; padding: .4rem .55rem; background: var(--tc); color: var(--tt); min-width: 0; }
+.sk-col__head .tn-team-badge { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); flex-shrink: 0; }
+.sk-col__name { font-weight: 800; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+.sk-col__role { font-size: .7rem; font-weight: 700; opacity: .9; white-space: nowrap; display: inline-flex; align-items: center; gap: .25rem; }
+.sk-col.is-offense { border-color: var(--tc); box-shadow: 0 0 0 2px var(--tc); }
+.sk-col .sk-btn--goal { background: var(--tc); border-color: var(--tc); color: var(--tt); }
+.sk-col .sk-btn--goal:disabled { opacity: .45; }
+@media (max-width: 340px) { .sk-col__role { display: none; } }
 
 /* ===== recorte de imágenes ===== */
 .tn-crop { position: relative; width: 100%; overflow: hidden; border-radius: 14px; touch-action: none; cursor: grab; user-select: none;

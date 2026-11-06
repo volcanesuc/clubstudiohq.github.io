@@ -36,7 +36,7 @@ import {
   updateGame,
   updatePlay,
 } from "/tournaments/js/services.js";
-import { askConfirm, possessionDot, esc, feedItemHtml, playerLabel, showNotice } from "/tournaments/js/ui.js";
+import { askConfirm, possessionDot, esc, feedItemHtml, playerLabel, showNotice, teamBadge, textOn } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -70,6 +70,10 @@ const picker = new bootstrap.Modal($("skPicker"));
 // datos actuales del equipo (si lo renombraron o cambió de color después de crear el partido)
 const teamName = (side) => state.teams[side]?.name || (side === "A" ? state.game?.teamA?.name : state.game?.teamB?.name) || side;
 const teamColor = (side) => state.teams[side]?.color || (side === "A" ? state.game?.teamA?.color : state.game?.teamB?.color) || "#888";
+// equipo para el escudo (logo o letra con su color)
+const teamObj = (side) => state.teams[side] || { id: side, name: teamName(side), color: teamColor(side) };
+// colores del equipo para su columna: fondo y texto legible encima
+const teamVars = (side) => `--tc:${esc(teamColor(side))};--tt:${textOn(teamColor(side))}`;
 // Durante un timeout / medio tiempo, o con el marcador al objetivo, no se registran jugadas.
 const onBreak = () => !!state.game?.clock?.break;
 const gameOver = () => !!state.calc?.reachedGameTo;
@@ -308,13 +312,14 @@ function scoreHeader() {
   if (view.timeUp) caps.push(EX.skTimeUp);
   const side = (k) => `
     <div class="ev-score__team">
-      <div class="ev-score__name"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
+      <div class="sk-crest">${teamBadge(teamObj(k), 46)}</div>
+      <div class="ev-score__name">${esc(teamName(k))}</div>
       <div class="ev-score__pts">${s[k]}</div>
       <div class="small opacity-75">${esc(exf(EX.skTimeoutsLeft, { n: state.calc.timeoutsLeft[k] }))}</div>
       ${isLive() ? `<div class="ev-score__disc" title="${esc(off === k ? EX.skOffense : EX.skNoDisc)}">${possessionDot(14, off === k)}</div>` : ""}
     </div>`;
   return `
-    <div class="ev-score">
+    <div class="ev-score sk-score" style="--ca:${esc(teamColor("A"))};--cb:${esc(teamColor("B"))}">
       ${side("A")}
       <div class="ev-score__mid">
         <div class="ev-score__clock" id="skClock">${view.text}</div>
@@ -370,8 +375,12 @@ function sideButtons(k) {
   const off = state.calc.possession === k;
   const lock = playsLocked() ? "disabled" : "";
   return `
-    <div class="sk-side">
-      <div class="sk-side__title"><span class="ev-team-dot" style="background:${esc(teamColor(k))}"></span> ${esc(teamName(k))}</div>
+    <div class="sk-side sk-col ${off && isLive() ? "is-offense" : ""}" style="${teamVars(k)}">
+      <div class="sk-col__head">
+        ${teamBadge(teamObj(k), 22)}
+        <span class="sk-col__name">${esc(teamName(k))}</span>
+        <span class="sk-col__role">${off ? `${possessionDot(9, true)} ${esc(EX.skOffense)}` : esc(EX.skDefense)}</span>
+      </div>
       <button class="sk-btn sk-btn--goal" data-act="goal" data-side="${k}" ${lock}><i class="bi bi-trophy"></i>${esc(EX.skGoal)}</button>
       <div class="d-grid gap-2" style="grid-template-columns:1fr 1fr">
         <button class="sk-btn sk-btn--turn" data-act="drop" data-side="${k}" ${off ? "" : "data-dim"} ${lock}>${esc(EX.skDrop)}</button>
@@ -412,9 +421,9 @@ function renderLive() {
     <div class="sk-bar">
       <button class="btn btn-outline-secondary" data-act="undo"><i class="bi bi-arrow-counterclockwise me-1"></i>${esc(EX.skUndo)}</button>
       <button class="btn btn-outline-secondary" data-act="pause" ${state.game.clock?.break ? "disabled" : ""}><i class="bi ${paused ? "bi-play" : "bi-pause"} me-1"></i>${esc(paused ? EX.skResume : EX.skPause)}</button>
-      ${state.calc.halftimeDone ? "" : `<button class="btn btn-outline-secondary" data-act="halftime">${esc(EX.skHalftime)}</button>`}
-      <button class="btn btn-outline-danger" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button>
+      ${state.calc.halftimeDone ? "" : `<button class="btn btn-outline-secondary" data-act="halftime"><i class="bi bi-hourglass-split me-1"></i>${esc(EX.skHalftime)}</button>`}
     </div>
+    <button class="btn btn-outline-danger w-100 mt-2 sk-finish" data-act="finish"><i class="bi bi-flag me-1"></i>${esc(EX.skFinish)}</button>
     ${state.isOrganizer ? `<details class="mt-2 small">
       <summary class="ev-muted">${esc(EX.skClockAdjust)}</summary>
       <div class="d-flex gap-2 mt-2">

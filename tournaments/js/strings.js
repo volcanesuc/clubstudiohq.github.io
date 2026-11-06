@@ -168,6 +168,7 @@ export const EX = {
   skDimBlock: "{team} tiene el disco: un bloqueo es del equipo en defensa. ¿Registrarlo igual?",
   skStart: "Iniciar partido",
   skOffense: "Ataca",
+  skDefense: "Defiende",
   skGoal: "Gol",
   skTurn: "Turnover",
   skDrop: "Drop",
