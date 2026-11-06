@@ -5,6 +5,12 @@
    "name": "Copa de Invierno 2025",
    "source": "https://ultie.org/ciuf2025",
    "startDate": "2025-10-25"
+  },
+  {
+   "file": "cglow-2025.json",
+   "name": "Cartaglow 2025",
+   "source": "https://ultie.org/cglow-2025",
+   "startDate": "2025-08-09"
   }
  ]
 }

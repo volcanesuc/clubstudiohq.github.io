@@ -3,6 +3,7 @@
 Uso:
     python tools/import_ultie.py ciuf2025            # -> tournaments/data/imports/ciuf2025.json
     python tools/import_ultie.py ciuf2025 --out x.json
+    python tools/import_ultie.py cglow-2025 --hat    # torneo hat: equipos armados por el organizador, sin club
 
 Lee la API pública de ultie (GraphQL) y arma un JSON con el torneo, sus equipos con roster,
 los partidos con cada gol/asistencia/timeout/medio tiempo y las evaluaciones de espíritu.
@@ -105,7 +106,7 @@ def phase_of(logical_id, finals_rr_teams):
     return "Eliminatoria"
 
 
-def convert(slug):
+def convert(slug, hat=False):
     ev = gql(EVENT_QUERY, {"u": slug})["event"]["getByURLName"]
     if not ev:
         raise SystemExit(f"No existe el torneo '{slug}' en ultie")
@@ -157,6 +158,7 @@ def convert(slug):
                 "divisionId": div_id,
                 "pool": "",
                 "players": players,
+                **({"hat": True} if hat else {}),
                 "source": {"provider": "ultie", "teamId": t["id"]},
             })
             color_i += 1
@@ -256,6 +258,7 @@ def convert(slug):
             "fields": [],
             "format": "round_robin",
             "rules": {"mode": mode, "playersOnField": on_field, "gameTo": 13, "halftimeAt": 7, "gameMinutes": 90},
+            **({"type": "hat", "hat": {"multiDivision": False}} if hat else {}),
         },
         "teams": teams,
         "games": games,
@@ -302,8 +305,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug", help="url del torneo en ultie (ej. ciuf2025)")
     ap.add_argument("--out", help="archivo de salida")
+    ap.add_argument("--hat", action="store_true", help="torneo hat (equipos armados por el organizador, sin club)")
     args = ap.parse_args()
-    data = convert(args.slug)
+    data = convert(args.slug, hat=args.hat)
     out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "tournaments" / "data" / "imports" / f"{args.slug}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")

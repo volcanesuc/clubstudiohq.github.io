@@ -1,0 +1,3550 @@
+{
+ "format": "cshq-import/1",
+ "source": {
+  "provider": "ultie",
+  "url": "https://ultie.org/cglow-2025",
+  "eventId": 333,
+  "fetchedAt": "2026-11-05T23:58:33Z"
+ },
+ "event": {
+  "id": "evu333",
+  "name": "Cartaglow 2025",
+  "shortName": "Cartaglow 2025",
+  "slug": "cglow-2025",
+  "startDate": "2025-08-09",
+  "endDate": "2025-08-09",
+  "venue": "Cartago",
+  "description": "Resultados importados de ultie.org/cglow-2025.",
+  "divisions": [
+   {
+    "id": "mixto",
+    "name": "Open Mixto",
+    "level": "Open",
+    "gender": "mixto",
+    "mixed": true
+   }
+  ],
+  "fields": [],
+  "format": "round_robin",
+  "rules": {
+   "mode": "7v7",
+   "playersOnField": 7,
+   "gameTo": 13,
+   "halftimeAt": 7,
+   "gameMinutes": 90
+  },
+  "type": "hat",
+  "hat": {
+   "multiDivision": false
+  }
+ },
+ "teams": [
+  {
+   "id": "tmu3884",
+   "name": "Celeste",
+   "city": "Cartago",
+   "color": "#e63946",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35009",
+     "uid": null,
+     "name": "Alberto Alfaro",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6854,
+      "playerId": 35009
+     }
+    },
+    {
+     "id": "pu35020",
+     "uid": null,
+     "name": "Ana Victoria Montero Nunez",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6903,
+      "playerId": 35020
+     }
+    },
+    {
+     "id": "pu35016",
+     "uid": null,
+     "name": "Andres Abascal",
+     "number": 1,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6986,
+      "playerId": 35016
+     }
+    },
+    {
+     "id": "pu35013",
+     "uid": null,
+     "name": "Bryan Gamboa",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6899,
+      "playerId": 35013
+     }
+    },
+    {
+     "id": "pu35012",
+     "uid": null,
+     "name": "Evan Panther",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6956,
+      "playerId": 35012
+     }
+    },
+    {
+     "id": "pu35015",
+     "uid": null,
+     "name": "Fabio Rodriguez",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11570,
+      "playerId": 35015
+     }
+    },
+    {
+     "id": "pu35086",
+     "uid": null,
+     "name": "Freddy Arce navarro",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5678,
+      "playerId": 35086
+     }
+    },
+    {
+     "id": "pu35017",
+     "uid": null,
+     "name": "Jenny Arce",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5763,
+      "playerId": 35017
+     }
+    },
+    {
+     "id": "pu35014",
+     "uid": null,
+     "name": "Jon Kohl",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6905,
+      "playerId": 35014
+     }
+    },
+    {
+     "id": "pu35010",
+     "uid": null,
+     "name": "Pablo Vargas",
+     "number": 9,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6735,
+      "playerId": 35010
+     }
+    },
+    {
+     "id": "pu35019",
+     "uid": null,
+     "name": "Priscilla Filomena",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8125,
+      "playerId": 35019
+     }
+    },
+    {
+     "id": "pu35011",
+     "uid": null,
+     "name": "Román Barzuna",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8073,
+      "playerId": 35011
+     }
+    },
+    {
+     "id": "pu35018",
+     "uid": null,
+     "name": "Sofia Bolaños",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8072,
+      "playerId": 35018
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3884
+   }
+  },
+  {
+   "id": "tmu3881",
+   "name": "Vino",
+   "city": "Cartago",
+   "color": "#1d4ed8",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35029",
+     "uid": null,
+     "name": "Adrián Alemán",
+     "number": 1,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11675,
+      "playerId": 35029
+     }
+    },
+    {
+     "id": "pu35025",
+     "uid": null,
+     "name": "Allan Mora",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6909,
+      "playerId": 35025
+     }
+    },
+    {
+     "id": "pu35027",
+     "uid": null,
+     "name": "Andrey Campos",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8075,
+      "playerId": 35027
+     }
+    },
+    {
+     "id": "pu35021",
+     "uid": null,
+     "name": "Bayron Lopez",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5675,
+      "playerId": 35021
+     }
+    },
+    {
+     "id": "pu35032",
+     "uid": null,
+     "name": "Brittany Manzanarez",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8071,
+      "playerId": 35032
+     }
+    },
+    {
+     "id": "pu35031",
+     "uid": null,
+     "name": "Carolina Zamora",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6897,
+      "playerId": 35031
+     }
+    },
+    {
+     "id": "pu35028",
+     "uid": null,
+     "name": "Cesar Arroyo",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8104,
+      "playerId": 35028
+     }
+    },
+    {
+     "id": "pu35030",
+     "uid": null,
+     "name": "Daniela Bolivar",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6730,
+      "playerId": 35030
+     }
+    },
+    {
+     "id": "pu35022",
+     "uid": null,
+     "name": "Emilio Brenes",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6987,
+      "playerId": 35022
+     }
+    },
+    {
+     "id": "pu35024",
+     "uid": null,
+     "name": "Franco Quiros",
+     "number": 9,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6917,
+      "playerId": 35024
+     }
+    },
+    {
+     "id": "pu35026",
+     "uid": null,
+     "name": "Israel Aular",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5912,
+      "playerId": 35026
+     }
+    },
+    {
+     "id": "pu35102",
+     "uid": null,
+     "name": "Juan bosco Bustos cortes",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6860,
+      "playerId": 35102
+     }
+    },
+    {
+     "id": "pu35104",
+     "uid": null,
+     "name": "Tamara Alfaro",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11788,
+      "playerId": 35104
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3881
+   }
+  },
+  {
+   "id": "tmu3919",
+   "name": "Amarillo",
+   "city": "Cartago",
+   "color": "#059669",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35061",
+     "uid": null,
+     "name": "Aaron Quesada",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6861,
+      "playerId": 35061
+     }
+    },
+    {
+     "id": "pu35063",
+     "uid": null,
+     "name": "Alejandro Alfaro",
+     "number": 1,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6961,
+      "playerId": 35063
+     }
+    },
+    {
+     "id": "pu35068",
+     "uid": null,
+     "name": "Arelis Marin",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6723,
+      "playerId": 35068
+     }
+    },
+    {
+     "id": "pu35071",
+     "uid": null,
+     "name": "Ariana Sánchez",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8103,
+      "playerId": 35071
+     }
+    },
+    {
+     "id": "pu35064",
+     "uid": null,
+     "name": "Brandon Nunez",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6767,
+      "playerId": 35064
+     }
+    },
+    {
+     "id": "pu35060",
+     "uid": null,
+     "name": "Esteban Piedra",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6967,
+      "playerId": 35060
+     }
+    },
+    {
+     "id": "pu35059",
+     "uid": null,
+     "name": "Giovanny Buitrago espitia",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6721,
+      "playerId": 35059
+     }
+    },
+    {
+     "id": "pu35065",
+     "uid": null,
+     "name": "Gudari Castillo",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6833,
+      "playerId": 35065
+     }
+    },
+    {
+     "id": "pu35062",
+     "uid": null,
+     "name": "Josue Amador sanchez",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5782,
+      "playerId": 35062
+     }
+    },
+    {
+     "id": "pu35069",
+     "uid": null,
+     "name": "Karla stephanie Barquero gonzalez",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5680,
+      "playerId": 35069
+     }
+    },
+    {
+     "id": "pu35070",
+     "uid": null,
+     "name": "Macha Hernandez",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6728,
+      "playerId": 35070
+     }
+    },
+    {
+     "id": "pu35066",
+     "uid": null,
+     "name": "Sebastián Villalobos",
+     "number": 9,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8100,
+      "playerId": 35066
+     }
+    },
+    {
+     "id": "pu35067",
+     "uid": null,
+     "name": "Yohel Francesco Quirós Hernández",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8091,
+      "playerId": 35067
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3919
+   },
+   "finalPlace": 1
+  },
+  {
+   "id": "tmu3882",
+   "name": "Morado",
+   "city": "Cartago",
+   "color": "#f59e0b",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35048",
+     "uid": null,
+     "name": "Andres Chinchilla",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5762,
+      "playerId": 35048
+     }
+    },
+    {
+     "id": "pu35053",
+     "uid": null,
+     "name": "Claire Hassler",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6926,
+      "playerId": 35053
+     }
+    },
+    {
+     "id": "pu35055",
+     "uid": null,
+     "name": "Diana Berthelon",
+     "number": 9,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5676,
+      "playerId": 35055
+     }
+    },
+    {
+     "id": "pu35103",
+     "uid": null,
+     "name": "Ezekiel Appel",
+     "number": 1,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11785,
+      "playerId": 35103
+     }
+    },
+    {
+     "id": "pu35051",
+     "uid": null,
+     "name": "Gabriel Meza rojas",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8088,
+      "playerId": 35051
+     }
+    },
+    {
+     "id": "pu35101",
+     "uid": null,
+     "name": "Glenn Burgos",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11777,
+      "playerId": 35101
+     }
+    },
+    {
+     "id": "pu35047",
+     "uid": null,
+     "name": "Greg Solano",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6907,
+      "playerId": 35047
+     }
+    },
+    {
+     "id": "pu35049",
+     "uid": null,
+     "name": "Jp Rivera",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11302,
+      "playerId": 35049
+     }
+    },
+    {
+     "id": "pu35056",
+     "uid": null,
+     "name": "Mariana Zuniga coto",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6865,
+      "playerId": 35056
+     }
+    },
+    {
+     "id": "pu35050",
+     "uid": null,
+     "name": "Mark Groot",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11305,
+      "playerId": 35050
+     }
+    },
+    {
+     "id": "pu35052",
+     "uid": null,
+     "name": "Roberto Cruz",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8102,
+      "playerId": 35052
+     }
+    },
+    {
+     "id": "pu35054",
+     "uid": null,
+     "name": "Valeska Silva",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11776,
+      "playerId": 35054
+     }
+    },
+    {
+     "id": "pu35057",
+     "uid": null,
+     "name": "Yami Monge",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 7033,
+      "playerId": 35057
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3882
+   }
+  },
+  {
+   "id": "tmu3920",
+   "name": "Rosado",
+   "city": "Cartago",
+   "color": "#7c3aed",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35074",
+     "uid": null,
+     "name": "Angel Castellanos garita",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6835,
+      "playerId": 35074
+     }
+    },
+    {
+     "id": "pu35078",
+     "uid": null,
+     "name": "Brandon Pereira",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8070,
+      "playerId": 35078
+     }
+    },
+    {
+     "id": "pu35077",
+     "uid": null,
+     "name": "Carlos Umanzor salas",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8137,
+      "playerId": 35077
+     }
+    },
+    {
+     "id": "pu35072",
+     "uid": null,
+     "name": "Jared Lehotsky",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11319,
+      "playerId": 35072
+     }
+    },
+    {
+     "id": "pu35085",
+     "uid": null,
+     "name": "john palmer",
+     "number": 9,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6965,
+      "playerId": 35085
+     }
+    },
+    {
+     "id": "pu35079",
+     "uid": null,
+     "name": "Johnny Fallas",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6737,
+      "playerId": 35079
+     }
+    },
+    {
+     "id": "pu35075",
+     "uid": null,
+     "name": "Jorge Lacayo",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6904,
+      "playerId": 35075
+     }
+    },
+    {
+     "id": "pu35110",
+     "uid": null,
+     "name": "Jose Delgado",
+     "number": 0,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 5761,
+      "playerId": 35110
+     }
+    },
+    {
+     "id": "pu35076",
+     "uid": null,
+     "name": "Juan carlos Calvo castro",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6919,
+      "playerId": 35076
+     }
+    },
+    {
+     "id": "pu35081",
+     "uid": null,
+     "name": "Maria elena Esquivel murillo",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6830,
+      "playerId": 35081
+     }
+    },
+    {
+     "id": "pu35082",
+     "uid": null,
+     "name": "Maria Hidalgo",
+     "number": 14,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6913,
+      "playerId": 35082
+     }
+    },
+    {
+     "id": "pu35084",
+     "uid": null,
+     "name": "Romy Renazco",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6915,
+      "playerId": 35084
+     }
+    },
+    {
+     "id": "pu35083",
+     "uid": null,
+     "name": "Valeria Quesada",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8055,
+      "playerId": 35083
+     }
+    },
+    {
+     "id": "pu35080",
+     "uid": null,
+     "name": "Veronica Murcia Cruz",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6857,
+      "playerId": 35080
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3920
+   },
+   "finalPlace": 2
+  },
+  {
+   "id": "tmu3883",
+   "name": "Verde",
+   "city": "Cartago",
+   "color": "#db2777",
+   "logo": "",
+   "divisionId": "mixto",
+   "pool": "",
+   "players": [
+    {
+     "id": "pu35038",
+     "uid": null,
+     "name": "Barbas - diego Saenz",
+     "number": 9,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6868,
+      "playerId": 35038
+     }
+    },
+    {
+     "id": "pu35041",
+     "uid": null,
+     "name": "Cubillo Carlos",
+     "number": 5,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11316,
+      "playerId": 35041
+     }
+    },
+    {
+     "id": "pu35036",
+     "uid": null,
+     "name": "Daniel Alfaro",
+     "number": 1,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6984,
+      "playerId": 35036
+     }
+    },
+    {
+     "id": "pu35043",
+     "uid": null,
+     "name": "Dayanne Simpson",
+     "number": 13,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 8069,
+      "playerId": 35043
+     }
+    },
+    {
+     "id": "pu35033",
+     "uid": null,
+     "name": "Diego Rivera",
+     "number": 8,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6906,
+      "playerId": 35033
+     }
+    },
+    {
+     "id": "pu35045",
+     "uid": null,
+     "name": "Esther Jiménez",
+     "number": 11,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11561,
+      "playerId": 35045
+     }
+    },
+    {
+     "id": "pu35039",
+     "uid": null,
+     "name": "Felipe Calvo Araya",
+     "number": 3,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11548,
+      "playerId": 35039
+     }
+    },
+    {
+     "id": "pu35035",
+     "uid": null,
+     "name": "Francis Guindon",
+     "number": 6,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6832,
+      "playerId": 35035
+     }
+    },
+    {
+     "id": "pu35037",
+     "uid": null,
+     "name": "Gustavo Coronel",
+     "number": 4,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6910,
+      "playerId": 35037
+     }
+    },
+    {
+     "id": "pu35042",
+     "uid": null,
+     "name": "Ipsilan Castillo",
+     "number": 10,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6831,
+      "playerId": 35042
+     }
+    },
+    {
+     "id": "pu35100",
+     "uid": null,
+     "name": "Kelly Marin",
+     "number": 12,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6928,
+      "playerId": 35100
+     }
+    },
+    {
+     "id": "pu35040",
+     "uid": null,
+     "name": "Rodrigo Araya",
+     "number": 2,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6916,
+      "playerId": 35040
+     }
+    },
+    {
+     "id": "pu35044",
+     "uid": null,
+     "name": "Sofía Vargas",
+     "number": 14,
+     "gender": "F",
+     "source": {
+      "provider": "ultie",
+      "accountId": 11373,
+      "playerId": 35044
+     }
+    },
+    {
+     "id": "pu35034",
+     "uid": null,
+     "name": "Steven Johanson",
+     "number": 7,
+     "gender": "M",
+     "source": {
+      "provider": "ultie",
+      "accountId": 6962,
+      "playerId": 35034
+     }
+    }
+   ],
+   "hat": true,
+   "source": {
+    "provider": "ultie",
+    "teamId": 3883
+   }
+  }
+ ],
+ "games": [
+  {
+   "id": "gmu13678",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T19:00:05.135Z",
+   "finishedAt": "2025-08-10T11:48:02.124Z",
+   "teamA": "tmu3919",
+   "teamB": "tmu3882",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191411",
+     "t": 0,
+     "at": 1754766005126,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191418",
+     "t": 220,
+     "at": 1754766225068,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35059",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 0
+    },
+    {
+     "id": "u191420",
+     "t": 354,
+     "at": 1754766358999,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35048",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191424",
+     "t": 493,
+     "at": 1754766498162,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35059",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 1
+    },
+    {
+     "id": "u191425",
+     "t": 594,
+     "at": 1754766599296,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 1
+    },
+    {
+     "id": "u191427",
+     "t": 736,
+     "at": 1754766740793,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35069",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 1
+    },
+    {
+     "id": "u191430",
+     "t": 892,
+     "at": 1754766896980,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35050",
+     "assistId": "pu35049",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 2
+    },
+    {
+     "id": "u191432",
+     "t": 1035,
+     "at": 1754767039772,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 2
+    },
+    {
+     "id": "u191434",
+     "t": 1249,
+     "at": 1754767254324,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35068",
+     "assistId": "pu35062",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 2
+    },
+    {
+     "id": "u191435",
+     "t": 1378,
+     "at": 1754767383113,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35048",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 3
+    },
+    {
+     "id": "u191438",
+     "t": 1613,
+     "at": 1754767617657,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35101",
+     "assistId": "pu35050",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 4
+    },
+    {
+     "id": "u191440",
+     "t": 1784,
+     "at": 1754767789515,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35061",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 4
+    },
+    {
+     "id": "u191442",
+     "t": 1938,
+     "at": 1754767942815,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35068",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 4
+    },
+    {
+     "id": "u191447",
+     "t": 2138,
+     "at": 1754768143478,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35050",
+     "assistId": "pu35049",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 5
+    },
+    {
+     "id": "u191450",
+     "t": 2227,
+     "at": 1754768231705,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 9,
+     "scoreB": 5
+    },
+    {
+     "id": "u191452",
+     "t": 2324,
+     "at": 1754768328933,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 10,
+     "scoreB": 5
+    },
+    {
+     "id": "u191458",
+     "t": 2399,
+     "at": 1754768404135,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35049",
+     "assistId": "pu35057",
+     "callahan": false,
+     "scoreA": 10,
+     "scoreB": 6
+    },
+    {
+     "id": "u191557",
+     "t": 11157,
+     "at": 1754777162216,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13678,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/2"
+   }
+  },
+  {
+   "id": "gmu13677",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T19:00:08.579Z",
+   "finishedAt": "2025-08-09T22:06:16.131Z",
+   "teamA": "tmu3881",
+   "teamB": "tmu3920",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191412",
+     "t": 0,
+     "at": 1754766008571,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191416",
+     "t": 158,
+     "at": 1754766167052,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35082",
+     "assistId": "pu35078",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191419",
+     "t": 304,
+     "at": 1754766312149,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35027",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191423",
+     "t": 475,
+     "at": 1754766483619,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35075",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191429",
+     "t": 739,
+     "at": 1754766747816,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 3
+    },
+    {
+     "id": "u191431",
+     "t": 942,
+     "at": 1754766950618,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35085",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 4
+    },
+    {
+     "id": "u191433",
+     "t": 1240,
+     "at": 1754767248366,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35077",
+     "assistId": "pu35074",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 5
+    },
+    {
+     "id": "u191436",
+     "t": 1406,
+     "at": 1754767414519,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35029",
+     "assistId": "pu35022",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 5
+    },
+    {
+     "id": "u191437",
+     "t": 1504,
+     "at": 1754767512740,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35021",
+     "assistId": "pu35024",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 5
+    },
+    {
+     "id": "u191439",
+     "t": 1705,
+     "at": 1754767713177,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35024",
+     "assistId": "pu35102",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 5
+    },
+    {
+     "id": "u191441",
+     "t": 1922,
+     "at": 1754767930947,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 6
+    },
+    {
+     "id": "u191446",
+     "t": 2101,
+     "at": 1754768109641,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35030",
+     "assistId": "pu35027",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 6
+    },
+    {
+     "id": "u191451",
+     "t": 2232,
+     "at": 1754768240799,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 7
+    },
+    {
+     "id": "u191559",
+     "t": 11168,
+     "at": 1754777176127,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13677,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/1"
+   }
+  },
+  {
+   "id": "gmu13679",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T19:50:01.968Z",
+   "finishedAt": "2025-08-09T22:06:35.401Z",
+   "teamA": "tmu3919",
+   "teamB": "tmu3884",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191460",
+     "t": 0,
+     "at": 1754769001961,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191465",
+     "t": 365,
+     "at": 1754769367405,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35015",
+     "assistId": "pu35011",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191467",
+     "t": 565,
+     "at": 1754769566614,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35012",
+     "assistId": "pu35016",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 2
+    },
+    {
+     "id": "u191469",
+     "t": 664,
+     "at": 1754769666434,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35062",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191472",
+     "t": 786,
+     "at": 1754769787879,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191475",
+     "t": 886,
+     "at": 1754769887608,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35012",
+     "assistId": "pu35017",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 3
+    },
+    {
+     "id": "u191478",
+     "t": 1211,
+     "at": 1754770213236,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35071",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191480",
+     "t": 1475,
+     "at": 1754770476843,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191481",
+     "t": 1619,
+     "at": 1754770621005,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35060",
+     "assistId": "pu35062",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 3
+    },
+    {
+     "id": "u191483",
+     "t": 1793,
+     "at": 1754770794654,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35010",
+     "assistId": "pu35014",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191484",
+     "t": 1880,
+     "at": 1754770881687,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35059",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 4
+    },
+    {
+     "id": "u191485",
+     "t": 2017,
+     "at": 1754771019235,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35012",
+     "assistId": "pu35011",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 5
+    },
+    {
+     "id": "u191489",
+     "t": 2241,
+     "at": 1754771242937,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35060",
+     "assistId": "pu35068",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 5
+    },
+    {
+     "id": "u191493",
+     "t": 2353,
+     "at": 1754771355246,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 5
+    },
+    {
+     "id": "u191561",
+     "t": 8193,
+     "at": 1754777195398,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13679,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/3"
+   }
+  },
+  {
+   "id": "gmu13680",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T19:51:45.634Z",
+   "finishedAt": "2025-08-09T22:06:27.033Z",
+   "teamA": "tmu3920",
+   "teamB": "tmu3883",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191462",
+     "t": 0,
+     "at": 1754769105622,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191464",
+     "t": 198,
+     "at": 1754769303210,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35078",
+     "assistId": "pu35074",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 0
+    },
+    {
+     "id": "u191466",
+     "t": 415,
+     "at": 1754769520973,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35033",
+     "assistId": "pu35034",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191468",
+     "t": 524,
+     "at": 1754769629427,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35074",
+     "assistId": "pu35077",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 1
+    },
+    {
+     "id": "u191471",
+     "t": 680,
+     "at": 1754769785683,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35036",
+     "assistId": "pu35034",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191476",
+     "t": 799,
+     "at": 1754769904378,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35035",
+     "assistId": "pu35100",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 3
+    },
+    {
+     "id": "u191477",
+     "t": 931,
+     "at": 1754770037103,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35072",
+     "assistId": "pu35110",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191479",
+     "t": 1131,
+     "at": 1754770236673,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35077",
+     "assistId": "pu35084",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191482",
+     "t": 1626,
+     "at": 1754770731531,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35042",
+     "assistId": "pu35037",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191490",
+     "t": 2179,
+     "at": 1754771284209,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35037",
+     "assistId": "pu35034",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 5
+    },
+    {
+     "id": "u191495",
+     "t": 2297,
+     "at": 1754771403024,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35076",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 5
+    },
+    {
+     "id": "u191497",
+     "t": 2389,
+     "at": 1754771494167,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35035",
+     "assistId": "pu35034",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 6
+    },
+    {
+     "id": "u191560",
+     "t": 8081,
+     "at": 1754777187030,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13680,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/4"
+   }
+  },
+  {
+   "id": "gmu13682",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T20:40:05.799Z",
+   "finishedAt": "2025-08-09T21:21:58.021Z",
+   "teamA": "tmu3882",
+   "teamB": "tmu3883",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191502",
+     "t": 0,
+     "at": 1754772005788,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191508",
+     "t": 602,
+     "at": 1754772608209,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35048",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 0
+    },
+    {
+     "id": "u191509",
+     "t": 782,
+     "at": 1754772788187,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35037",
+     "assistId": "pu35036",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191512",
+     "t": 1066,
+     "at": 1754773071449,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35101",
+     "assistId": "pu35049",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 1
+    },
+    {
+     "id": "u191514",
+     "t": 1287,
+     "at": 1754773293166,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35103",
+     "assistId": "pu35050",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 1
+    },
+    {
+     "id": "u191517",
+     "t": 1379,
+     "at": 1754773384402,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35040",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 2
+    },
+    {
+     "id": "u191518",
+     "t": 1498,
+     "at": 1754773504101,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35035",
+     "assistId": "pu35037",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191520",
+     "t": 1603,
+     "at": 1754773608406,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35101",
+     "assistId": "pu35049",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191522",
+     "t": 1798,
+     "at": 1754773803506,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35040",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191523",
+     "t": 1921,
+     "at": 1754773927173,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35038",
+     "assistId": "pu35035",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 5
+    },
+    {
+     "id": "u191526",
+     "t": 2300,
+     "at": 1754774305577,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35043",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 6
+    },
+    {
+     "id": "u191531",
+     "t": 2499,
+     "at": 1754774504808,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35050",
+     "assistId": "pu35048",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 6
+    },
+    {
+     "id": "u191533",
+     "t": 2499,
+     "at": 1754774504808,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13682,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/6"
+   }
+  },
+  {
+   "id": "gmu13681",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T20:45:02.564Z",
+   "finishedAt": "2025-08-09T21:29:37.044Z",
+   "teamA": "tmu3884",
+   "teamB": "tmu3881",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191505",
+     "t": 0,
+     "at": 1754772302559,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191507",
+     "t": 272,
+     "at": 1754772574918,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35009",
+     "assistId": "pu35011",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 0
+    },
+    {
+     "id": "u191510",
+     "t": 474,
+     "at": 1754772776214,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35022",
+     "assistId": "pu35029",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191511",
+     "t": 756,
+     "at": 1754773058186,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35025",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191513",
+     "t": 890,
+     "at": 1754773192752,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35018",
+     "assistId": "pu35013",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191515",
+     "t": 1019,
+     "at": 1754773321585,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35012",
+     "assistId": "pu35010",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 2
+    },
+    {
+     "id": "u191516",
+     "t": 1078,
+     "at": 1754773381010,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35025",
+     "assistId": "pu35026",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191519",
+     "t": 1282,
+     "at": 1754773584304,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35011",
+     "assistId": "pu35017",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191521",
+     "t": 1458,
+     "at": 1754773760994,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35009",
+     "assistId": "pu35011",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 3
+    },
+    {
+     "id": "u191530",
+     "t": 2138,
+     "at": 1754774440816,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35025",
+     "assistId": "pu35030",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191535",
+     "t": 2239,
+     "at": 1754774541351,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35022",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 5
+    },
+    {
+     "id": "u191538",
+     "t": 2667,
+     "at": 1754774969943,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35031",
+     "assistId": "pu35024",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 6
+    },
+    {
+     "id": "u191540",
+     "t": 2667,
+     "at": 1754774969943,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13681,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/5"
+   }
+  },
+  {
+   "id": "gmu13684",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T21:45:02.696Z",
+   "finishedAt": "2025-08-09T22:27:04.175Z",
+   "teamA": "tmu3882",
+   "teamB": "tmu3881",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191541",
+     "t": 0,
+     "at": 1754775902682,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191546",
+     "t": 341,
+     "at": 1754776244084,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35051",
+     "assistId": "pu35053",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 0
+    },
+    {
+     "id": "u191548",
+     "t": 518,
+     "at": 1754776420939,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35029",
+     "assistId": "pu35024",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191549",
+     "t": 607,
+     "at": 1754776509939,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35030",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191551",
+     "t": 798,
+     "at": 1754776700987,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35031",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 3
+    },
+    {
+     "id": "u191554",
+     "t": 986,
+     "at": 1754776889089,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35051",
+     "assistId": "pu35101",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 3
+    },
+    {
+     "id": "u191556",
+     "t": 1114,
+     "at": 1754777016337,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35047",
+     "assistId": "pu35048",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191558",
+     "t": 1270,
+     "at": 1754777172277,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35051",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191564",
+     "t": 1625,
+     "at": 1754777527887,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35028",
+     "assistId": "pu35102",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191568",
+     "t": 2095,
+     "at": 1754777997906,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35101",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191574",
+     "t": 2279,
+     "at": 1754778182067,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35050",
+     "assistId": "pu35052",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 4
+    },
+    {
+     "id": "u191580",
+     "t": 2521,
+     "at": 1754778424173,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13684,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/8"
+   }
+  },
+  {
+   "id": "gmu13683",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T21:45:07.259Z",
+   "finishedAt": "2025-08-09T22:28:17.530Z",
+   "teamA": "tmu3919",
+   "teamB": "tmu3920",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191543",
+     "t": 0,
+     "at": 1754775907251,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191544",
+     "t": 142,
+     "at": 1754776049528,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35074",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191545",
+     "t": 258,
+     "at": 1754776164873,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191547",
+     "t": 405,
+     "at": 1754776312453,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35068",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 1
+    },
+    {
+     "id": "u191550",
+     "t": 604,
+     "at": 1754776511216,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35071",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 1
+    },
+    {
+     "id": "u191552",
+     "t": 794,
+     "at": 1754776701321,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 1
+    },
+    {
+     "id": "u191553",
+     "t": 945,
+     "at": 1754776851930,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35083",
+     "assistId": "pu35080",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 2
+    },
+    {
+     "id": "u191555",
+     "t": 1085,
+     "at": 1754776992098,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35078",
+     "assistId": "pu35110",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191562",
+     "t": 1320,
+     "at": 1754777226819,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 3
+    },
+    {
+     "id": "u191563",
+     "t": 1588,
+     "at": 1754777495685,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35078",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191565",
+     "t": 1855,
+     "at": 1754777762545,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35083",
+     "assistId": "pu35075",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 5
+    },
+    {
+     "id": "u191566",
+     "t": 1967,
+     "at": 1754777874036,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35062",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 5
+    },
+    {
+     "id": "u191567",
+     "t": 2075,
+     "at": 1754777982052,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 5
+    },
+    {
+     "id": "u191571",
+     "t": 2161,
+     "at": 1754778068501,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 6
+    },
+    {
+     "id": "u191575",
+     "t": 2330,
+     "at": 1754778237019,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35077",
+     "assistId": "pu35075",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 7
+    },
+    {
+     "id": "u191581",
+     "t": 2579,
+     "at": 1754778486373,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35059",
+     "assistId": "pu35062",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 7
+    },
+    {
+     "id": "u191583",
+     "t": 2579,
+     "at": 1754778486373,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13683,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/7"
+   }
+  },
+  {
+   "id": "gmu13685",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T22:40:03.182Z",
+   "finishedAt": "2025-08-09T23:20:53.849Z",
+   "teamA": "tmu3884",
+   "teamB": "tmu3920",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191588",
+     "t": 0,
+     "at": 1754779203170,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191592",
+     "t": 225,
+     "at": 1754779428033,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35077",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191594",
+     "t": 345,
+     "at": 1754779547775,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35078",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 2
+    },
+    {
+     "id": "u191596",
+     "t": 429,
+     "at": 1754779631947,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35012",
+     "assistId": "pu35018",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191598",
+     "t": 663,
+     "at": 1754779865688,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35011",
+     "assistId": "pu35009",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191600",
+     "t": 871,
+     "at": 1754780074352,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35015",
+     "assistId": "pu35012",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 2
+    },
+    {
+     "id": "u191603",
+     "t": 993,
+     "at": 1754780196364,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35075",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191604",
+     "t": 1174,
+     "at": 1754780376822,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35110",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 4
+    },
+    {
+     "id": "u191606",
+     "t": 1336,
+     "at": 1754780538910,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35020",
+     "assistId": "pu35014",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191609",
+     "t": 1479,
+     "at": 1754780682103,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35083",
+     "assistId": "pu35077",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 5
+    },
+    {
+     "id": "u191610",
+     "t": 1604,
+     "at": 1754780806770,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35083",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 6
+    },
+    {
+     "id": "u191612",
+     "t": 1715,
+     "at": 1754780917769,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35110",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 7
+    },
+    {
+     "id": "u191614",
+     "t": 1894,
+     "at": 1754781097144,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35014",
+     "assistId": "pu35017",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 7
+    },
+    {
+     "id": "u191617",
+     "t": 2121,
+     "at": 1754781323760,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35110",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 8
+    },
+    {
+     "id": "u191625",
+     "t": 2399,
+     "at": 1754781602314,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35020",
+     "assistId": "pu35086",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 8
+    },
+    {
+     "id": "u191628",
+     "t": 2451,
+     "at": 1754781653846,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13685,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/9"
+   }
+  },
+  {
+   "id": "gmu13686",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T22:40:08.554Z",
+   "finishedAt": "2025-08-09T23:20:46.006Z",
+   "teamA": "tmu3919",
+   "teamB": "tmu3883",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191589",
+     "t": 0,
+     "at": 1754779208540,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191593",
+     "t": 286,
+     "at": 1754779494470,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35042",
+     "assistId": "pu35036",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191595",
+     "t": 390,
+     "at": 1754779598237,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35069",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191597",
+     "t": 588,
+     "at": 1754779796387,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35035",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191599",
+     "t": 805,
+     "at": 1754780013808,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35071",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191601",
+     "t": 881,
+     "at": 1754780089281,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35033",
+     "assistId": "pu35035",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 3
+    },
+    {
+     "id": "u191602",
+     "t": 978,
+     "at": 1754780186966,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191605",
+     "t": 1186,
+     "at": 1754780394701,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191607",
+     "t": 1342,
+     "at": 1754780550436,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35040",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191608",
+     "t": 1431,
+     "at": 1754780639344,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35070",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191611",
+     "t": 1651,
+     "at": 1754780859388,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35067",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 4
+    },
+    {
+     "id": "u191613",
+     "t": 1850,
+     "at": 1754781058442,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35033",
+     "assistId": "pu35042",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 5
+    },
+    {
+     "id": "u191618",
+     "t": 2134,
+     "at": 1754781342245,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35063",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 5
+    },
+    {
+     "id": "u191621",
+     "t": 2260,
+     "at": 1754781468117,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 5
+    },
+    {
+     "id": "u191627",
+     "t": 2437,
+     "at": 1754781646003,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13686,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/10"
+   }
+  },
+  {
+   "id": "gmu13688",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T23:30:15.092Z",
+   "finishedAt": "2025-08-10T00:10:57.675Z",
+   "teamA": "tmu3884",
+   "teamB": "tmu3882",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191629",
+     "t": 0,
+     "at": 1754782215085,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191634",
+     "t": 397,
+     "at": 1754782611723,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35103",
+     "assistId": "pu35101",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191637",
+     "t": 616,
+     "at": 1754782830957,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35101",
+     "assistId": "pu35053",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 2
+    },
+    {
+     "id": "u191639",
+     "t": 721,
+     "at": 1754782935916,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35050",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 3
+    },
+    {
+     "id": "u191640",
+     "t": 861,
+     "at": 1754783076373,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35103",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 4
+    },
+    {
+     "id": "u191642",
+     "t": 983,
+     "at": 1754783198497,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35051",
+     "assistId": "pu35047",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 5
+    },
+    {
+     "id": "u191643",
+     "t": 1114,
+     "at": 1754783329110,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35101",
+     "assistId": "pu35050",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 6
+    },
+    {
+     "id": "u191645",
+     "t": 1208,
+     "at": 1754783423480,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35012",
+     "assistId": "pu35014",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 6
+    },
+    {
+     "id": "u191646",
+     "t": 1519,
+     "at": 1754783733982,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35010",
+     "assistId": "pu35017",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 6
+    },
+    {
+     "id": "u191647",
+     "t": 1644,
+     "at": 1754783859542,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35015",
+     "assistId": "pu35009",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 6
+    },
+    {
+     "id": "u191651",
+     "t": 1790,
+     "at": 1754784005096,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35017",
+     "assistId": "pu35013",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 6
+    },
+    {
+     "id": "u191653",
+     "t": 2023,
+     "at": 1754784238429,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35009",
+     "assistId": "pu35014",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 6
+    },
+    {
+     "id": "u191659",
+     "t": 2311,
+     "at": 1754784526157,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35048",
+     "assistId": "pu35049",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 7
+    },
+    {
+     "id": "u191664",
+     "t": 2443,
+     "at": 1754784657672,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13688,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/12"
+   }
+  },
+  {
+   "id": "gmu13687",
+   "divisionId": "mixto",
+   "phase": "Eliminatoria",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-09T23:31:52.978Z",
+   "finishedAt": "2025-08-10T00:12:06.029Z",
+   "teamA": "tmu3883",
+   "teamB": "tmu3881",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191631",
+     "t": 0,
+     "at": 1754782312970,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191633",
+     "t": 217,
+     "at": 1754782529978,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35030",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191635",
+     "t": 358,
+     "at": 1754782671173,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35040",
+     "assistId": "pu35039",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 1
+    },
+    {
+     "id": "u191636",
+     "t": 458,
+     "at": 1754782770904,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35021",
+     "assistId": "pu35102",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191638",
+     "t": 558,
+     "at": 1754782871162,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35041",
+     "assistId": "pu35035",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191641",
+     "t": 774,
+     "at": 1754783086508,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35033",
+     "assistId": "pu35036",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 2
+    },
+    {
+     "id": "u191644",
+     "t": 1073,
+     "at": 1754783386052,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35022",
+     "assistId": "pu35026",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 3
+    },
+    {
+     "id": "u191648",
+     "t": 1580,
+     "at": 1754783892908,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35024",
+     "assistId": "pu35025",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 4
+    },
+    {
+     "id": "u191649",
+     "t": 1589,
+     "at": 1754783902151,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35042",
+     "assistId": "pu35033",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 4
+    },
+    {
+     "id": "u191650",
+     "t": 1613,
+     "at": 1754783926291,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35022",
+     "assistId": "pu35030",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 5
+    },
+    {
+     "id": "u191652",
+     "t": 1800,
+     "at": 1754784112575,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35029",
+     "assistId": "pu35025",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 6
+    },
+    {
+     "id": "u191655",
+     "t": 2079,
+     "at": 1754784392115,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35104",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 7
+    },
+    {
+     "id": "u191656",
+     "t": 2094,
+     "at": 1754784406899,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35038",
+     "assistId": "pu35039",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 7
+    },
+    {
+     "id": "u191666",
+     "t": 2399,
+     "at": 1754784711978,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35102",
+     "assistId": "pu35021",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 8
+    },
+    {
+     "id": "u191668",
+     "t": 2413,
+     "at": 1754784726026,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13687,
+    "logicalId": "/SWISS/30bbe26a_475/Swiss/1/game/11"
+   }
+  },
+  {
+   "id": "gmu13689",
+   "divisionId": "mixto",
+   "phase": "Final",
+   "pool": "",
+   "round": null,
+   "field": "",
+   "startAt": "2025-08-10T00:19:55.278Z",
+   "finishedAt": "2025-08-10T01:02:02.330Z",
+   "teamA": "tmu3919",
+   "teamB": "tmu3920",
+   "status": "final",
+   "offenseFirst": "A",
+   "spirit": {},
+   "plays": [
+    {
+     "id": "u191669",
+     "t": 0,
+     "at": 1754785195270,
+     "type": "start",
+     "team": "A"
+    },
+    {
+     "id": "u191681",
+     "t": 471,
+     "at": 1754785665880,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35085",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 1
+    },
+    {
+     "id": "u191686",
+     "t": 655,
+     "at": 1754785850102,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35078",
+     "assistId": "pu35080",
+     "callahan": false,
+     "scoreA": 0,
+     "scoreB": 2
+    },
+    {
+     "id": "u191689",
+     "t": 729,
+     "at": 1754785924619,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35069",
+     "callahan": false,
+     "scoreA": 1,
+     "scoreB": 2
+    },
+    {
+     "id": "u191692",
+     "t": 835,
+     "at": 1754786029917,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35059",
+     "assistId": "pu35065",
+     "callahan": false,
+     "scoreA": 2,
+     "scoreB": 2
+    },
+    {
+     "id": "u191695",
+     "t": 1027,
+     "at": 1754786222513,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35062",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 3,
+     "scoreB": 2
+    },
+    {
+     "id": "u191700",
+     "t": 1190,
+     "at": 1754786385300,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 2
+    },
+    {
+     "id": "u191702",
+     "t": 1327,
+     "at": 1754786522297,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35077",
+     "assistId": "pu35078",
+     "callahan": false,
+     "scoreA": 4,
+     "scoreB": 3
+    },
+    {
+     "id": "u191707",
+     "t": 1440,
+     "at": 1754786635736,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35060",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 3
+    },
+    {
+     "id": "u191712",
+     "t": 1617,
+     "at": 1754786812200,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35072",
+     "assistId": "pu35110",
+     "callahan": false,
+     "scoreA": 5,
+     "scoreB": 4
+    },
+    {
+     "id": "u191715",
+     "t": 1724,
+     "at": 1754786919759,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35060",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 4
+    },
+    {
+     "id": "u191717",
+     "t": 1857,
+     "at": 1754787051901,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 6,
+     "scoreB": 5
+    },
+    {
+     "id": "u191722",
+     "t": 2204,
+     "at": 1754787398949,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35069",
+     "assistId": "pu35059",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 5
+    },
+    {
+     "id": "u191726",
+     "t": 2282,
+     "at": 1754787477132,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35080",
+     "assistId": "pu35110",
+     "callahan": false,
+     "scoreA": 7,
+     "scoreB": 6
+    },
+    {
+     "id": "u191730",
+     "t": 2398,
+     "at": 1754787593114,
+     "type": "goal",
+     "team": "A",
+     "scorerId": "pu35065",
+     "assistId": "pu35062",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 6
+    },
+    {
+     "id": "u191735",
+     "t": 2399,
+     "at": 1754787594278,
+     "type": "goal",
+     "team": "B",
+     "scorerId": "pu35083",
+     "assistId": "pu35072",
+     "callahan": false,
+     "scoreA": 8,
+     "scoreB": 7
+    },
+    {
+     "id": "u191737",
+     "t": 2527,
+     "at": 1754787722327,
+     "type": "end"
+    }
+   ],
+   "source": {
+    "provider": "ultie",
+    "gameId": 13689,
+    "logicalId": "/FINALS/a9ccd251_475/GameUnion/game/1"
+   }
+  }
+ ]
+}

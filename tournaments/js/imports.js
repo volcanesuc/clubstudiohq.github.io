@@ -113,6 +113,8 @@ export async function importTournament(data, onProgress) {
     format: src.format || "round_robin",
     rules,
     registrationOpen: false,
+    // torneo hat: equipos armados por el organizador, sin club detrás
+    ...(src.type === "hat" ? { type: "hat", hat: { multiDivision: false, ...(src.hat || {}) } } : {}),
     imported: { ...data.source, by: user.uid, at: new Date() },
   };
 
