@@ -1374,6 +1374,7 @@ const DATA_EN = [
   [/^Ronda (\d+)/i, "Round $1"],
   [/^Puestos (\d+)-(\d*)/i, "Places $1-$2"],
   [/^Puesto (\d+)-(\d+)/i, "$1-$2 place"],
+  [/^Cruce/i, "Crossover"],
   [/^Tercer lugar/i, "Third place"],
   [/^Quinto lugar/i, "Fifth place"],
   [/^Séptimo lugar/i, "Seventh place"],

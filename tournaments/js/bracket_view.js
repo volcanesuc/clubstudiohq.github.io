@@ -46,7 +46,7 @@ export function finalPlaces(teams = [], games = []) {
 
 // Nombre de la ronda sin el rango de puestos ni el número: "Puestos 5-8 · Semifinal 2" → "Semifinal"
 const roundBase = (phase = "") => String(phase).split(" · ").pop().replace(/\s*(\(\d+\)|\d+)$/, "").trim();
-const PLURAL = { Semifinal: EX.bkSemis, "Cuartos de final": EX.bkQuarters, "Octavos de final": EX.bkEighths };
+const PLURAL = { Cruce: EX.bkCrossovers, Semifinal: EX.bkSemis, "Cuartos de final": EX.bkQuarters, "Octavos de final": EX.bkEighths };
 // Primer puesto que se juega en ese partido (para ordenar: bracket principal arriba, 5-8 después…)
 const startPlaceOf = (g) => {
   const m = String(g.phase || "").match(/^Puestos (\d+)-/);
@@ -64,7 +64,7 @@ function columnOf(g) {
   if (placeOfPhase(p)) return [50, EX.bkFinals];
   // otras llaves (ej. "Ronda 1", "Ganadores · Ronda 2"): por ronda, antes de cuartos
   const base = p.replace(/\s+(\(\d+\)|\d+)$/, "").trim() || EX.bkRound;
-  return [10 + Math.min(9, Number(g.round) || 0) / 10, trData(base)];
+  return [10 + Math.min(9, Number(g.round) || 0) / 10, PLURAL[base] || trData(base)];
 }
 
 const orderInColumn = (g) => startPlaceOf(g);

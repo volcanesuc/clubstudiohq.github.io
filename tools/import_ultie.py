@@ -102,6 +102,8 @@ def phase_of(logical_id, finals_rr_teams):
         # llave por puestos: /S_1_4/ = cuartos (de ahí salen 1º-4º), /S_1_2/ = semis
         span = lid.split("/")[1].split("_")[-1]
         return {"2": "Semifinal", "4": "Cuartos de final", "8": "Octavos de final"}.get(span, "Eliminatoria")
+    if lid.startswith("/CROSSOVER/"):
+        return "Cruce"  # cruces entre grupos antes de la llave (no cuentan para la tabla)
     if "/GameUnion/game/" in lid:
         # finales por puesto: game/1 = 1º-2º, game/2 = 3º-4º, game/3 = 5º-6º…
         k = int(lid.rsplit("/", 1)[1])
@@ -253,6 +255,7 @@ def convert(slug, hat=False, country="CR"):
             })
 
         # puesto final de cada equipo según la llave (para mostrarlo y para el historial)
+        relabel_place_games(dv, [g for g in games if g["divisionId"] == div_id], team_key)
         places = final_places(dv, games, team_key)
         for t in teams:
             if t["divisionId"] == div_id and t["id"] in places:
@@ -298,6 +301,12 @@ def reconcile(plays, official, game_id, score):
                 p["deleted"] = True
                 p["note"] = "Anotado después del final en ultie; no cuenta"
     live = lambda: [p for p in plays if p["type"] == "goal" and not p.get("deleted")]
+    # goles de más (ej. partido dado por perdido): los últimos de ese equipo no cuentan
+    for s in ("A", "B"):
+        extra = sum(p["team"] == s for p in live()) - official[s]
+        for p in [p for p in live() if p["team"] == s][::-1][:max(0, extra)]:
+            p["deleted"] = True
+            p["note"] = "No cuenta en el marcador oficial de ultie"
     for s in ("A", "B"):
         missing = official[s] - sum(p["team"] == s for p in live())
         for k in range(max(0, missing)):
@@ -315,8 +324,39 @@ def reconcile(plays, official, game_id, score):
     return new
 
 
+def result_places(dv, team_key):
+    """Tabla final oficial de ultie: /RESULT/<id>/Result/in/<puesto> -> equipo."""
+    out = {}
+    for lid, s in (dv.get("teamMap") or {}).items():
+        if s and lid.startswith("/RESULT/") and "/Result/in/" in lid and s.get("teamId") in team_key:
+            out[team_key[s["teamId"]]] = int(lid.rsplit("/", 1)[1])
+    return out
+
+
+def relabel_place_games(dv, games, team_key):
+    """Con tabla oficial, cada partido por puesto se nombra por el puesto de su ganador
+    (ej. la "final" de un bloque FINALS que reparte el 5º = "Quinto lugar")."""
+    places = result_places(dv, team_key)
+    if not places:
+        return
+    tm = dv.get("teamMap") or {}
+    for g in games:
+        lid = g["source"]["logicalId"] or ""
+        if not (lid.startswith("/FINALS/") and "/GameUnion/game/" in lid):
+            continue
+        w = (tm.get(lid + "/out/w") or {}).get("teamId")
+        p = places.get(team_key.get(w))
+        if p:
+            k = (p + 1) // 2
+            g["phase"] = PLACE_GAMES.get(k, f"Puesto {2 * k - 1}-{2 * k}")
+
+
 def final_places(dv, games, team_key):
-    """Puesto final: final (1-2), tercer lugar (3-4), y los demás por la tabla de su mini round robin."""
+    """Puesto final: la tabla final oficial de ultie (/RESULT/) si viene; si no,
+    final (1-2), tercer lugar (3-4), y los demás por la tabla de su mini round robin."""
+    official = result_places(dv, team_key)
+    if official:
+        return official
     out = {}
     div_games = [g for g in games if g["source"]["logicalId"] and any(g["source"]["gameId"] == x["id"] for x in dv["games"])]
     def winner_loser(g):
