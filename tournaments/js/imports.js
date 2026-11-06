@@ -56,7 +56,12 @@ export function validateImport(data) {
 // Resumen para mostrar antes de importar (marcadores calculados con la misma lógica del planillero)
 export function importPreview(data) {
   const rules = eventRules({ rules: { ...DEFAULT_RULES, ...data.event.rules } });
-  const games = data.games.map((g) => ({ ...g, state: computeGameState(g.plays || [], { offenseFirst: g.offenseFirst }, rules) }));
+  const games = data.games.map((g) => {
+    const state = computeGameState(g.plays || [], { offenseFirst: g.offenseFirst }, rules);
+    // solo marcador final (sin jugadas)
+    if (!(g.plays || []).length && g.score) state.score = { A: g.score.A || 0, B: g.score.B || 0 };
+    return { ...g, state };
+  });
   return {
     teams: data.teams.length,
     players: data.teams.reduce((n, t) => n + (t.players || []).length, 0),
@@ -193,6 +198,8 @@ export async function importTournament(data, onProgress) {
       status: g.status === GAME_STATUS.FINAL ? GAME_STATUS.FINAL : GAME_STATUS.SCHEDULED,
       offenseFirst: g.offenseFirst || "A",
       ...gameSummary(state),
+      // partido con solo el marcador final (sin jugadas): se guarda ese marcador
+      ...(!(g.plays || []).length && g.score ? { scoreA: g.score.A || 0, scoreB: g.score.B || 0 } : {}),
       spirit: g.spirit || {},
       clock: startMs ? { startedAt: startMs, pausedMs: 0, pausedAt: null, offsetMs: 0, endedAt: endMs, break: null } : {},
       source: g.source || null,

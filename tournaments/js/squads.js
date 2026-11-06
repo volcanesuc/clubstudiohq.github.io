@@ -485,7 +485,8 @@ export async function playerHistory(uid, squadIds = [], hatEventIds = []) {
     const isMe = (t) => (p) => p.id === uid || p.uid === uid || (claim && t.id === claim.teamId && p.id === claim.playerId);
     const team = teams.find((t) => (t.players || []).some(isMe(t)));
     if (!event || !team) return null;
-    const pid = team.players.find(isMe(team)).id;
+    const me = team.players.find(isMe(team));
+    const pid = me.id;
     const games = (await listGames(eid).catch(() => []))
       .filter((g) => g.status !== GAME_STATUS.SCHEDULED && (g.teamA?.id === team.id || g.teamB?.id === team.id));
     const st = games.reduce((t, g) => {
@@ -493,6 +494,8 @@ export async function playerHistory(uid, squadIds = [], hatEventIds = []) {
       ["goals", "assists", "blocks", "turns", "callahans"].forEach((k) => (t[k] += p[k] || 0));
       return t;
     }, { goals: 0, assists: 0, blocks: 0, turns: 0, callahans: 0 });
+    // totales del roster (torneos importados sin jugadas por partido)
+    if (me.totals) ["goals", "assists", "blocks", "turns", "callahans"].forEach((k) => (st[k] += me.totals[k] || 0));
     const gameRows = games
       .sort((a, b) => (a.startAt?.toMillis?.() || 0) - (b.startAt?.toMillis?.() || 0))
       .map((g) => ({ game: g, side: g.teamA?.id === team.id ? "A" : "B", stats: g.playerStats?.[pid] || {} }));

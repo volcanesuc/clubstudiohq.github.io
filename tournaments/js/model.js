@@ -425,6 +425,13 @@ export function playerTotals(games = [], teams = [], rules = DEFAULT_RULES) {
       totals.set(id, cur);
     });
   });
+  // torneos importados solo con totales por jugador (sin jugadas por partido): vienen en el roster
+  teams.forEach((t) => (t.players || []).forEach((p) => {
+    if (!p.totals) return;
+    const cur = totals.get(p.id) || { id: p.id, goals: 0, assists: 0, blocks: 0, turns: 0, callahans: 0, games: 0 };
+    ["goals", "assists", "blocks", "turns", "callahans"].forEach((k) => (cur[k] += p.totals[k] || 0));
+    totals.set(p.id, cur);
+  }));
   return [...totals.values()]
     .map((t) => ({ ...t, ...(playerInfo.get(t.id) || { name: "—" }), mvp: mvpScore(t, rules) }))
     .filter((t) => t.name);

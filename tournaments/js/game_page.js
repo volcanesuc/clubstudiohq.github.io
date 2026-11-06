@@ -80,7 +80,8 @@ function render() {
   const calc = computeGameState(state.plays, g, state.rules);
   const live = g.status === GAME_STATUS.LIVE;
   const started = g.status !== GAME_STATUS.SCHEDULED && g.status;
-  const score = started ? calc.score : { A: g.scoreA || 0, B: g.scoreB || 0 };
+  // partido importado solo con el marcador final (sin jugadas): se usa el marcador guardado
+  const score = started && state.plays.length ? calc.score : { A: g.scoreA || 0, B: g.scoreB || 0 };
   document.title = `${teamName("A")} ${score.A}–${score.B} ${teamName("B")}`;
 
   const side = (k) => `
