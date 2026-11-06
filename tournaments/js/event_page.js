@@ -760,7 +760,9 @@ function gamesTab() {
       <button class="sb-filter ${state.gamesView === "list" ? "is-active" : ""}" data-gview="list"><i class="bi bi-list-ul me-1"></i>${esc(EX.schedViewList)}</button>
       <button class="sb-filter ${state.gamesView === "grid" ? "is-active" : ""}" data-gview="grid"><i class="bi bi-calendar3-week me-1"></i>${esc(EX.schedViewGrid)}</button>
     </div>`;
-  const calButton = `<button class="btn btn-sm btn-outline-primary" data-ics="all"><i class="bi bi-calendar-plus me-1"></i>${esc(EX.icsAll)}</button>`;
+  // agregar al calendario: solo si queda algún partido por jugar (en torneos que ya pasaron no tiene sentido)
+  const upcoming = all.some((g) => g.status === GAME_STATUS.SCHEDULED && toMillis(g.startAt) > Date.now());
+  const calButton = upcoming ? `<button class="btn btn-sm btn-outline-primary" data-ics="all"><i class="bi bi-calendar-plus me-1"></i>${esc(EX.icsAll)}</button>` : "";
   if (state.gamesView === "grid") {
     const gdays = scheduleDays(all, state.event);
     const gday = gdays.includes(state.gameDay) ? state.gameDay : gdays[0] || "";

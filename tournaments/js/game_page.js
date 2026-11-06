@@ -97,7 +97,7 @@ function render() {
   $("tnRoot").innerHTML = `
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
       <a class="small ev-muted text-decoration-none" href="${esc(eventUrl(state.event))}"><i class="bi bi-arrow-left"></i> ${esc(state.event.name || "")}</a>
-      ${g.status === GAME_STATUS.SCHEDULED && toMillis(g.startAt) ? `
+      ${g.status === GAME_STATUS.SCHEDULED && toMillis(g.startAt) > Date.now() ? `
         <div class="dropdown">
           <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-calendar-plus me-1"></i>${esc(EX.icsGame)}</button>
           <ul class="dropdown-menu dropdown-menu-end">
