@@ -303,7 +303,16 @@ body.tn-busy::before {
 .sk-choice .btn { padding: .75rem .5rem; font-weight: 700; }
 .sk-point-info { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; margin-top: .5rem; }
 /* planillero: marcador con el color de cada equipo (A → B) y sus escudos */
-.ev-score.sk-score { background: #16141f; }
+/* base oscura (el texto se lee siempre) con el color de cada equipo entrando desde su lado y una franja arriba */
+.ev-score.sk-score {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(75% 130% at 0% 50%, color-mix(in srgb, var(--ca) 50%, transparent) 0%, transparent 70%),
+    radial-gradient(75% 130% at 100% 50%, color-mix(in srgb, var(--cb) 50%, transparent) 0%, transparent 70%),
+    #16141f;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+}
+.ev-score.sk-score::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: linear-gradient(90deg, var(--ca) 0 50%, var(--cb) 50% 100%); }
 .sk-score__point { font-size: .78rem; font-weight: 700; opacity: .75; margin-top: .1rem; }
 .sk-score__ratio { display: inline-block; margin-top: .35rem; padding: .15rem .55rem; border-radius: 999px; font-size: .74rem; font-weight: 800; background: rgba(34, 197, 94, .18); color: #86efac; white-space: nowrap; }
 .sk-crest { display: flex; justify-content: center; margin-bottom: .3rem; }
