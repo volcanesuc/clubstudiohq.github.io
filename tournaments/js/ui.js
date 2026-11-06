@@ -402,14 +402,14 @@ export function gameRowHtml(game, { href = "", teams = null } = {}) {
   const tag = href ? "a" : "div";
   return `
     <${tag} class="ev-game-row" ${href ? `href="${esc(href)}"` : ""}>
-      <div class="ev-game-row__team ${aWin ? "is-winner" : ""}">
+      <div class="ev-game-row__team ${aWin ? "is-winner" : bWin ? "is-loser" : ""}">
         ${teamBadge(g.teamA || {}, 34)}<span class="ev-game-row__name">${esc(g.teamA?.name || "—")}</span>
       </div>
       <div class="ev-game-row__mid">
-        ${final || live ? `<div class="ev-game-row__score">${g.scoreA || 0} – ${g.scoreB || 0}</div>` : `<div class="fw-bold">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</div>`}
+        ${final || live ? `<div class="ev-game-row__score"><span class="${bWin ? "is-loser" : ""}">${g.scoreA || 0}</span> – <span class="${aWin ? "is-loser" : ""}">${g.scoreB || 0}</span></div>` : `<div class="fw-bold">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</div>`}
         <div class="ev-game-row__meta">${live ? statusChip(g.status) : esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}</div>
       </div>
-      <div class="ev-game-row__team ev-game-row__team--b ${bWin ? "is-winner" : ""}">
+      <div class="ev-game-row__team ev-game-row__team--b ${bWin ? "is-winner" : aWin ? "is-loser" : ""}">
         <span class="ev-game-row__name">${esc(g.teamB?.name || "—")}</span>${teamBadge(g.teamB || {}, 34)}
       </div>
     </${tag}>`;

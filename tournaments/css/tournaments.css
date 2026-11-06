@@ -145,7 +145,11 @@
 .ev-game-row__mid { text-align: center; min-width: 76px; }
 .ev-game-row__score { font-weight: 900; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .ev-game-row__meta { font-size: .72rem; color: var(--ev-muted); }
-.ev-game-row__team.is-winner { color: var(--ev-main); font-weight: 900; }
+/* como en Partidos: el ganador oscuro y en negrita, el perdedor en gris */
+.ev-game-row__team.is-winner { color: #1f1446; font-weight: 900; }
+.ev-game-row__team.is-loser { color: #9a94ad; font-weight: 700; }
+.ev-game-row__team.is-loser .tn-team-logo { opacity: .55; }
+.ev-game-row__score .is-loser { color: #9a94ad; }
 .ev-leader-card { background: #fff; border: 1px solid var(--ev-border); border-radius: 16px; padding: 12px 14px; }
 .ev-leader-card h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ev-muted); font-weight: 800; }
 .ev-leader-row { display: grid; grid-template-columns: 22px 1fr auto; gap: .5rem; padding: 5px 0; border-bottom: 1px solid var(--ev-border); align-items: center; }
