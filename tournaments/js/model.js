@@ -432,6 +432,18 @@ export function playerTotals(games = [], teams = [], rules = DEFAULT_RULES) {
     ["goals", "assists", "blocks", "turns", "callahans"].forEach((k) => (cur[k] += p.totals[k] || 0));
     totals.set(p.id, cur);
   }));
+  // PJ = partidos que jugó su equipo (todos los del roster cuentan, aunque no anoten ni asistan)
+  const teamGames = new Map();
+  games.forEach((g) => [g.teamA?.id ?? g.teamA, g.teamB?.id ?? g.teamB].forEach((tid) => tid && teamGames.set(tid, (teamGames.get(tid) || 0) + 1)));
+  teams.forEach((t) => {
+    const n = teamGames.get(t.id) || 0;
+    if (!n) return;
+    (t.players || []).forEach((p) => {
+      const cur = totals.get(p.id) || { id: p.id, goals: 0, assists: 0, blocks: 0, turns: 0, callahans: 0, games: 0 };
+      cur.games = Math.max(cur.games, n);
+      totals.set(p.id, cur);
+    });
+  });
   return [...totals.values()]
     .map((t) => ({ ...t, ...(playerInfo.get(t.id) || { name: "—" }), mvp: mvpScore(t, rules) }))
     .filter((t) => t.name);
