@@ -86,7 +86,8 @@ export async function savePickup(id, data, org) {
     return id;
   }
   const newId = randomId("pk");
-  const day = new Date(startMs).toISOString().slice(0, 10);
+  const d = new Date(startMs); // fecha local del organizador (19:00 en CR no es "mañana" en UTC)
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   await setDoc(pickupRef(newId), {
     ...payload,
     slug: `${slugify(payload.title) || "pickup"}-${day}-${newId.slice(-4)}`,

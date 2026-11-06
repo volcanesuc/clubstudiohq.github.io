@@ -97,9 +97,9 @@ export function totals(pickup, players = [], now = Date.now()) {
   return { in: inList.length, waitlist: waitlist.length, paid, due, owing, review, capacity: Number(pickup?.capacity || 0) };
 }
 
-// Precio más bajo entre las tarifas del pickup (para "desde ₡2.000")
+// Precio más bajo que se cobra (para "desde ₡2.000"); 0 si todas las tarifas son gratis
 export function minPrice(pickup) {
-  const prices = (pickup?.tiers || []).map((t) => Number(t.price || 0));
+  const prices = (pickup?.tiers || []).map((t) => Number(t.price || 0)).filter((n) => n > 0);
   return prices.length ? Math.min(...prices) : 0;
 }
 

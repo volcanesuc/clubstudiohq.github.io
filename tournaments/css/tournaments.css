@@ -1200,3 +1200,4 @@ body.is-admin-mode .os-card { border-color: rgba(180, 83, 9, .35); }
 .pk-bar > i { display: block; height: 100%; background: var(--ev-main); border-radius: 4px; }
 .pk-me { border-radius: 14px; padding: .8rem 1rem; border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
 .pk-me--wait { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.pk-hero-chip { font-size: .72rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; background: rgba(255, 255, 255, .92); color: #4b4566; }
