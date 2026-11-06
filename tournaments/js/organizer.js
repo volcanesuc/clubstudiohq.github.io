@@ -20,6 +20,8 @@ import {
 import { GAME_MODES, HAT_AGE_DEFAULTS } from "/tournaments/js/divisions-config.js";
 import { PLAYER_FEE_MODES, hatGenders, isHatEvent } from "/tournaments/js/hat.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
+import { listMyOrgs, orgHasPickups } from "/tournaments/js/orgs.js";
+import { PK } from "/tournaments/js/pickups_strings.js";
 import { renderCreate, segHtml, segValue } from "/tournaments/js/create_event.js";
 import { getFormat, listFormats } from "/tournaments/js/formats.js";
 import { buildSchedule, playDays, scheduleWarnings } from "/tournaments/js/scheduler.js";
@@ -75,7 +77,7 @@ async function renderList() {
         <h1 class="h3 fw-bold mb-1">${esc(EX.myEvents)}</h1>
         <div class="ev-muted">${esc(EX.dirSubtitle)}</div>
       </div>
-      <div class="d-flex gap-2 flex-wrap">
+      <div class="d-flex gap-2 flex-wrap" id="evActions">
         <button class="btn btn-primary" id="evNew"><i class="bi bi-plus-lg me-1"></i>${esc(EX.newEvent)}</button>
       </div>
     </div>
@@ -100,6 +102,12 @@ async function renderList() {
     ev.preventDefault();
     run(() => openEvent(a.dataset.open));
   }));
+  // Pickups: solo si administro una organización a la que le dieron el permiso
+  listMyOrgs(state.user).then((orgs) => {
+    const org = orgs.find(orgHasPickups);
+    if (!org || $("#evPickups")) return;
+    $("#evActions")?.insertAdjacentHTML("afterbegin", `<a class="btn btn-light" id="evPickups" href="/pickups/organize.html?org=${esc(org.id)}"><i class="bi bi-lightning-charge me-1"></i>${esc(PK.dirOrganize)}</a>`);
+  }).catch(() => {});
 }
 
 /* =========================

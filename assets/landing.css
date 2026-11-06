@@ -212,3 +212,18 @@ html[lang="en"] [data-lang="es"], html:not([lang="en"]) [data-lang="en"] { displ
 .lp-footer a:hover { color: #fff; }
 .lp-fab { position: fixed; right: 18px; bottom: 18px; z-index: 50; width: 56px; height: 56px; border-radius: 50%; background: #25d366; color: #fff !important; display: inline-flex; align-items: center; justify-content: center; font-size: 1.7rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
 .lp-fab:hover { filter: brightness(1.08); }
+/* Pickups (tercera vista) */
+.lp-product--pickups::before { background: radial-gradient(520px 260px at 100% 0%, rgba(245, 158, 11, .22), transparent 65%); }
+.lp-product--pickups .lp-product__icon { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.lp-product--pickups li i { color: #fcd34d; }
+.lp-view--pickups .lp-feature__icon { background: rgba(245, 158, 11, .18); color: #fcd34d; }
+.lp-view--pickups .lp-price--hot { border-color: rgba(251, 191, 36, .55); box-shadow: 0 20px 60px rgba(245, 158, 11, .12); }
+.lp-pk-date { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; background: #fff; color: #1f1446; line-height: 1; }
+.lp-pk-date b { font-size: 1.05rem; }
+.lp-pk-date small { font-size: .62rem; font-weight: 700; text-transform: uppercase; opacity: .7; }
+.lp-pk-bar { height: 6px; border-radius: 3px; background: #ece8f5; overflow: hidden; margin-top: .4rem; }
+.lp-pk-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.lp-pk-chip { font-size: .72rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; background: #f1f0f5; color: #4b4566; white-space: nowrap; }
+.lp-pk-chip--ok { background: #dcfce7; color: #166534; }
+.lp-pk-chip--review { background: #fef3c7; color: #92400e; }
+@media (min-width: 992px) { #lpNav .nav-link, #lpNav .btn { white-space: nowrap; } }

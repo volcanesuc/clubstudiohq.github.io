@@ -211,7 +211,8 @@ body.tn-body { background: #f6f5fb; color: #1d1b26; min-height: 100vh; }
 .tn-nav__help:hover { color: #fff; }
 @media (max-width: 767.98px) {
   .tn-nav__help { display: inline-block; margin-left: auto; }
-  .tn-nav__help + .tn-nav__lang { margin-left: 0; }
+  .tn-nav__help + .tn-nav__lang, .tn-nav__admin + .tn-nav__help { margin-left: 0; }
+  .tn-nav__admin.is-active { color: #fbbf24; border-color: rgba(251, 191, 36, .6); }
 }
 .tn-nav__lang:hover, .tn-nav__lang:focus-visible { background: rgba(255, 255, 255, .14); color: #fff; border-color: rgba(255, 255, 255, .6); }
 .tn-nav__out-icon, .tn-nav__in-short { display: none; }

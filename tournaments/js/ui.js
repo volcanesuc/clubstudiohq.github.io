@@ -113,11 +113,11 @@ function renderBottomNav({ active, isAdmin, google }) {
     </a>`;
   bar.innerHTML = [
     item("dir", "/tournaments/", "bi-trophy", EX.navTournaments),
+    item("pickups", "/pickups/", "bi-lightning-charge", EX.navPickups),
     item("clubs", "/tournaments/clubs.html", "bi-shield", EX.navClubs),
     item("team", "/tournaments/team.html", "bi-people", EX.navTeam),
     item("org", "/tournaments/organize.html", "bi-clipboard-check", EX.navOrganize),
-    // el perfil queda en la foto de arriba (la barra tiene lugar para 5)
-    isAdmin ? item("admin", "/tournaments/admin.html", "bi-shield-check", EX.navAdminShort) : "",
+    // la barra tiene lugar para 5: el perfil queda en la foto de arriba y Admin en un ícono arriba
   ].join("");
 }
 
@@ -125,7 +125,7 @@ function renderBottomNav({ active, isAdmin, google }) {
 const adminCache = new Map();
 
 // Título de la pestaña en inglés: los HTML lo traen en español ("Torneos · ClubStudioHQ")
-const TITLES_EN = { Equipo: "Team", Clubes: "Clubs", Torneo: "Tournament", "Partido en vivo": "Live game", Torneos: "Tournaments", "Unirme a un equipo": "Join a team", "Organizar torneos": "Organize tournaments", Perfil: "Profile", Planillaje: "Scoring", "Espíritu de juego": "Spirit of the game", "Mi equipo": "My team", Formulario: "Form" };
+const TITLES_EN = { "Organizar pickups": "Organize pickups", Equipo: "Team", Clubes: "Clubs", Torneo: "Tournament", "Partido en vivo": "Live game", Torneos: "Tournaments", "Unirme a un equipo": "Join a team", "Organizar torneos": "Organize tournaments", Perfil: "Profile", Planillaje: "Scoring", "Espíritu de juego": "Spirit of the game", "Mi equipo": "My team", Formulario: "Form" };
 if (LANG === "en") {
   const [first, ...rest] = document.title.split(" · ");
   if (TITLES_EN[first]) document.title = [TITLES_EN[first], ...rest].join(" · ");
@@ -161,6 +161,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
       <a class="tn-nav__brand" href="/tournaments/"><img src="/assets/favicon.svg" width="30" height="30" alt="ClubStudioHQ" /><span class="tn-nav__name">ClubStudio<span class="tn-nav__hq">HQ</span></span></a>
       <div class="d-flex gap-1 flex-grow-1 overflow-auto tn-nav__tabs">
         ${link("dir", "/tournaments/", EX.navTournaments)}
+        ${link("pickups", "/pickups/", EX.navPickups)}
         ${link("clubs", "/tournaments/clubs.html", EX.navClubs)}
         ${link("team", "/tournaments/team.html", EX.navTeam)}
         ${google ? link("profile", "/tournaments/profile.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
@@ -168,6 +169,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
         ${isAdmin ? link("admin", "/tournaments/admin.html", EX.navAdmin) : ""}
         ${link("docs", "/docs/", EX.navDocs)}
       </div>
+      ${isAdmin ? `<a class="btn btn-sm tn-nav__help tn-nav__admin ${active === "admin" ? "is-active" : ""}" href="/tournaments/admin.html" title="${esc(EX.navAdmin)}" aria-label="${esc(EX.navAdmin)}"><i class="bi bi-shield-check"></i></a>` : ""}
       <a class="btn btn-sm tn-nav__help" href="/docs/" title="${esc(EX.navDocs)}" aria-label="${esc(EX.navDocs)}"><i class="bi bi-question-circle"></i></a>
       <button class="btn btn-sm tn-nav__lang" id="tnLang" title="${esc(EX.langSwitchTitle)}" aria-label="${esc(EX.langSwitchTitle)}">${LANG === "en" ? "ES" : "EN"}</button>
       ${google

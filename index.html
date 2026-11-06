@@ -33,6 +33,7 @@
           <li class="nav-item"><a class="nav-link lp-live-link" href="#en-vivo"><span class="lp-dot"></span>Torneos en vivo</a></li>
           <li class="nav-item"><a class="nav-link" href="#torneos" data-view-link="torneos">Para torneos</a></li>
           <li class="nav-item"><a class="nav-link" href="#equipos" data-view-link="equipos">Para equipos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#pickups" data-view-link="pickups">Para pickups</a></li>
           <li class="nav-item"><a class="nav-link" href="#precios" data-goto-pricing>Precios</a></li>
         </ul>
         <div class="d-flex gap-2 py-2 py-lg-0">
@@ -50,11 +51,11 @@
         <div class="text-center mx-auto mb-5" style="max-width:860px">
           <span class="lp-eyebrow"><i class="bi bi-lightning-charge-fill"></i>Hecho para ultimate</span>
           <h1 class="mt-3 mb-3">Tus torneos <span class="lp-grad-text">en vivo</span>.<br />Tu equipo <span class="lp-grad-text">en orden</span>.</h1>
-          <p class="lp-lead mx-auto">ClubStudioHQ son dos herramientas en una sola plataforma. Usá una, la otra o las dos: los jugadores tienen un solo perfil y sus estadísticas los acompañan de torneo en torneo.</p>
+          <p class="lp-lead mx-auto">ClubStudioHQ son tres herramientas en una sola plataforma. Usá la que necesités o todas juntas: los jugadores tienen un solo perfil y sus estadísticas los acompañan de torneo en torneo.</p>
         </div>
 
         <div class="row g-4">
-          <div class="col-12 col-lg-6">
+          <div class="col-12 col-lg-4">
             <article class="lp-product lp-product--torneos">
               <div class="d-flex align-items-center justify-content-between">
                 <span class="lp-product__icon"><i class="bi bi-trophy-fill"></i></span>
@@ -74,7 +75,7 @@
               </div>
             </article>
           </div>
-          <div class="col-12 col-lg-6">
+          <div class="col-12 col-lg-4">
             <article class="lp-product lp-product--equipos">
               <div class="d-flex align-items-center justify-content-between">
                 <span class="lp-product__icon"><i class="bi bi-people-fill"></i></span>
@@ -91,6 +92,26 @@
               <div class="lp-product__ctas">
                 <a class="btn btn-lp" href="#equipos" data-view-link="equipos">Conocer Equipos</a>
                 <a class="btn btn-lp-ghost" href="/tournaments/team.html"><i class="bi bi-plus-lg me-1"></i>Crear mi equipo</a>
+              </div>
+            </article>
+          </div>
+          <div class="col-12 col-lg-4">
+            <article class="lp-product lp-product--pickups">
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="lp-product__icon"><i class="bi bi-lightning-charge-fill"></i></span>
+                <span class="lp-chip">Asociaciones y ligas</span>
+              </div>
+              <div class="lp-product__name">ClubStudio Pickups</div>
+              <div class="lp-product__tag">Juegos abiertos con cupo, lista de espera y pagos claros.</div>
+              <ul>
+                <li><i class="bi bi-check-circle-fill"></i>Un link para anotarse con Google, con amigos incluidos</li>
+                <li><i class="bi bi-check-circle-fill"></i>Lista de espera que sube sola cuando alguien se sale</li>
+                <li><i class="bi bi-check-circle-fill"></i>Hora límite para salirse: después, el que no llega igual paga</li>
+                <li><i class="bi bi-check-circle-fill"></i>Comprobantes de pago en la lista, sin comisiones</li>
+              </ul>
+              <div class="lp-product__ctas">
+                <a class="btn btn-lp" href="#pickups" data-view-link="pickups">Conocer Pickups</a>
+                <a class="btn btn-lp-ghost" href="/pickups/"><i class="bi bi-calendar-event me-1"></i>Ver pickups</a>
               </div>
             </article>
           </div>
@@ -126,6 +147,7 @@
       <div class="lp-switch__inner" role="tablist">
         <button type="button" class="is-active" data-view-btn="torneos" role="tab"><i class="bi bi-trophy-fill"></i>Para torneos</button>
         <button type="button" data-view-btn="equipos" role="tab"><i class="bi bi-people-fill"></i>Para equipos</button>
+        <button type="button" data-view-btn="pickups" role="tab"><i class="bi bi-lightning-charge-fill"></i>Para pickups</button>
       </div>
     </div>
 
@@ -363,6 +385,85 @@
     </section>
     <span id="precios"></span>
 
+    <!-- ===== VISTA: PICKUPS ===== -->
+    <section class="lp-view lp-view--pickups" id="pickups" data-view="pickups">
+      <div class="container lp-section pt-4">
+        <span class="lp-eyebrow" style="color:#fcd34d"><i class="bi bi-lightning-charge-fill"></i>ClubStudio Pickups</span>
+        <h2 class="lp-h2">Pickups llenos, sin perseguir a nadie</h2>
+        <p class="lp-lead">Para asociaciones, ligas, clubes o cualquier persona que organiza juegos abiertos. Publicás el pickup, compartís el link y la lista se ordena sola.</p>
+
+        <!-- lista de ejemplo (datos de muestra, estática) -->
+        <div class="lp-dash mt-4" aria-label="Lista de ejemplo de un pickup">
+          <div class="lp-dash__bar">
+            <span class="lp-pk-date"><b>12</b><small>nov</small></span>
+            <div>
+              <div class="fw-bold">Pickup del jueves</div>
+              <div class="small opacity-75">7:00 pm · La Sabana, cancha 3</div>
+            </div>
+            <span class="lp-pill-y ms-auto">Abierto</span>
+          </div>
+          <div class="lp-dash__body">
+            <div class="row g-3">
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Confirmados</div><div class="lp-dcard__n">22<span class="fs-6 text-secondary">/24</span></div><div class="lp-pk-bar"><i style="width:92%"></i></div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">En espera</div><div class="lp-dcard__n">3</div><div class="lp-dcard__s">suben solos</div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Pagados</div><div class="lp-dcard__n">17</div><div class="lp-dcard__s">2 comprobantes por revisar</div></div></div>
+              <div class="col-6 col-lg-3"><div class="lp-dcard"><div class="lp-dcard__l">Pueden salirse hasta</div><div class="lp-dcard__n" style="font-size:1.25rem">Jue 7:00 am</div><div class="lp-dcard__s">12 h antes del juego</div></div></div>
+              <div class="col-12 col-lg-7">
+                <div class="lp-dcard">
+                  <div class="lp-dcard__l mb-1">Confirmados</div>
+                  <div class="lp-leader"><span class="lp-leader__av">MH</span><div><div class="fw-semibold">María H.</div><div class="lp-dcard__s">Miembro · ₡2 000</div></div><span class="lp-pk-chip lp-pk-chip--ok ms-auto">Pagado</span></div>
+                  <div class="lp-leader"><span class="lp-leader__av">JL</span><div><div class="fw-semibold">Jorge L.</div><div class="lp-dcard__s">General · ₡3 000</div></div><span class="lp-pk-chip lp-pk-chip--review ms-auto">Comprobante por revisar</span></div>
+                  <div class="lp-leader"><span class="lp-leader__av">EB</span><div><div class="fw-semibold">Emilio B.</div><div class="lp-dcard__s">General · ₡3 000 · amigo de Jorge</div></div><span class="lp-pk-chip ms-auto">Sin pagar</span></div>
+                </div>
+              </div>
+              <div class="col-12 col-lg-5">
+                <div class="lp-dcard">
+                  <div class="lp-dcard__l mb-1">Lista de espera</div>
+                  <div class="lp-leader"><span class="lp-leader__av">1</span><div><div class="fw-semibold">Ana R.</div><div class="lp-dcard__s">Primera vez · Gratis</div></div></div>
+                  <div class="lp-leader"><span class="lp-leader__av">2</span><div><div class="fw-semibold">Pablo J.</div><div class="lp-dcard__s">General · ₡3 000</div></div></div>
+                  <div class="lp-dcard__s mt-2">Si alguien se sale antes de la hora límite, el primero de la espera sube solo.</div>
+                </div>
+              </div>
+            </div>
+            <div class="small text-secondary mt-3">Lista de ejemplo con datos de muestra.</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-4">
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-link-45deg"></i></span><h3>Un link para todo</h3><p>Publicás el pickup y compartís el link por WhatsApp. Cada quien se anota con su cuenta de Google y puede sumar amigos.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-hourglass-split"></i></span><h3>Lista de espera automática</h3><p>Cuando se llena el cupo, los demás quedan en espera por orden de llegada y suben solos si alguien se sale.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-clock-history"></i></span><h3>Hora límite para salirse</h3><p>Los jugadores se pueden salir hasta la hora que vos definís. Después quedan en la lista y deben pagar aunque no lleguen.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-receipt"></i></span><h3>Comprobantes en la lista</h3><p>Se anotan sin pagar y suben el comprobante cuando quieran. Vos lo aprobás y ves quién debe de un vistazo.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-tags"></i></span><h3>Tarifas a tu medida</h3><p>General, miembros, primera vez, menores o invitados: definí tus tarifas en los ajustes y cambiá el precio por pickup.</p></div></div>
+          <div class="col-12 col-md-6 col-lg-4"><div class="lp-feature"><span class="lp-feature__icon"><i class="bi bi-person-plus"></i></span><h3>Jugadores sin cuenta</h3><p>Agregá a mano a quien no tiene Google y marcá si ya pagó. Si ya jugó un torneo, lo ligás a su perfil.</p></div></div>
+        </div>
+
+        <!-- precios: pickups -->
+        <div class="mt-5 pt-3" id="precios-pickups">
+          <span class="lp-eyebrow" style="color:#fcd34d"><i class="bi bi-tag-fill"></i>Precios para pickups</span>
+          <h2 class="lp-h2">Gratis para organizar</h2>
+          <p class="lp-lead mb-4">La plataforma no cobra comisión: los jugadores le pagan directo a la organización. Activamos los pickups por organización; escribinos para habilitar la tuya.</p>
+          <div class="row g-3">
+            <div class="col-12 col-lg-5">
+              <div class="lp-price lp-price--hot">
+                <div class="lp-price__name">Pickups</div>
+                <div class="muted tiny">Para asociaciones, ligas, clubes y personas</div>
+                <div class="lp-price__amount">Gratis</div>
+                <div class="lp-price__per">sin comisión por jugador</div>
+                <ul>
+                  <li><i class="bi bi-check2"></i>Pickups ilimitados con link para compartir</li>
+                  <li><i class="bi bi-check2"></i>Cupo, lista de espera y hora límite</li>
+                  <li><i class="bi bi-check2"></i>Comprobantes de pago y control de quién debe</li>
+                  <li><i class="bi bi-check2"></i>Varios admins por organización</li>
+                </ul>
+                <a class="btn btn-wa w-100" data-wa="Hola! Quiero activar los pickups para mi organización en ClubStudioHQ." href="https://wa.me/50670567463"><i class="bi bi-whatsapp me-1"></i>Pedir acceso</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== FAQ ===== -->
     <section class="lp-section pt-2" id="faq">
       <div class="container" style="max-width:880px">
@@ -427,6 +528,7 @@
         <div class="col-6 col-lg-2">
           <div class="lp-footer__h">Producto</div>
           <a href="/tournaments/">Torneos</a>
+          <a href="/pickups/">Pickups</a>
           <a href="/tournaments/organize.html">Organizar</a>
           <a href="/tournaments/team.html">Mi equipo</a>
           <a href="#precios" data-goto-pricing>Precios</a>
@@ -462,7 +564,7 @@
       document.getElementById("lpYear").textContent = new Date().getFullYear();
 
       // Selector Torneos / Equipos (cada producto tiene su propia vista y sus precios)
-      var views = ["torneos", "equipos"];
+      var views = ["torneos", "equipos", "pickups"];
       function show(view, scrollTo) {
         document.querySelectorAll("[data-view]").forEach(function (s) { s.classList.toggle("is-active", s.dataset.view === view); });
         document.querySelectorAll("[data-view-btn]").forEach(function (b) { b.classList.toggle("is-active", b.dataset.viewBtn === view); });
@@ -497,6 +599,7 @@
       // entrar directo con #equipos, #precios-equipos, etc.
       var h = location.hash.replace("#", "");
       if (h === "equipos" || h === "precios-equipos") show("equipos", h);
+      else if (h === "pickups" || h === "precios-pickups") show("pickups", h);
       else if (h === "precios") show("torneos", "precios-torneos");
       else if (h === "torneos" || h === "precios-torneos") show("torneos", h);
     })();

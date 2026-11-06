@@ -585,6 +585,7 @@ const ES = {
   navAdmin: "Admin",
   navAdminShort: "Admin",
   navDocs: "Guía",
+  navPickups: "Pickups",
   signIn: "Entrar con Google",
   signInShort: "Entrar",
   signOut: "Salir",
