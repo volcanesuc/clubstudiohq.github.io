@@ -90,17 +90,22 @@ DIVISION_GENDER = {"MIXED": ("mixto", "Mixto", True), "OPEN": ("open", "Open", F
 GAME_MODE = {"GAME_TYPE_7x7": ("7v7", 7), "GAME_TYPE_5x5": ("5v5", 5), "GAME_TYPE_4x4": ("4v4", 4), "GAME_TYPE_3x3": ("3v3", 3)}
 
 
+PLACE_GAMES = {1: "Final", 2: "Tercer lugar", 3: "Quinto lugar", 4: "Séptimo lugar"}
+
+
 def phase_of(logical_id, finals_rr_teams):
     """Fase del partido según su logicalId de ultie ('' = fase de grupos, cuenta para posiciones)."""
     lid = logical_id or ""
     if lid.startswith("/GROUP/"):
         return ""
     if lid.startswith("/S_"):
-        return "Semifinal"
-    if "/GameUnion/game/1" in lid:
-        return "Final"
-    if "/GameUnion/game/2" in lid:
-        return "Tercer lugar"
+        # llave por puestos: /S_1_4/ = cuartos (de ahí salen 1º-4º), /S_1_2/ = semis
+        span = lid.split("/")[1].split("_")[-1]
+        return {"2": "Semifinal", "4": "Cuartos de final", "8": "Octavos de final"}.get(span, "Eliminatoria")
+    if "/GameUnion/game/" in lid:
+        # finales por puesto: game/1 = 1º-2º, game/2 = 3º-4º, game/3 = 5º-6º…
+        k = int(lid.rsplit("/", 1)[1])
+        return PLACE_GAMES.get(k, f"Puesto {2 * k - 1}-{2 * k}")
     if lid.startswith("/FINALS/") and "/RR/" in lid:
         return finals_rr_teams.get(lid.split("/RR/")[0], "Clasificación")
     return "Eliminatoria"
@@ -212,8 +217,9 @@ def convert(slug, hat=False):
             if start_play:
                 start_play["team"] = "A"
             sc = g.get("score") or {}
-            if (sc.get("homeTeam"), sc.get("visitorTeam")) != (score["A"], score["B"]):
-                print(f"  aviso: partido {g['id']} marcador {sc} vs jugadas {score}", file=sys.stderr)
+            official = {"A": sc.get("homeTeam"), "B": sc.get("visitorTeam")}
+            if final and None not in official.values() and official != score:
+                score = reconcile(plays, official, g["id"], score)
             card_a, card_b = spirit.get((g["id"], home)), spirit.get((g["id"], away))
             games.append({
                 "id": f"gmu{g['id']}",
@@ -265,12 +271,41 @@ def convert(slug, hat=False):
     }
 
 
+def reconcile(plays, official, game_id, score):
+    """Ajusta las jugadas al marcador oficial de ultie (el que vio todo el mundo):
+    1. goles anotados después del final quedan marcados como borrados (siguen en Jugadas);
+    2. si aún falta algún gol, se agrega uno sin anotador justo antes del final.
+    Los marcadores parciales (scoreA/scoreB) se recalculan."""
+    end_i = next((i for i, p in enumerate(plays) if p["type"] == "end"), None)
+    if end_i is not None:
+        for p in plays[end_i + 1:]:
+            if p["type"] == "goal":
+                p["deleted"] = True
+                p["note"] = "Anotado después del final en ultie; no cuenta"
+    live = lambda: [p for p in plays if p["type"] == "goal" and not p.get("deleted")]
+    for s in ("A", "B"):
+        missing = official[s] - sum(p["team"] == s for p in live())
+        for k in range(max(0, missing)):
+            end_i = next((i for i, p in enumerate(plays) if p["type"] == "end"), len(plays))
+            ref = plays[end_i - 1] if end_i else {"t": 0, "at": None}
+            plays.insert(end_i, {"id": f"u{game_id}fix{s}{k}", "type": "goal", "team": s, "t": ref["t"], "at": ref["at"],
+                                 "scorerId": "", "assistId": "", "callahan": False,
+                                 "note": "Gol sin registrar en ultie (marcador oficial)"})
+    new = {"A": 0, "B": 0}
+    for p in live():
+        new[p["team"]] += 1
+        p["scoreA"], p["scoreB"] = new["A"], new["B"]
+    msg = "ajustado" if new == official else "NO coincide"
+    print(f"  aviso: partido {game_id} jugadas {score} -> {new}, oficial {official} ({msg})", file=sys.stderr)
+    return new
+
+
 def final_places(dv, games, team_key):
     """Puesto final: final (1-2), tercer lugar (3-4), y los demás por la tabla de su mini round robin."""
     out = {}
     div_games = [g for g in games if g["source"]["logicalId"] and any(g["source"]["gameId"] == x["id"] for x in dv["games"])]
     def winner_loser(g):
-        last = [p for p in g["plays"] if p["type"] == "goal"]
+        last = [p for p in g["plays"] if p["type"] == "goal" and not p.get("deleted")]
         a = last[-1]["scoreA"] if last else 0
         b = last[-1]["scoreB"] if last else 0
         return (g["teamA"], g["teamB"]) if a > b else (g["teamB"], g["teamA"])
@@ -281,6 +316,11 @@ def final_places(dv, games, team_key):
         elif g["phase"] == "Tercer lugar":
             w, l = winner_loser(g)
             out[w], out[l] = 3, 4
+        elif "/GameUnion/game/" in (g["source"]["logicalId"] or "") and g["source"]["logicalId"].startswith("/FINALS/"):
+            k = int(g["source"]["logicalId"].rsplit("/", 1)[1])
+            if k >= 3:
+                w, l = winner_loser(g)
+                out[w], out[l] = 2 * k - 1, 2 * k
     # el resto: tabla del mini round robin por puestos (ej. 5-7)
     rr_teams = [team_key[s["teamId"]] for lid, s in (dv.get("teamMap") or {}).items()
                 if s and lid.startswith("/FINALS/") and "/RR/" in lid and s.get("teamId") in team_key]
@@ -289,7 +329,7 @@ def final_places(dv, games, team_key):
         rows = {t: [0, 0] for t in rr_teams}  # ganados, diferencia
         for g in div_games:
             if g["teamA"] in rows and g["teamB"] in rows and g["phase"].startswith("Puesto"):
-                goals = [p for p in g["plays"] if p["type"] == "goal"]
+                goals = [p for p in g["plays"] if p["type"] == "goal" and not p.get("deleted")]
                 a = goals[-1]["scoreA"] if goals else 0
                 b = goals[-1]["scoreB"] if goals else 0
                 rows[g["teamA"]][1] += a - b

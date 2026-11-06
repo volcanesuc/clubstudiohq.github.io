@@ -238,7 +238,7 @@ function standingsTab() {
             <div class="st-card__title">${esc(pool ? exf(EX.phasePool, { pool }) : divName || EX.tabStandings)}</div>
             <div class="st-card__sub">${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}</div>
           </div>
-          <span class="st-live"><i class="bi bi-broadcast"></i> ${esc(EX.standUpdated)}</span>
+          ${state.event.status === "finished" ? "" : `<span class="st-live"><i class="bi bi-broadcast"></i> ${esc(EX.standUpdated)}</span>`}
         </header>
         <div class="table-responsive">
           <table class="st-table">
