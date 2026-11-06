@@ -387,7 +387,7 @@ function ensurePhotos(uids) {
   Promise.all(missing.map(async (u) => photos.set(u, (await loadProfile(u).catch(() => null))?.photoURL || "")))
     .finally(() => {
       photosLoading = false;
-      if (state.tab === "stats" || state.tab === "overview") render();
+      if (["stats", "overview", "teams"].includes(state.tab)) render();
     });
 }
 
@@ -537,6 +537,45 @@ function allPlayersTable(ranked, rankOf, teamById, person, link) {
     <div class="small ev-muted mt-2">${esc(EX.mvpHint)}</div>`;
 }
 
+// plantel de un equipo hat: mujeres primero, con foto, número y enlace al perfil
+const ROSTER_PREVIEW = 10;
+function rosterHtml(t, href) {
+  const players = [...(t.players || [])];
+  ensurePhotos([...new Set(players.map((p) => p.uid).filter(Boolean))]);
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es");
+  const groups = [["F", EX.rosterWomen], ["M", EX.rosterMen], ["", EX.rosterOthers]]
+    .map(([g, label]) => [label, players.filter((p) => (g ? p.gender === g : p.gender !== "F" && p.gender !== "M")).sort(byName)])
+    .filter(([, list]) => list.length);
+  const showLabels = groups.length > 1;
+  const row = (p) => {
+    const me = state.user?.uid && p.uid === state.user.uid;
+    const hasNum = p.number !== null && p.number !== undefined && p.number !== "";
+    const inner = `
+      ${avatarHtml({ name: p.name, photoURL: photos.get(p.uid) || "" }, 26)}
+      <span class="rs-name text-truncate">${esc(p.name)}${me ? ` <span class="rs-me">${esc(EX.rosterYou)}</span>` : ""}</span>
+      ${hasNum ? `<span class="rs-num">${esc(p.number)}</span>` : ""}`;
+    // con cuenta: abre su perfil (estadísticas de todos sus torneos)
+    return p.uid && !href
+      ? `<a class="rs-player is-link ${me ? "is-me" : ""}" href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}" title="${esc(EX.rosterSeeProfile)}">${inner}</a>`
+      : `<div class="rs-player ${me ? "is-me" : ""}">${inner}</div>`;
+  };
+  const block = ([label, list, total]) => `
+    ${showLabels ? `<div class="rs-label">${esc(label)} <span>${total ?? list.length}</span></div>` : ""}
+    <div class="rs-grid">${list.map(row).join("")}</div>`;
+  if (players.length <= 16) return `<div class="ev-team-roster">${groups.map(block).join("")}</div>`;
+  // plantel largo: primeros de cada grupo a la vista, el resto desplegable
+  const per = Math.max(2, Math.ceil(ROSTER_PREVIEW / groups.length));
+  const head = groups.map(([l, list]) => [l, list.slice(0, per), list.length]);
+  return `
+    <div class="ev-team-roster">
+      <div class="rs-preview">${head.map(block).join("")}</div>
+      <details class="rs-more">
+        <summary><span class="rs-open">${esc(exf(EX.rosterSeeAll, { n: players.length }))}</span><span class="rs-close">${esc(EX.rosterSeeLess)}</span> <i class="bi bi-chevron-down"></i></summary>
+        <div class="rs-full">${groups.map(block).join("")}</div>
+      </details>
+    </div>`;
+}
+
 function teamsTab() {
   const teams = state.teams.filter(inDivision(state.division));
   return `
@@ -561,15 +600,7 @@ function teamsTab() {
               </div>
               ${href ? `<i class="bi bi-chevron-right ev-muted"></i>` : ""}
             </div>
-            ${t.hat && (t.players || []).length ? `
-              <div class="small mt-2 ev-team-roster">${(t.players || []).map((p) => {
-                const num = p.number !== null && p.number !== undefined && p.number !== "" ? ` <span class="ev-muted">#${esc(p.number)}</span>` : "";
-                const me = state.user?.uid && p.uid === state.user.uid ? "fw-bold" : "";
-                // con cuenta: abre su perfil (estadísticas de todos sus torneos)
-                return p.uid && !href
-                  ? `<a class="ev-roster-link ${me}" href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}" title="${esc(EX.rosterSeeProfile)}">${esc(p.name)}</a>${num}`
-                  : `<span class="${me}">${esc(p.name)}${num}</span>`;
-              }).join(" · ")}</div>` : ""}
+            ${t.hat && (t.players || []).length ? rosterHtml(t, href) : ""}
           </${tag}>
         </div>`;
       }).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}
