@@ -302,6 +302,12 @@ body.tn-busy::before {
 .tn-cover-empty { width: 100%; max-width: 420px; aspect-ratio: 2 / 1; border-radius: 14px; border: 2px dashed var(--ev-border); display: flex; align-items: center; justify-content: center; color: var(--ev-muted); flex-direction: column; gap: .25rem; }
 .tn-event-card { overflow: hidden; }
 .tn-event-card__img { margin: -16px -16px 12px; aspect-ratio: 2 / 1; background-size: cover; background-position: center; }
+.tn-event-card__img--logo { background-color: #fff; background-size: contain; background-repeat: no-repeat; border-bottom: 1px solid var(--ev-border, #ece8f5); }
+/* logo del torneo junto al nombre */
+.ev-hero__title { display: flex; align-items: center; gap: .85rem; min-width: 0; margin-bottom: .4rem; }
+.ev-hero__title h1 { margin-bottom: 0; min-width: 0; }
+.ev-hero__logo { width: 64px; height: 64px; flex-shrink: 0; object-fit: contain; background: #fff; border-radius: 16px; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+@media (max-width: 575.98px) { .ev-hero__logo { width: 48px; height: 48px; border-radius: 12px; } }
 
 /* ===== foto de perfil (subir) ===== */
 .tn-photo-pick { position: relative; display: inline-block; cursor: pointer; border-radius: 50%; }
@@ -343,7 +349,10 @@ body.tn-busy::before {
 .sb-card__meta { font-size: .72rem; color: var(--ev-muted); font-weight: 600; text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-pill { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .2rem .6rem; border-radius: 999px; background: rgba(109, 40, 217, .1); color: #5b21b6; white-space: nowrap; }
 .sb-pill--live { background: #fee2e2; color: #b91c1c; }
-.sb-pill--final { background: #1f1446; color: #fff; }
+/* terminado: discreto (lo que importa es el marcador); en pantallas angostas se oculta */
+.sb-pill--final { background: transparent; color: #64748b; padding-left: 0; text-transform: none; letter-spacing: 0; font-weight: 700; font-size: .78rem; }
+.sb-pill--final i { font-size: .95rem; }
+@media (max-width: 380px) { .sb-pill--final { display: none; } }
 .sb-team { display: flex; align-items: center; gap: .7rem; padding: .65rem .9rem; }
 .sb-team + .sb-team { border-top: 1px dashed var(--ev-border); }
 .sb-team__info { flex: 1; min-width: 0; }
@@ -749,6 +758,8 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .st-final { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem; padding: .75rem 1rem 1rem; }
 .st-final__row { display: flex; align-items: center; gap: .6rem; padding: .5rem .65rem; border: 1px solid var(--ev-border); border-radius: 14px; background: #fff; min-width: 0; }
 .st-final__row.is-top { background: linear-gradient(135deg, #fef9c3, #fff); border-color: #fde68a; }
+.st-final__rec { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-size: .78rem; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.st-final__rec b { font-size: .9rem; }
 .st-final__pos { font-weight: 900; font-size: 1.1rem; width: 2rem; text-align: center; font-variant-numeric: tabular-nums; }
 
 /* ===== MVP: carrusel de tarjetas (5 por página, el mejor al centro) ===== */
@@ -777,6 +788,9 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .mv-chip { display: flex; min-width: 0; white-space: nowrap; justify-content: space-between; align-items: center; gap: .3rem; background: rgba(255, 255, 255, .06); border-radius: 9px; padding: .3rem .5rem; font-size: .72rem; color: #cbd5e1; }
 .mv-chip b { color: #fff; font-size: .85rem; font-variant-numeric: tabular-nums; }
 .mv-card.is-first .mv-chip { background: rgba(31, 224, 127, .12); }
+/* el total (puntaje MVP) se distingue de las otras tres estadísticas */
+.mv-chip.mv-chip--total, .mv-card.is-first .mv-chip--total { background: rgba(251, 191, 36, .16); color: #fcd34d; box-shadow: inset 0 0 0 1px rgba(251, 191, 36, .35); }
+.mv-chip--total b { color: #fbbf24; }
 .mv-pager { display: flex; justify-content: center; gap: .35rem; margin-top: .9rem; }
 .mv-pager button { min-width: 2.1rem; height: 2.1rem; border-radius: 10px; border: 1px solid #2f3341; background: #22252f; color: #e5e7eb; font-weight: 800; font-size: .85rem; }
 .mv-pager button:hover:not(:disabled) { border-color: #1fe07f; }

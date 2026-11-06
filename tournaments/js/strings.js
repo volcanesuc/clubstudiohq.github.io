@@ -29,6 +29,7 @@ export const EX = {
   gameScheduled: "Programado",
   gameLive: "En vivo",
   gameFinal: "Final",
+  gameEnded: "Finalizó",
 
   // organizador: lista
   orgTitle: "Organizar eventos",
@@ -430,6 +431,7 @@ export const EX = {
   stCLong: "Callahans",
   stMvp: "MVP",
   stMvpLong: "Puntaje MVP",
+  stTotalShort: "Total",
   heroAssists: "Asistencias",
   heroBlocks: "Bloqueos",
   spiritAvgShort: "PROM",
@@ -1069,6 +1071,8 @@ export const EX = {
   sbNoGamesFilter: "No hay partidos con este filtro.",
   standUpdated: "En vivo",
   standGamesPlayed: "{n} de {total} partidos jugados",
+  standGroupStage: "Fase de grupos",
+  standOverall: "Récord en todo el torneo (grupos y llave)",
   standPct: "%",
   standStreak: "Últimos 5",
   standPlayedLong: "Partidos jugados",

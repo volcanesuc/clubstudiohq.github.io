@@ -13,7 +13,8 @@ function card(e) {
   return `
     <div class="col-12 col-md-6 col-lg-4">
       <a class="ev-card tn-event-card h-100" href="${esc(eventUrl(e))}">
-        ${e.image ? `<div class="tn-event-card__img" style="background-image:url('${esc(e.image)}')"></div>` : ""}
+        ${e.image ? `<div class="tn-event-card__img" style="background-image:url('${esc(e.image)}')"></div>`
+          : e.logo ? `<div class="tn-event-card__img tn-event-card__img--logo" style="background-image:url('${esc(e.logo)}')"></div>` : ""}
         <div class="fw-bold">${esc(e.name || "—")}</div>
         <div class="small ev-muted mt-1"><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}${e.country ? ` · ${flagOf(e.country)} ${esc(countryName(e.country))}` : ""}</div>
         ${e.venue || SURFACES.includes(e.surface) ? `<div class="small ev-muted">${e.venue ? `<i class="bi bi-geo-alt"></i> ${esc(e.venue)}` : ""}${e.venue && SURFACES.includes(e.surface) ? " · " : ""}${SURFACES.includes(e.surface) ? `<i class="bi ${SURFACE_ICONS[e.surface]}"></i> ${esc(EX[`surface_${e.surface}`])}` : ""}</div>` : ""}

@@ -106,6 +106,7 @@ export async function importTournament(data, onProgress) {
     startDate: src.startDate || "",
     endDate: src.endDate || "",
     venue: src.venue || "",
+    ...(src.logo ? { logo: src.logo } : {}),
     address: src.address || "",
     description: src.description || "",
     divisions: src.divisions || [{ id: "open", name: "Open" }],

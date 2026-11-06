@@ -27,7 +27,7 @@ COLORS = ["#e63946", "#1d4ed8", "#059669", "#f59e0b", "#7c3aed", "#db2777", "#08
 
 EVENT_QUERY = """
 query Q($u: String!) { event { getByURLName(urlName: $u) {
-  id urlName title titleShort startDate endDate status city { title }
+  id urlName title titleShort startDate endDate status avatarId city { title }
   divisions { id title divisionType gameType teamMap
     teams { id title club { title avatarId city { title } }
       sotgStats { id gameId r f fm p c }
@@ -138,6 +138,17 @@ def convert(slug, hat=False):
             lo = n_teams - len(ids) + 1
             finals_rr[stage] = f"Puestos {lo}-{n_teams}" if lo < n_teams else f"Puesto {n_teams}"
 
+        # grupos (/GROUP/<id>/RR/in/<n>): A, B… según el orden del sorteo (el grupo del 1º sembrado es A)
+        group_of, draw_pos = {}, {}
+        for lid, slot in (dv.get("teamMap") or {}).items():
+            if slot and lid.startswith("/GROUP/") and "/RR/in/" in lid:
+                gid = lid.split("/")[2]
+                group_of[slot["teamId"]] = gid
+                pos = (slot.get("logicalId") or "").rsplit("/", 1)[-1]
+                draw_pos[gid] = min(draw_pos.get(gid, 999), int(pos) if pos.isdigit() else 999)
+        letters = {gid: chr(65 + i) for i, gid in enumerate(sorted(draw_pos, key=lambda g: (draw_pos[g], g)))}
+        pool_of = {tid: letters[gid] for tid, gid in group_of.items()} if len(letters) > 1 else {}
+
         for t in dv["teams"]:
             key = f"tmu{t['id']}"
             team_key[t["id"]] = key
@@ -161,7 +172,7 @@ def convert(slug, hat=False):
                 "color": COLORS[color_i % len(COLORS)],
                 "logo": logo_data_url(club.get("avatarId")),
                 "divisionId": div_id,
-                "pool": "",
+                "pool": pool_of.get(t["id"], ""),
                 "players": players,
                 **({"hat": True} if hat else {}),
                 "source": {"provider": "ultie", "teamId": t["id"]},
@@ -225,7 +236,7 @@ def convert(slug, hat=False):
                 "id": f"gmu{g['id']}",
                 "divisionId": div_id,
                 "phase": phase_of(g["logicalId"], finals_rr),
-                "pool": "",
+                "pool": pool_of.get(g["homeTeamId"], "") if (g["logicalId"] or "").startswith("/GROUP/") else "",
                 "round": None,
                 "field": "",
                 "startAt": g["startedAt"],
@@ -259,6 +270,7 @@ def convert(slug, hat=False):
             "startDate": ev["startDate"],
             "endDate": ev["endDate"],
             "venue": (ev.get("city") or {}).get("title") or "",
+            "logo": logo_data_url(ev.get("avatarId"), 400),
             "description": f"Resultados importados de ultie.org/{ev['urlName']}.",
             "divisions": divisions,
             "fields": [],

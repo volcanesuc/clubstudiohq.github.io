@@ -223,6 +223,7 @@ const streakDots = (res) => `<span class="st-streak">${res.map((r) => `<i class=
 function standingsTab() {
   const teams = state.teams.filter(inDivision(state.division));
   const games = state.games.filter(inDivision(state.division)).filter((g) => !g.phase); // fase de grupos
+  const hasBracket = state.games.some((g) => inDivision(state.division)(g) && g.phase);
   const pools = [...new Set(teams.map((t) => (t.pool || "").toUpperCase()))].sort();
   const divName = divisions().find((d) => d.id === state.division)?.name || divisions()[0]?.name || "";
   const table = (pool) => {
@@ -236,7 +237,7 @@ function standingsTab() {
         <header class="st-card__head">
           <div>
             <div class="st-card__title">${esc(pool ? exf(EX.phasePool, { pool }) : divName || EX.tabStandings)}</div>
-            <div class="st-card__sub">${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}</div>
+            <div class="st-card__sub">${hasBracket ? `${esc(EX.standGroupStage)} · ` : ""}${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}</div>
           </div>
           ${state.event.status === "finished" ? "" : `<span class="st-live"><i class="bi bi-broadcast"></i> ${esc(EX.standUpdated)}</span>`}
         </header>
@@ -285,6 +286,14 @@ function standingsTab() {
   };
   // puesto final después de la llave (ej. torneos importados): se muestra arriba de la tabla de grupos
   const placed = teams.filter((t) => Number(t.finalPlace) > 0).sort((a, b) => a.finalPlace - b.finalPlace);
+  // récord de todo el torneo (grupos + llave) junto al puesto final
+  const allGames = state.games.filter(inDivision(state.division)).filter((g) => g.status === GAME_STATUS.FINAL);
+  const overall = new Map(standings(placed, allGames).map((r) => [r.team.id, r]));
+  const recordOf = (t) => {
+    const r = overall.get(t.id);
+    if (!r?.played) return "";
+    return `<div class="st-final__rec" title="${esc(EX.standOverall)}"><b>${r.w}-${r.l}</b><span class="st-diff ${r.diff > 0 ? "is-pos" : r.diff < 0 ? "is-neg" : ""}">${r.diff > 0 ? "+" : ""}${r.diff}</span></div>`;
+  };
   const finalCard = placed.length ? `
     <section class="st-card">
       <header class="st-card__head"><div><div class="st-card__title">${esc(EX.finalStandings)}</div><div class="st-card__sub">${esc(divName)}</div></div></header>
@@ -293,6 +302,7 @@ function standingsTab() {
           <span class="st-final__pos">${t.finalPlace}</span>
           ${teamBadge(t, 28)}
           <div class="min-w-0"><div class="st-team__name text-truncate">${esc(t.name)}</div>${t.city ? `<div class="st-team__sub">${esc(t.city)}</div>` : ""}</div>
+          ${recordOf(t)}
         </div>`).join("")}
       </div>
     </section>` : "";
@@ -356,7 +366,7 @@ function statsTab() {
         <div class="mv-team">${esc(p.teamName || "")}</div>
         <div class="mv-rank">#${rank}</div>
         <div class="mv-label">${esc(EX.stStats)}</div>
-        <div class="mv-chips">${chip(EX.heroGoals, p.goals)}${chip(EX.stAssistShort, p.assists)}${chip(EX.stBlockShort, p.blocks)}${chip(EX.leaderMvp, p.mvp)}</div>
+        <div class="mv-chips">${chip(EX.heroGoals, p.goals)}${chip(EX.stAssistShort, p.assists)}${chip(EX.stBlockShort, p.blocks)}<span class="mv-chip mv-chip--total" title="${esc(EX.stMvpLong)}"><span>${esc(EX.stTotalShort)}</span><b>${p.mvp || 0}</b></span></div>
       </article>`;
   };
   const first = Math.max(0, Math.min(page - 2, pages - 5));
@@ -530,7 +540,7 @@ function scoreCard(game, records) {
   const status = live
     ? `<span class="sb-pill sb-pill--live"><i></i>${esc(EX.gameLive)}</span>`
     : final
-      ? `<span class="sb-pill sb-pill--final">${esc(EX.gameFinal)}</span>`
+      ? `<span class="sb-pill sb-pill--final"><i class="bi bi-check2"></i>${esc(EX.gameEnded)}</span>`
       : `<span class="sb-pill">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</span>`;
   const team = (t, score, other) => {
     const r = records.get(t?.id);
@@ -692,7 +702,10 @@ function render() {
   document.title = e.name || EX.appTitle;
   $("tnRoot").innerHTML = `
     <section class="ev-hero mb-3 ${e.image ? "ev-hero--image" : ""}" ${e.image ? `style="background: linear-gradient(to top, rgba(20, 8, 45, .92) 0%, rgba(20, 8, 45, .35) 55%, rgba(20, 8, 45, .1) 100%), url('${esc(e.image)}')"` : ""}>
-      <h1>${esc(e.name || "")}</h1>
+      <div class="ev-hero__title">
+        ${e.logo ? `<img class="ev-hero__logo" src="${esc(e.logo)}" alt="" />` : ""}
+        <h1>${esc(e.name || "")}</h1>
+      </div>
       <div class="ev-hero__meta">
         ${e.startDate ? `<span><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</span>` : ""}
         ${e.venue ? `<span><i class="bi bi-geo-alt"></i> ${esc(e.venue)}</span>` : ""}

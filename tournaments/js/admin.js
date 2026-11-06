@@ -68,8 +68,8 @@ const daysLeft = (v) => {
 
 const isoIn = (days) => new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
 
-const thumb = (e, size = 64) => (e.image
-  ? `<div class="pa-thumb" style="width:${size}px;height:${size}px;background-image:url('${esc(e.image)}')"></div>`
+const thumb = (e, size = 64) => (e.image || e.logo
+  ? `<div class="pa-thumb" style="width:${size}px;height:${size}px;background-image:url('${esc(e.image || e.logo)}')"></div>`
   : `<div class="pa-thumb pa-thumb--plain" style="width:${size}px;height:${size}px">🏆</div>`);
 
 function ownerLine(e) {
