@@ -17,7 +17,7 @@ const state = { events: [], q: "", country: "", pastShown: PAST_PAGE };
 
 const place = (e) => [e.venue, e.country ? `${flagOf(e.country)} ${countryName(e.country)}` : ""].filter(Boolean).join(" · ");
 // etiqueta "Hat" primero (equipos armados por el organizador) y después las categorías
-const chips = (e) => `${isHatEvent(e) ? `<span class="ev-chip dir-chip-hat"><i class="bi bi-shuffle"></i> ${esc(EX.crTypeHat)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}`;
+const chips = (e) => `${isHatEvent(e) ? `<span class="ev-chip dir-chip-hat">${esc(EX.crTypeHat)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}`;
 const hasChips = (e) => isHatEvent(e) || (e.divisions || []).length > 0;
 const logoHtml = (e, cls) => e.logo
   ? `<span class="${cls}" style="background-image:url('${esc(e.logo)}')"></span>`
