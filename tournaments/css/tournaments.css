@@ -1168,6 +1168,7 @@ body.is-admin-mode .os-card { border-color: rgba(180, 83, 9, .35); }
 .pk-org-logo.is-editable::after { content: "\F4CB"; font-family: bootstrap-icons; position: absolute; right: -4px; bottom: -4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #4b4566; display: grid; place-items: center; font-size: .75rem; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
 .ev-chip.pk-chip-on { background: #dcfce7; color: #166534; font-weight: 700; }
 .ev-chip.pk-chip-off { background: rgba(255, 255, 255, .18); color: #fff; }
+.ev-chip.pk-chip-soon { background: #fef3c7; color: #92400e; font-weight: 700; }
 .pk-tier-head, .pk-tier-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 110px 38px; gap: .5rem; align-items: center; }
 .pk-tier-row { margin-bottom: .4rem; }
 @media (max-width: 575.98px) {

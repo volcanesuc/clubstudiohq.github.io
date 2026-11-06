@@ -104,7 +104,7 @@ async function renderList() {
   }));
   // Pickups: solo si administro una organización a la que le dieron el permiso
   listMyOrgs(state.user).then((orgs) => {
-    const org = orgs.find(orgHasPickups);
+    const org = orgs.find((o) => orgHasPickups(o));
     if (!org || $("#evPickups")) return;
     $("#evActions")?.insertAdjacentHTML("afterbegin", `<a class="btn btn-light" id="evPickups" href="/pickups/organize.html?org=${esc(org.id)}"><i class="bi bi-lightning-charge me-1"></i>${esc(PK.dirOrganize)}</a>`);
   }).catch(() => {});

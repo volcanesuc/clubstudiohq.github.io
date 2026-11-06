@@ -447,8 +447,15 @@ service cloud.firestore {
       return isGoogle() && request.auth.uid in orgData(orgId).ownerUids;
     }
 
+    // activo y sin vencer (features.pickupsUntil null = sin fecha de vencimiento)
     function orgHasPickups(orgId) {
-      return orgData(orgId).get("features", {}).get("pickups", false) == true;
+      let f = orgData(orgId).get("features", {});
+      return f.get("pickups", false) == true
+        && (f.get("pickupsUntil", null) == null || request.time < f.get("pickupsUntil", null));
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
     }
 
     function orgInviteFor(token, orgId) {
@@ -468,15 +475,28 @@ service cloud.firestore {
       allow read: if true;
 
       // el permiso de pickups (features) solo lo da el admin de la plataforma
-      allow create: if isGoogle()
+      // el admin de la plataforma también la crea para un correo (pendingEmails) con el permiso ya puesto
+      allow create: if isPlatformAdmin() || (isGoogle()
         && request.resource.data.ownerUids == [request.auth.uid]
-        && !("features" in request.resource.data);
+        && !("features" in request.resource.data));
 
       allow update: if isPlatformAdmin() || isGoogle() && (
         (
           request.auth.uid in resource.data.ownerUids
           && request.resource.data.ownerUids.size() > 0
           && request.resource.data.get("features", {}) == resource.data.get("features", {})
+        )
+        // correo invitado (pendingEmails): al entrar con esa cuenta de Google se vuelve admin
+        || (
+          request.auth.token.email_verified == true
+          && myEmail() in resource.data.get("pendingEmails", [])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["ownerUids", "pendingEmails", "updatedAt"])
+          && request.resource.data.ownerUids.hasAll(resource.data.ownerUids)
+          && request.resource.data.ownerUids.size() == resource.data.ownerUids.size() + 1
+          && request.auth.uid in request.resource.data.ownerUids
+          && !(myEmail() in request.resource.data.pendingEmails)
+          && resource.data.pendingEmails.hasAll(request.resource.data.pendingEmails)
+          && request.resource.data.pendingEmails.size() == resource.data.pendingEmails.size() - 1
         )
         // co-admin nuevo con el link: solo se agrega a sí mismo
         || (

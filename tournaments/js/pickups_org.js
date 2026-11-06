@@ -17,7 +17,8 @@ import {
   listMyOrgs,
   loadOrg,
   loadOrgInvite,
-  orgHasPickups,
+  pickupAccess,
+  claimPendingOrgs,
   orgJoinUrl,
   regenerateOrgInvite,
   saveOrg,
@@ -25,7 +26,7 @@ import {
 } from "/tournaments/js/orgs.js";
 import { TIER_RULES, defaultPickupSettings, slugify } from "/tournaments/js/pickups.js";
 import { mountPickups } from "/tournaments/js/pickups_manage.js";
-import { askConfirm, esc, hideLoader, isGoogleUser, renderNav, setAdminMode, showLoader, signInGoogle, teamBadge, waitForUser } from "/tournaments/js/ui.js";
+import { askConfirm, esc, fmtWhen, hideLoader, isGoogleUser, renderNav, setAdminMode, showLoader, signInGoogle, teamBadge, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const params = new URLSearchParams(location.search);
@@ -106,6 +107,7 @@ function orgForm(o = {}) {
       <div class="col-12 col-md-5"><label class="form-label small fw-semibold" for="ogCountry">${esc(PK.orgCountry)}</label><select class="form-select" id="ogCountry">${countryOptions(o.country || "", esc(PK.orgCountryPick))}</select></div>
       <div class="col-8 col-md-5"><label class="form-label small fw-semibold" for="ogCity">${esc(PK.orgCity)}</label><input class="form-control" id="ogCity" value="${esc(o.city || "")}" maxlength="60" /></div>
       <div class="col-4 col-md-2"><label class="form-label small fw-semibold" for="ogColor">${esc(PK.orgColor)}</label><input class="form-control form-control-color w-100" type="color" id="ogColor" value="${esc(o.color || "#6d28d9")}" /></div>
+      <div class="col-12 col-md-5"><label class="form-label small fw-semibold" for="ogPhone">${esc(PK.orgPhone)}</label><input class="form-control" type="tel" id="ogPhone" value="${esc(o.contactPhone || "")}" placeholder="8888 8888" maxlength="30" /></div>
     </div>`;
 }
 
@@ -115,6 +117,7 @@ const readOrgForm = () => ({
   country: root.querySelector("#ogCountry").value,
   city: root.querySelector("#ogCity").value.trim(),
   color: root.querySelector("#ogColor").value,
+  contactPhone: root.querySelector("#ogPhone").value.trim(),
 });
 
 function renderCreate() {
@@ -161,7 +164,13 @@ async function openOrg(id) {
 
 function header() {
   const o = state.org;
-  const on = orgHasPickups(o);
+  const acc = pickupAccess(o);
+  const on = acc.state === "on" || acc.state === "soon";
+  const day = (ms) => fmtWhen(ms, { day: "numeric", month: "short", year: "numeric" });
+  const chip = acc.state === "expired" ? ["pk-chip-off", pkf(PK.accExpired, { date: day(acc.until) })]
+    : acc.state === "soon" ? ["pk-chip-soon", pkf(PK.accUntil, { date: day(acc.until) })]
+    : on ? ["pk-chip-on", acc.until ? pkf(PK.accUntil, { date: day(acc.until) }) : PK.orgPickupsOn]
+    : ["pk-chip-off", PK.orgPickupsOff];
   const where = o.country ? `${flagOf(o.country)} ${[o.city, countryName(o.country)].filter(Boolean).join(", ")}` : o.city || "";
   return `
     <section class="ev-hero mb-3 d-flex align-items-center gap-3 flex-wrap">
@@ -172,7 +181,7 @@ function header() {
       <div class="flex-grow-1 min-w-0">
         <div class="ev-hero__meta">${esc(PK.orgKinds[o.kind] || "")}${where ? ` · ${esc(where)}` : ""}</div>
         <h1 class="mb-1">${esc(o.name)}</h1>
-        <span class="ev-chip ${on ? "pk-chip-on" : "pk-chip-off"}">${esc(on ? PK.orgPickupsOn : PK.orgPickupsOff)}</span>
+        <span class="ev-chip ${chip[0]}">${esc(chip[1])}</span>
       </div>
       <div class="d-flex gap-2 flex-wrap">
         ${state.orgs.length > 1 ? `<select class="form-select form-select-sm" id="ogSwitch" aria-label="${esc(PK.orgTitle)}">${state.orgs.map((x) => `<option value="${esc(x.id)}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
@@ -182,6 +191,23 @@ function header() {
     <nav class="tp-tabs mb-3" role="tablist">
       ${TABS.map((t) => `<button class="tp-tab ${state.tab === t ? "is-active" : ""}" data-tab="${t}"><i class="bi ${{ pickups: "bi-calendar-event", settings: "bi-sliders", admins: "bi-person-gear", profile: "bi-building" }[t]}"></i> ${esc(PK[`orgTab${t[0].toUpperCase()}${t.slice(1)}`])}</button>`).join("")}
     </nav>`;
+}
+
+// Aviso cuando el permiso vence pronto o ya venció (con link para renovar por WhatsApp)
+function accessNote() {
+  const acc = pickupAccess(state.org);
+  if (acc.state !== "soon" && acc.state !== "expired") return "";
+  const day = fmtWhen(acc.until, { day: "numeric", month: "long", year: "numeric" });
+  const wa = `https://wa.me/${WA}?text=${encodeURIComponent(pkf(PK.orgRenewWa, { name: state.org.name }))}`;
+  const expired = acc.state === "expired";
+  return `
+    <div class="pk-note ${expired ? "pk-note--off" : "pk-note--review"} mb-3 d-flex align-items-center gap-2 flex-wrap">
+      <div class="flex-grow-1 min-w-0">
+        <div class="fw-bold">${esc(expired ? PK.orgExpiredTitle : pkf(PK.orgSoonTitle, { date: day }))}</div>
+        <div class="small">${esc(expired ? pkf(PK.orgExpiredText, { date: day }) : PK.orgSoonText)}</div>
+      </div>
+      <a class="btn btn-sm tn-btn-grad" href="${esc(wa)}" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-1"></i>${esc(PK.orgRenew)}</a>
+    </div>`;
 }
 
 function lockedCard() {
@@ -289,12 +315,18 @@ function profileTab() {
 function render() {
   setUrl();
   const o = state.org;
-  const locked = !orgHasPickups(o) && !state.platformAdmin;
+  const acc = pickupAccess(o);
+  // vencido: sigue viendo sus pickups (listas y pagos) pero no crea nuevos; nunca activado: tarjeta de pedir permiso
+  const expired = acc.state === "expired" && !state.platformAdmin;
+  const locked = acc.state === "off" && !state.platformAdmin;
   root.innerHTML = `${header()}<div id="pkTab"></div>`;
   const box = root.querySelector("#pkTab");
   if (state.tab === "pickups") {
     if (locked) box.innerHTML = lockedCard();
-    else mountPickups(box, { org: o, user: state.user, alertBox, run, pickupId: params.get("p") || "" });
+    else {
+      box.insertAdjacentHTML("beforebegin", accessNote());
+      mountPickups(box, { org: o, user: state.user, alertBox, run, pickupId: params.get("p") || "", locked: expired });
+    }
   } else if (state.tab === "settings") box.innerHTML = settingsTab();
   else if (state.tab === "admins") {
     box.innerHTML = adminsTab();
@@ -454,8 +486,11 @@ async function handleJoin(token) {
     renderNav({ active: "pickups", user, isAdmin: state.platformAdmin });
     if (!state.user) return renderSignIn();
     if (params.get("join") && (await handleJoin(params.get("join")))) return;
+    // si el admin de la plataforma creó una organización para mi correo, la reclamo al entrar
+    const claimed = await claimPendingOrgs(state.user);
+    if (claimed.length) alertBox(pkf(PK.orgClaimed, { name: claimed.map((o) => o.name).join(", ") }));
     state.orgs = await listMyOrgs(state.user);
-    const want = params.get("org");
+    const want = params.get("org") || claimed[0]?.id;
     // el admin de la plataforma puede abrir cualquier organización con ?org=
     if (want && (state.orgs.some((o) => o.id === want) || state.platformAdmin)) await openOrg(want);
     else if (state.orgs.length) await openOrg(state.orgs[0].id);

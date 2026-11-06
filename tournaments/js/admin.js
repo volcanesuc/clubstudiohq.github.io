@@ -21,12 +21,12 @@ import {
   validateImport,
 } from "/tournaments/js/imports.js";
 import { listClubDirectory, profileUrl, squadUrl } from "/tournaments/js/squads.js";
-import { listAllOrgs, orgHasPickups, setOrgFeature } from "/tournaments/js/orgs.js";
+import { ORG_KINDS, SOON_DAYS, addMonths, addOrgEmail, createOrgForEmail, endOfDay, isEmail, listAllOrgs, pickupAccess, setOrgPickups } from "/tournaments/js/orgs.js";
 import { PK, pkf } from "/tournaments/js/pickups_strings.js";
-import { countryName, flagOf } from "/tournaments/js/countries.js";
+import { countryName, countryOptions, flagOf } from "/tournaments/js/countries.js";
 import { normName } from "/tournaments/js/names.js";
 import { sameName } from "/tournaments/js/names.js";
-import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, setAdminMode, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
+import { askConfirm, avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, setAdminMode, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const TABS = ["pending", "drafts", "active", "clubs", "orgs", "migrations", "import", "players"];
@@ -135,31 +135,95 @@ function migrationsTab() {
     }).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(EX.adNoMigrations)}</div>`}`;
 }
 
+// Permiso de pickups: activo hasta una fecha (se cobra por mes), con aviso cuando vence
+const pad2 = (n) => String(n).padStart(2, "0");
+const dateValue = (ms) => { if (!ms) return ""; const d = new Date(ms); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+const fmtDay = (ms) => fmtWhen(ms, { day: "numeric", month: "short", year: "numeric" });
+
+function accessChip(acc) {
+  if (acc.state === "off") return `<span class="ev-chip">${esc(PK.accOff)}</span>`;
+  if (acc.state === "expired") return `<span class="ev-chip ev-chip--bad">${esc(pkf(PK.accExpired, { date: fmtDay(acc.until) }))}</span>`;
+  if (acc.state === "soon") return `<span class="ev-chip ev-chip--wait">${esc(acc.days <= 0 ? PK.accToday : acc.days === 1 ? PK.accSoon1 : pkf(PK.accSoon, { n: acc.days }))}</span>`;
+  return `<span class="ev-chip ev-chip--ok">${esc(acc.until ? pkf(PK.accUntil, { date: fmtDay(acc.until) }) : `${PK.accOn} · ${PK.accNoEnd}`)}</span>`;
+}
+
+function remindHref(o, acc) {
+  const text = pkf(acc.state === "expired" ? PK.adRemindTextExpired : PK.adRemindText, { name: o.name || "", date: fmtDay(acc.until) });
+  if (o.contactPhone) return waLink(o.contactPhone, text);
+  if (o.ownerEmail) return `mailto:${encodeURIComponent(o.ownerEmail)}?subject=${encodeURIComponent(PK.adRemindSubject)}&body=${encodeURIComponent(text)}`;
+  return "";
+}
+
+const orgAlerts = () => {
+  const accs = (state.orgs || []).map((o) => pickupAccess(o).state);
+  return { soon: accs.filter((x) => x === "soon").length, expired: accs.filter((x) => x === "expired").length };
+};
+
+function grantCard() {
+  return `
+    <details class="ev-card mb-3" ${state.grantOpen ? "open" : ""} id="paGrant">
+      <summary class="fw-bold"><i class="bi bi-person-plus me-1"></i>${esc(PK.adGrantTitle)}</summary>
+      <div class="small ev-muted mt-2 mb-3">${esc(PK.adGrantLead)}</div>
+      <div class="row g-2">
+        <div class="col-12 col-md-6"><label class="form-label small fw-semibold" for="grEmail">${esc(PK.adEmail)}</label><input class="form-control" id="grEmail" type="email" autocomplete="off" placeholder="nombre@gmail.com" /></div>
+        <div class="col-12 col-md-6"><label class="form-label small fw-semibold" for="grName">${esc(PK.adGrantName)}</label><input class="form-control" id="grName" maxlength="80" placeholder="${esc(PK.orgNamePh)}" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small fw-semibold" for="grKind">${esc(PK.orgKind)}</label><select class="form-select" id="grKind">${ORG_KINDS.map((k) => `<option value="${k}">${esc(PK.orgKinds[k])}</option>`).join("")}</select></div>
+        <div class="col-6 col-md-3"><label class="form-label small fw-semibold" for="grCountry">${esc(PK.orgCountry)}</label><select class="form-select" id="grCountry">${countryOptions("CR", esc(PK.orgCountryPick))}</select></div>
+        <div class="col-6 col-md-3"><label class="form-label small fw-semibold" for="grPhone">${esc(PK.adGrantPhone)}</label><input class="form-control" id="grPhone" type="tel" placeholder="8888 8888" /></div>
+        <div class="col-6 col-md-3"><label class="form-label small fw-semibold" for="grUntil">${esc(PK.adUntil)}</label><input class="form-control" id="grUntil" type="date" value="${dateValue(addMonths(Date.now()))}" /></div>
+      </div>
+      <div class="d-flex justify-content-end mt-3"><button class="btn btn-admin" data-org-grant><i class="bi bi-check2 me-1"></i>${esc(PK.adGrantBtn)}</button></div>
+      ${state.grantDone ? `<div class="pk-note mt-3 d-flex align-items-center gap-2 flex-wrap"><span class="flex-grow-1">${esc(state.grantDone.msg)}</span><a class="btn btn-sm btn-light" href="${esc(state.grantDone.href)}" target="_blank" rel="noopener"><i class="bi ${state.grantDone.phone ? "bi-whatsapp" : "bi-envelope"} me-1"></i>${esc(PK.adGrantShare)}</a></div>` : ""}
+    </details>`;
+}
+
 function orgsTab() {
   if (state.orgs === null) return `<div class="pa-empty small ev-muted">${esc(EX.loading)}</div>`;
   const words = normName(state.orgQ).split(/\s+/).filter(Boolean);
-  const hay = (o) => normName([o.name, o.city, o.country, countryName(o.country), o.ownerEmail].filter(Boolean).join(" "));
-  const shown = state.orgs.filter((o) => words.every((w) => hay(o).includes(w)));
+  const hay = (o) => normName([o.name, o.city, o.country, countryName(o.country), o.ownerEmail, ...(o.pendingEmails || [])].filter(Boolean).join(" "));
+  // primero las vencidas y las que vencen pronto
+  const rank = { expired: 0, soon: 1, on: 2, off: 3 };
+  const shown = state.orgs
+    .filter((o) => words.every((w) => hay(o).includes(w)))
+    .map((o) => ({ o, acc: pickupAccess(o) }))
+    .sort((a, b) => rank[a.acc.state] - rank[b.acc.state] || String(a.o.name).localeCompare(String(b.o.name)));
+  const al = orgAlerts();
   return `
+    ${al.soon || al.expired ? `
+      <div class="pk-note pk-note--review mb-3"><i class="bi bi-bell me-1"></i><b>${esc([al.expired ? pkf(PK.adAlertExpired, { n: al.expired }) : "", al.soon ? pkf(PK.adAlertSoon, { n: al.soon }) : ""].filter(Boolean).join(" · "))}.</b> ${esc(PK.adAlertHint)}</div>` : ""}
+    ${grantCard()}
     <div class="small ev-muted mb-2">${esc(PK.adOrgsHint)}</div>
     <div class="pa-search">
       <i class="bi bi-search"></i>
       <input class="form-control" id="paOrgQ" placeholder="${esc(PK.adOrgSearch)}" value="${esc(state.orgQ)}" />
     </div>
-    ${shown.length ? `<div class="pa-list">${shown.map((o) => {
+    ${shown.length ? `<div class="pa-list">${shown.map(({ o, acc }) => {
       const n = (o.ownerUids || []).length;
+      const on = acc.state !== "off";
+      const remind = (acc.state === "soon" || acc.state === "expired") && remindHref(o, acc);
+      const pending = (o.pendingEmails || []).map((e) => pkf(PK.adPending, { email: e }));
       return `
-      <div class="pa-row">
+      <div class="pa-row flex-wrap">
         ${teamBadge({ id: o.id, name: o.name, logo: o.logo, color: o.color }, 44)}
         <div class="flex-grow-1 min-w-0">
           <span class="fw-bold">${esc(o.name || "—")}</span>
           <div class="small ev-muted text-truncate">${esc([PK.orgKinds[o.kind], o.country ? `${flagOf(o.country)} ${[o.city, countryName(o.country)].filter(Boolean).join(", ")}` : o.city, n === 1 ? PK.adOrgAdmin1 : pkf(PK.adOrgAdmins, { n }), o.ownerEmail].filter(Boolean).join(" · "))}</div>
+          ${pending.length ? `<div class="small text-warning-emphasis">${esc(pending.join(" · "))}</div>` : ""}
         </div>
-        <div class="form-check form-switch m-0 flex-shrink-0" title="${esc(PK.adPickups)}">
-          <input class="form-check-input" type="checkbox" role="switch" id="org-${esc(o.id)}" data-org-pk="${esc(o.id)}" ${orgHasPickups(o) ? "checked" : ""} />
-          <label class="form-check-label small" for="org-${esc(o.id)}">${esc(PK.adPickups)}</label>
+        ${accessChip(acc)}
+        <div class="w-100 d-flex align-items-center gap-2 flex-wrap ps-sm-5">
+          <div class="form-check form-switch m-0" title="${esc(PK.adPickups)}">
+            <input class="form-check-input" type="checkbox" role="switch" id="org-${esc(o.id)}" data-org-pk="${esc(o.id)}" ${on ? "checked" : ""} />
+            <label class="form-check-label small" for="org-${esc(o.id)}">${esc(PK.adPickups)}</label>
+          </div>
+          <label class="small ev-muted d-flex align-items-center gap-1 m-0" title="${esc(PK.adUntilHint)}">${esc(PK.adUntil)}
+            <input class="form-control form-control-sm" style="width:auto" type="date" data-org-until="${esc(o.id)}" value="${dateValue(acc.until)}" />
+          </label>
+          <button class="btn btn-sm btn-light" data-org-month="${esc(o.id)}"><i class="bi bi-calendar-plus me-1"></i>${esc(PK.adMonth)}</button>
+          ${remind ? `<a class="btn btn-sm btn-warning" href="${esc(remind)}" target="_blank" rel="noopener"><i class="bi ${o.contactPhone ? "bi-whatsapp" : "bi-envelope"} me-1"></i>${esc(PK.adRemind)}</a>` : ""}
+          <button class="btn btn-sm btn-light" data-org-email="${esc(o.id)}" title="${esc(PK.adAddEmail)}" aria-label="${esc(PK.adAddEmail)}"><i class="bi bi-person-plus"></i></button>
+          <a class="btn btn-sm btn-admin" href="/pickups/organize.html?org=${esc(o.id)}&tab=profile" title="${esc(EX.edit)}"><i class="bi bi-pencil"></i><span class="d-none d-sm-inline ms-1">${esc(EX.edit)}</span></a>
         </div>
-        <a class="btn btn-sm btn-admin flex-shrink-0" href="/pickups/organize.html?org=${esc(o.id)}&tab=profile" title="${esc(EX.edit)}"><i class="bi bi-pencil"></i><span class="d-none d-sm-inline ms-1">${esc(EX.edit)}</span></a>
       </div>`;
     }).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(PK.adNoOrgs)}</div>`}`;
 }
@@ -596,7 +660,7 @@ function render() {
       <button class="tp-tab ${state.tab === "drafts" ? "is-active" : ""}" data-pa-tab="drafts"><i class="bi bi-pencil-square"></i> ${esc(EX.adTabDrafts)} <span class="pa-count">${state.drafts.length}</span></button>
       <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-trophy"></i> ${esc(EX.adTabEvents)} <span class="pa-count">${active.length}</span></button>
       <button class="tp-tab ${state.tab === "clubs" ? "is-active" : ""}" data-pa-tab="clubs"><i class="bi bi-shield"></i> ${esc(EX.adTabClubs)}${state.clubs ? ` <span class="pa-count">${state.clubs.length}</span>` : ""}</button>
-      <button class="tp-tab ${state.tab === "orgs" ? "is-active" : ""}" data-pa-tab="orgs"><i class="bi bi-building"></i> ${esc(PK.adTabOrgs)}${state.orgs ? ` <span class="pa-count">${state.orgs.length}</span>` : ""}</button>
+      <button class="tp-tab ${state.tab === "orgs" ? "is-active" : ""}" data-pa-tab="orgs"><i class="bi bi-building"></i> ${esc(PK.adTabOrgs)}${state.orgs ? (orgAlerts().soon + orgAlerts().expired ? ` <span class="pa-count pa-count--alert">${orgAlerts().soon + orgAlerts().expired}</span>` : ` <span class="pa-count">${state.orgs.length}</span>`) : ""}</button>
       <button class="tp-tab ${state.tab === "migrations" ? "is-active" : ""}" data-pa-tab="migrations"><i class="bi bi-arrow-left-right"></i> ${esc(EX.adTabMigrations)}${state.migrations.some((r) => r.status !== "done") ? ` <span class="pa-count pa-count--alert">${state.migrations.filter((r) => r.status !== "done").length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
       <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
@@ -838,16 +902,78 @@ root.addEventListener("input", (ev) => {
   }
 });
 
-// Permiso de pickups por organización
+// Permiso de pickups por organización (con fecha de vencimiento)
+const findOrg = (id) => (state.orgs || []).find((o) => o.id === id);
+function savePickups(org, on, until, msg) {
+  return act(async () => {
+    await setOrgPickups(org.id, { on, until });
+    org.features = { ...(org.features || {}), pickups: on, pickupsUntil: until ? { seconds: Math.floor(until / 1000) } : null };
+  }, msg, { reload: false });
+}
+
 root.addEventListener("change", (ev) => {
-  const id = ev.target.dataset?.orgPk;
-  if (!id) return;
-  const org = (state.orgs || []).find((o) => o.id === id);
-  const on = ev.target.checked;
-  act(async () => {
-    await setOrgFeature(id, "pickups", on);
-    if (org) org.features = { ...(org.features || {}), pickups: on };
-  }, pkf(on ? PK.adPickupsOn : PK.adPickupsOff, { name: org?.name || "" }), { reload: false });
+  const t = ev.target;
+  if (t.dataset?.orgPk) {
+    const org = findOrg(t.dataset.orgPk);
+    if (!org) return;
+    const acc = pickupAccess(org);
+    // al prender sin fecha (o vencida) se da un mes
+    const until = t.checked && (!acc.until || acc.state === "expired") ? addMonths(Date.now()) : acc.until;
+    return savePickups(org, t.checked, until, pkf(t.checked ? PK.adPickupsOn : PK.adPickupsOff, { name: org.name || "" }));
+  }
+  if (t.dataset?.orgUntil) {
+    const org = findOrg(t.dataset.orgUntil);
+    if (!org) return;
+    const until = endOfDay(t.value);
+    return savePickups(org, true, until, pkf(PK.adUntilOk, { name: org.name || "" }));
+  }
+});
+
+root.addEventListener("click", async (ev) => {
+  const month = ev.target.closest("[data-org-month]");
+  if (month) {
+    const org = findOrg(month.dataset.orgMonth);
+    if (!org) return;
+    const acc = pickupAccess(org);
+    // se suma un mes desde la fecha actual de vencimiento (o desde hoy si ya venció)
+    const until = addMonths(acc.until && acc.until > Date.now() ? acc.until : Date.now());
+    return savePickups(org, true, until, pkf(PK.adMonthOk, { name: org.name || "", date: fmtDay(until) }));
+  }
+  const addEmail = ev.target.closest("[data-org-email]");
+  if (addEmail) {
+    const org = findOrg(addEmail.dataset.orgEmail);
+    if (!org) return;
+    const email = await askConfirm("", {
+      title: PK.adAddEmail,
+      ok: PK.plAddOk,
+      html: `<div class="text-start"><label class="form-label small fw-semibold" for="aeEmail">${esc(PK.adEmail)}</label><input class="form-control" id="aeEmail" type="email" autocomplete="off" /></div>`,
+      onOpen: (wrap) => wrap.querySelector("#aeEmail").focus(),
+      read: (wrap) => wrap.querySelector("#aeEmail").value.trim(),
+    });
+    if (!email) return;
+    if (!isEmail(email)) return alertBox(PK.adEmailBad, "warning");
+    return act(async () => {
+      org.pendingEmails = await addOrgEmail(org, email);
+      org.ownerEmail = org.ownerEmail || email.toLowerCase();
+    }, pkf(PK.adAddEmailOk, { email }), { reload: false });
+  }
+  if (ev.target.closest("[data-org-grant]")) {
+    const v = (id) => document.getElementById(id).value.trim();
+    const data = { email: v("grEmail"), name: v("grName"), kind: v("grKind"), country: v("grCountry"), contactPhone: v("grPhone"), until: endOfDay(v("grUntil")) };
+    if (!data.email || !data.name) return alertBox(PK.adGrantMissing, "warning");
+    if (!isEmail(data.email)) return alertBox(PK.adEmailBad, "warning");
+    state.grantOpen = true;
+    return act(async () => {
+      await createOrgForEmail(state.me, data);
+      state.orgs = await listAllOrgs();
+      const text = pkf(PK.adGrantShareText, { name: data.name, email: data.email, url: `${location.origin}/pickups/organize.html` });
+      state.grantDone = {
+        msg: pkf(PK.adGrantOk, { name: data.name, email: data.email }),
+        phone: !!data.contactPhone,
+        href: data.contactPhone ? waLink(data.contactPhone, text) : `mailto:${encodeURIComponent(data.email)}?subject=${encodeURIComponent(PK.adRemindSubject)}&body=${encodeURIComponent(text)}`,
+      };
+    }, pkf(PK.adGrantOk, { name: data.name, email: data.email }), { reload: false });
+  }
 });
 
 (async function init() {
@@ -861,7 +987,10 @@ root.addEventListener("change", (ev) => {
       return;
     }
     setAdminMode(true);
+    state.me = user;
     await reload();
+    // organizaciones: para el aviso de vencimientos en la pestaña (aunque no esté abierta)
+    if (state.orgs === null) listAllOrgs().then((o) => { if (state.orgs === null) { state.orgs = o; render(); } }).catch(() => {});
     if (["import", "players", "clubs", "orgs"].includes(state.tab)) await openTab(state.tab);
   } catch (err) {
     console.error("[admin]", err);

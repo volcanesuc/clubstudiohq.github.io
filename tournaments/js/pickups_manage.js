@@ -68,6 +68,8 @@ export function dateStamp(ms) {
 
 export function mountPickups(box, ctx) {
   const { org, alertBox, run } = ctx;
+  // permiso vencido: ve las listas y marca pagos, pero no crea, edita ni publica pickups
+  const locked = !!ctx.locked;
   const settings = { ...defaultPickupSettings(org.country), ...(org.pickupSettings || {}) };
   const money = (v, p) => fmtMoney(v, p?.currency || settings.currency, LOCALE);
   const st = { list: null, pickup: null, players: [], form: null, showLeft: false };
@@ -101,7 +103,7 @@ export function mountPickups(box, ctx) {
     box.innerHTML = `
       <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
         <div class="small ev-muted">${esc(PK.pkListLead)}</div>
-        <button class="btn tn-btn-grad" data-pk="new"><i class="bi bi-plus-lg me-1"></i>${esc(PK.pkNew)}</button>
+        ${locked ? "" : `<button class="btn tn-btn-grad" data-pk="new"><i class="bi bi-plus-lg me-1"></i>${esc(PK.pkNew)}</button>`}
       </div>
       ${upcoming.length ? `<div class="pk-sec">${esc(PK.pkUpcoming)}</div>${upcoming.map(row).join("")}` : `<div class="ev-card ev-muted small mb-3">${esc(PK.pkNoUpcoming)}</div>`}
       ${past.length ? `<div class="pk-sec mt-3">${esc(PK.pkPast)}</div>${past.map(row).join("")}` : ""}`;
@@ -223,10 +225,10 @@ export function mountPickups(box, ctx) {
             <div class="small ev-muted"><i class="bi bi-calendar-event me-1"></i>${esc(fmtWhen(p.startAt))}${p.venue ? ` · <i class="bi bi-geo-alt"></i> ${esc(p.venue)}` : ""}</div>
           </div>
           <div class="d-flex gap-2 flex-wrap">
-            ${draft ? `<button class="btn btn-sm tn-btn-grad" data-pk="publish"><i class="bi bi-send me-1"></i>${esc(PK.pfPublish)}</button>` : ""}
+            ${draft && !locked ? `<button class="btn btn-sm tn-btn-grad" data-pk="publish"><i class="bi bi-send me-1"></i>${esc(PK.pfPublish)}</button>` : ""}
             ${!draft ? `<button class="btn btn-sm btn-light" data-pk="copy"><i class="bi bi-link-45deg me-1"></i>${esc(PK.pkCopy)}</button><a class="btn btn-sm btn-light" href="${esc(pickupUrl(p))}" target="_blank" rel="noopener"><i class="bi bi-eye"></i></a>` : ""}
             ${!cancelled ? `<button class="btn btn-sm btn-light" data-pk="add"><i class="bi bi-person-plus me-1"></i>${esc(PK.plAdd)}</button>` : ""}
-            <button class="btn btn-sm btn-light" data-pk="edit"><i class="bi bi-pencil me-1"></i>${esc(EX.edit)}</button>
+            ${locked ? "" : `<button class="btn btn-sm btn-light" data-pk="edit"><i class="bi bi-pencil me-1"></i>${esc(EX.edit)}</button>`}
             <div class="dropdown">
               <button class="btn btn-sm btn-light" data-bs-toggle="dropdown" aria-label="${esc(PK.pkMore)}"><i class="bi bi-three-dots-vertical"></i></button>
               <ul class="dropdown-menu dropdown-menu-end">
