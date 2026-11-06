@@ -27,6 +27,7 @@ import {
 import { GAME_STATUS, randomId, spiritTable, standings } from "/tournaments/js/model.js";
 import { listGames, listTeams, loadEvent, loadRegistration, rosterLocked } from "/tournaments/js/services.js";
 import { listClaimsForUser } from "/tournaments/js/imports.js";
+import { finalPlaces } from "/tournaments/js/bracket_view.js";
 
 const SPIRIT_WINDOW_DAYS = 21; // después de esto ya no se recuerda la evaluación pendiente
 
@@ -384,12 +385,14 @@ export async function squadResults(sid, pointers) {
     const div = team.divisionId || "";
     const divTeams = teams.filter((t) => (t.divisionId || "") === div);
     const ids = new Set(divTeams.map((t) => t.id));
-    const divGames = games.filter((g) => !g.phase && ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
-    const table = standings(divTeams, divGames);
+    const allGames = games.filter((g) => ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
+    // posición en la fase de grupos (solo si no hay puesto final)
+    const table = standings(divTeams, allGames.filter((g) => !g.phase));
     const groupRank = table.findIndex((r) => r.team.id === team.id) + 1;
-    const me = table[groupRank - 1] || { w: 0, l: 0, played: 0 };
-    // puesto final después de la llave (si el torneo lo tiene), si no el de la tabla de grupos
-    const rank = Number(team.finalPlace) > 0 ? Number(team.finalPlace) : groupRank;
+    // récord de todo el torneo: grupos + llave (playoffs, partidos por puesto)
+    const me = standings(divTeams, allGames).find((r) => r.team.id === team.id) || { w: 0, l: 0, played: 0 };
+    // puesto final: el guardado (importados) o el que sale de los partidos por puesto; si no, el de grupos
+    const rank = finalPlaces(divTeams, allGames).get(team.id) || groupRank;
     const spirit = spiritTable(divTeams, games.filter((g) => ids.has(g.teamA?.id) || ids.has(g.teamB?.id)));
     return {
       ...base,
