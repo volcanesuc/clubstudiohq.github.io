@@ -561,6 +561,8 @@ export const EX = {
   dirSubtitle: "Resultados en vivo, posiciones y estadísticas de torneos que usan ClubStudioHQ.",
   dirLive: "En curso y próximos",
   dirPast: "Finalizados",
+  dirNow: "En curso",
+  dirSoon: "Próximo",
   dirSearch: "Buscar por nombre, sede, categoría o país",
   dirCountry: "País",
   dirAllCountries: "Todos los países",
