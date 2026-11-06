@@ -21,13 +21,15 @@ import {
   validateImport,
 } from "/tournaments/js/imports.js";
 import { listClubDirectory, profileUrl, squadUrl } from "/tournaments/js/squads.js";
+import { listAllOrgs, orgHasPickups, setOrgFeature } from "/tournaments/js/orgs.js";
+import { PK, pkf } from "/tournaments/js/pickups_strings.js";
 import { countryName, flagOf } from "/tournaments/js/countries.js";
 import { normName } from "/tournaments/js/names.js";
 import { sameName } from "/tournaments/js/names.js";
 import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, setAdminMode, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
-const TABS = ["pending", "drafts", "active", "clubs", "migrations", "import", "players"];
+const TABS = ["pending", "drafts", "active", "clubs", "orgs", "migrations", "import", "players"];
 const HASH_TAB = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "";
 const state = {
   pending: [],
@@ -37,6 +39,8 @@ const state = {
   search: "",
   clubs: null, // pestaña Clubes (se carga al abrirla)
   clubQ: "",
+  orgs: null, // pestaña Organizaciones (permiso de pickups)
+  orgQ: "",
   migrations: [], // pedidos de migración desde otras plataformas
   // importar
   bundled: null,
@@ -129,6 +133,35 @@ function migrationsTab() {
         </div>
       </div>`;
     }).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(EX.adNoMigrations)}</div>`}`;
+}
+
+function orgsTab() {
+  if (state.orgs === null) return `<div class="pa-empty small ev-muted">${esc(EX.loading)}</div>`;
+  const words = normName(state.orgQ).split(/\s+/).filter(Boolean);
+  const hay = (o) => normName([o.name, o.city, o.country, countryName(o.country), o.ownerEmail].filter(Boolean).join(" "));
+  const shown = state.orgs.filter((o) => words.every((w) => hay(o).includes(w)));
+  return `
+    <div class="small ev-muted mb-2">${esc(PK.adOrgsHint)}</div>
+    <div class="pa-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" id="paOrgQ" placeholder="${esc(PK.adOrgSearch)}" value="${esc(state.orgQ)}" />
+    </div>
+    ${shown.length ? `<div class="pa-list">${shown.map((o) => {
+      const n = (o.ownerUids || []).length;
+      return `
+      <div class="pa-row">
+        ${teamBadge({ id: o.id, name: o.name, logo: o.logo, color: o.color }, 44)}
+        <div class="flex-grow-1 min-w-0">
+          <span class="fw-bold">${esc(o.name || "—")}</span>
+          <div class="small ev-muted text-truncate">${esc([PK.orgKinds[o.kind], o.country ? `${flagOf(o.country)} ${[o.city, countryName(o.country)].filter(Boolean).join(", ")}` : o.city, n === 1 ? PK.adOrgAdmin1 : pkf(PK.adOrgAdmins, { n }), o.ownerEmail].filter(Boolean).join(" · "))}</div>
+        </div>
+        <div class="form-check form-switch m-0 flex-shrink-0" title="${esc(PK.adPickups)}">
+          <input class="form-check-input" type="checkbox" role="switch" id="org-${esc(o.id)}" data-org-pk="${esc(o.id)}" ${orgHasPickups(o) ? "checked" : ""} />
+          <label class="form-check-label small" for="org-${esc(o.id)}">${esc(PK.adPickups)}</label>
+        </div>
+        <a class="btn btn-sm btn-admin flex-shrink-0" href="/pickups/organize.html?org=${esc(o.id)}&tab=profile" title="${esc(EX.edit)}"><i class="bi bi-pencil"></i><span class="d-none d-sm-inline ms-1">${esc(EX.edit)}</span></a>
+      </div>`;
+    }).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(PK.adNoOrgs)}</div>`}`;
 }
 
 function clubsTab() {
@@ -563,12 +596,13 @@ function render() {
       <button class="tp-tab ${state.tab === "drafts" ? "is-active" : ""}" data-pa-tab="drafts"><i class="bi bi-pencil-square"></i> ${esc(EX.adTabDrafts)} <span class="pa-count">${state.drafts.length}</span></button>
       <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-trophy"></i> ${esc(EX.adTabEvents)} <span class="pa-count">${active.length}</span></button>
       <button class="tp-tab ${state.tab === "clubs" ? "is-active" : ""}" data-pa-tab="clubs"><i class="bi bi-shield"></i> ${esc(EX.adTabClubs)}${state.clubs ? ` <span class="pa-count">${state.clubs.length}</span>` : ""}</button>
+      <button class="tp-tab ${state.tab === "orgs" ? "is-active" : ""}" data-pa-tab="orgs"><i class="bi bi-building"></i> ${esc(PK.adTabOrgs)}${state.orgs ? ` <span class="pa-count">${state.orgs.length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "migrations" ? "is-active" : ""}" data-pa-tab="migrations"><i class="bi bi-arrow-left-right"></i> ${esc(EX.adTabMigrations)}${state.migrations.some((r) => r.status !== "done") ? ` <span class="pa-count pa-count--alert">${state.migrations.filter((r) => r.status !== "done").length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
       <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
     </nav>
 
-    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "migrations" ? migrationsTab() : state.tab === "drafts"
+    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "migrations" ? migrationsTab() : state.tab === "orgs" ? orgsTab() : state.tab === "drafts"
       ? `<div class="small ev-muted mb-2">${esc(EX.adDraftsHint)}</div>${state.drafts.length ? `<div class="d-grid gap-3">${state.drafts.map(pendingCard).join("")}</div>`
         : `<div class="pa-empty small ev-muted">${esc(EX.adNoDrafts)}</div>`}`
       : state.tab === "pending"
@@ -625,6 +659,10 @@ root.addEventListener("submit", (ev) => {
 async function openTab(tab, eventId = "") {
   state.tab = tab;
   history.replaceState(null, "", `#${tab}`);
+  if (tab === "orgs" && state.orgs === null) {
+    render();
+    state.orgs = await listAllOrgs().catch(() => []);
+  }
   if (tab === "clubs" && state.clubs === null) {
     render();
     state.clubs = await listClubDirectory().catch(() => []);
@@ -769,6 +807,15 @@ root.addEventListener("input", (ev) => {
     input.setSelectionRange(pos, pos);
     return;
   }
+  if (ev.target.id === "paOrgQ") {
+    state.orgQ = ev.target.value;
+    const pos = ev.target.selectionStart;
+    render();
+    const input = document.getElementById("paOrgQ");
+    input.focus();
+    input.setSelectionRange(pos, pos);
+    return;
+  }
   if (ev.target.id === "paClubQ") {
     state.clubQ = ev.target.value;
     const pos = ev.target.selectionStart;
@@ -791,6 +838,18 @@ root.addEventListener("input", (ev) => {
   }
 });
 
+// Permiso de pickups por organización
+root.addEventListener("change", (ev) => {
+  const id = ev.target.dataset?.orgPk;
+  if (!id) return;
+  const org = (state.orgs || []).find((o) => o.id === id);
+  const on = ev.target.checked;
+  act(async () => {
+    await setOrgFeature(id, "pickups", on);
+    if (org) org.features = { ...(org.features || {}), pickups: on };
+  }, pkf(on ? PK.adPickupsOn : PK.adPickupsOff, { name: org?.name || "" }), { reload: false });
+});
+
 (async function init() {
   showLoader();
   try {
@@ -803,7 +862,7 @@ root.addEventListener("input", (ev) => {
     }
     setAdminMode(true);
     await reload();
-    if (["import", "players", "clubs"].includes(state.tab)) await openTab(state.tab);
+    if (["import", "players", "clubs", "orgs"].includes(state.tab)) await openTab(state.tab);
   } catch (err) {
     console.error("[admin]", err);
     alertBox(`${EX.error} ${err?.code || ""}`, "danger");

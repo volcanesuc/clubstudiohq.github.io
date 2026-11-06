@@ -22,4 +22,7 @@ export const COL = {
   playerClaims: "player_claims", // player_claims/{eventId}__{playerId}: cuenta asignada por un admin a un jugador importado
   claimRequests: "claim_requests", // claim_requests/{eventId}__{playerId}__{uid}: "soy yo" pedido por el jugador
   migrationRequests: "migration_requests", // migration_requests/{id}: pedido para pasar un torneo de otra plataforma
+  orgs: "orgs", // orgs/{id}: organización (asociación, liga, club o persona) que hace torneos y pickups
+  orgInvites: "org_invites", // org_invites/{token}: link para sumarse como admin de una organización
+  pickups: "pickups", // pickups/{id} + players/{pid} (+ private/proof)
 };

@@ -435,6 +435,143 @@ service cloud.firestore {
 
     // "Soy yo": un jugador pide que le asignen una ficha sin cuenta de un torneo (ej. importado).
     // id = {eventId}__{playerId}__{uid}. Lo ve él y el admin de la plataforma, que la aprueba o la rechaza.
+    /* =========================
+       ORGANIZACIONES (asociación, liga, club o persona) y PICKUPS
+       Una organización hace pickups solo si el admin de la plataforma le activó features.pickups.
+    ========================= */
+    function orgData(orgId) {
+      return get(/databases/$(database)/documents/orgs/$(orgId)).data;
+    }
+
+    function isOrgAdmin(orgId) {
+      return isGoogle() && request.auth.uid in orgData(orgId).ownerUids;
+    }
+
+    function orgHasPickups(orgId) {
+      return orgData(orgId).get("features", {}).get("pickups", false) == true;
+    }
+
+    function orgInviteFor(token, orgId) {
+      let inv = get(/databases/$(database)/documents/org_invites/$(token));
+      return inv != null && inv.data.orgId == orgId && inv.data.role == "admin";
+    }
+
+    function pkData(pickupId) {
+      return get(/databases/$(database)/documents/pickups/$(pickupId)).data;
+    }
+
+    function isPickupAdmin(pickupId) {
+      return isOrgAdmin(pkData(pickupId).orgId);
+    }
+
+    match /orgs/{orgId} {
+      allow read: if true;
+
+      // el permiso de pickups (features) solo lo da el admin de la plataforma
+      allow create: if isGoogle()
+        && request.resource.data.ownerUids == [request.auth.uid]
+        && !("features" in request.resource.data);
+
+      allow update: if isPlatformAdmin() || isGoogle() && (
+        (
+          request.auth.uid in resource.data.ownerUids
+          && request.resource.data.ownerUids.size() > 0
+          && request.resource.data.get("features", {}) == resource.data.get("features", {})
+        )
+        // co-admin nuevo con el link: solo se agrega a sí mismo
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["ownerUids", "joinToken", "updatedAt"])
+          && request.resource.data.ownerUids.hasAll(resource.data.ownerUids)
+          && request.resource.data.ownerUids.size() == resource.data.ownerUids.size() + 1
+          && request.auth.uid in request.resource.data.ownerUids
+          && orgInviteFor(request.resource.data.joinToken, orgId)
+        )
+      );
+
+      allow delete: if isPlatformAdmin() || (isGoogle() && request.auth.uid in resource.data.ownerUids);
+
+      // links de invitación vigentes (solo admins)
+      match /private/{docId} {
+        allow read, write: if isPlatformAdmin() || isOrgAdmin(orgId);
+      }
+    }
+
+    match /org_invites/{token} {
+      allow get: if true;
+      allow create: if isGoogle()
+        && request.resource.data.createdBy == request.auth.uid
+        && isOrgAdmin(request.resource.data.orgId);
+      allow delete: if isGoogle() && isOrgAdmin(resource.data.orgId);
+    }
+
+    match /pickups/{pickupId} {
+      allow read: if resource.data.isPublic == true || isPlatformAdmin() || isOrgAdmin(resource.data.orgId);
+      allow create: if isPlatformAdmin()
+        || (isOrgAdmin(request.resource.data.orgId) && orgHasPickups(request.resource.data.orgId));
+      allow update: if isPlatformAdmin()
+        || (isOrgAdmin(resource.data.orgId) && request.resource.data.orgId == resource.data.orgId && orgHasPickups(resource.data.orgId));
+      allow delete: if isPlatformAdmin() || isOrgAdmin(resource.data.orgId);
+
+      // lista pública: nombre, tarifa y estado. El comprobante va en /private
+      match /players/{playerId} {
+        allow read: if true;
+        allow write: if isPlatformAdmin() || isPickupAdmin(pickupId);
+
+        // anotarse (yo o un amigo que anoto yo) mientras el pickup esté publicado y no haya empezado
+        allow create: if isGoogle()
+          && pkData(pickupId).status == "published"
+          && request.time < pkData(pickupId).startAt
+          && request.resource.data.status == "active"
+          && request.resource.data.paymentStatus in ["none", "free"]
+          && request.resource.data.attendance == null
+          && request.resource.data.addedBy == request.auth.uid
+          && request.resource.data.joinedAt == request.time
+          && (
+            (playerId == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.source == "self")
+            || (request.resource.data.uid == null && request.resource.data.source == "friend")
+          );
+
+        allow update: if isGoogle()
+          && (resource.data.uid == request.auth.uid || resource.data.addedBy == request.auth.uid)
+          && (
+            // salirse: solo antes de la hora límite (después queda en la lista y debe)
+            (
+              resource.data.status == "active"
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "leftAt", "updatedAt"])
+              && request.resource.data.status == "left"
+              && request.time < pkData(pickupId).leaveDeadlineAt
+            )
+            // comprobante subido (o vuelto a subir si lo rechazaron)
+            || (
+              resource.data.status == "active"
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paymentStatus", "paymentAt", "updatedAt"])
+              && request.resource.data.paymentStatus == "submitted"
+              && resource.data.paymentStatus in ["none", "rejected"]
+            )
+            // volver a anotarse después de salirse: queda al final de la fila
+            || (
+              resource.data.status == "left"
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "joinedAt", "leftAt", "tierId", "tierName", "price", "name", "number", "gender", "photoURL", "paymentStatus", "updatedAt"])
+              && request.resource.data.status == "active"
+              && request.resource.data.joinedAt == request.time
+              && (request.resource.data.paymentStatus == resource.data.paymentStatus || request.resource.data.paymentStatus in ["none", "free"])
+              && pkData(pickupId).status == "published"
+              && request.time < pkData(pickupId).startAt
+            )
+          );
+
+        // comprobante: el jugador (o quien lo anotó) y los admins de la organización
+        match /private/{docId} {
+          allow read, write: if isPlatformAdmin() || isPickupAdmin(pickupId) || (
+            isGoogle() && (
+              get(/databases/$(database)/documents/pickups/$(pickupId)/players/$(playerId)).data.uid == request.auth.uid
+              || get(/databases/$(database)/documents/pickups/$(pickupId)/players/$(playerId)).data.addedBy == request.auth.uid
+            )
+          );
+        }
+      }
+    }
+
     // Pedidos para migrar un torneo desde otra plataforma (formulario público en /tournaments/)
     match /migration_requests/{reqId} {
       allow read, update, delete: if isPlatformAdmin();
