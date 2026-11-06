@@ -1,6 +1,12 @@
 {
  "imports": [
   {
+   "file": "tech26.json",
+   "name": "Espíritu Chorotega 2026",
+   "source": "https://ultie.org/tech26",
+   "startDate": "2026-08-29"
+  },
+  {
    "file": "ciuf2025.json",
    "name": "Copa de Invierno 2025",
    "source": "https://ultie.org/ciuf2025",
