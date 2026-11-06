@@ -20,4 +20,5 @@ export const COL = {
   squadInvites: "squad_invites", // squad_invites/{token}: link para unirse a un equipo (jugador o co-admin)
   profiles: "profiles", // profiles/{uid}: perfil del jugador (foto, número, equipos)
   playerClaims: "player_claims", // player_claims/{eventId}__{playerId}: cuenta asignada por un admin a un jugador importado
+  claimRequests: "claim_requests", // claim_requests/{eventId}__{playerId}__{uid}: "soy yo" pedido por el jugador
 };

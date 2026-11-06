@@ -133,6 +133,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
     </div>`;
   revealActiveTab(nav.querySelector(".tn-nav__tabs"));
   renderBottomNav({ active, isAdmin, google });
+  if (google) refreshTeamBadge(user);
   if (!renderNav.spiritChecked && isGoogleUser(user)) {
     renderNav.spiritChecked = true;
     maybeSpiritPopup(user).catch(() => {});
@@ -150,6 +151,34 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
     } catch (err) {
       console.warn("[torneos] login:", err?.code || err);
     }
+  });
+}
+
+// Avisos sin leer de los equipos que administro (ej. un jugador nuevo): número sobre "Mi equipo".
+// Se guarda 2 minutos en la sesión para no consultar en cada página.
+export async function refreshTeamBadge(user) {
+  if (!isGoogleUser(user)) return;
+  const key = `tnNotices:${user.uid}`;
+  let n = null;
+  try {
+    const c = JSON.parse(sessionStorage.getItem(key) || "null");
+    if (c && Date.now() - c.t < 120000) n = c.n;
+  } catch {}
+  if (n === null) {
+    if (refreshTeamBadge.loading) return;
+    refreshTeamBadge.loading = true;
+    try {
+      n = (await (await import("/tournaments/js/squads.js")).unreadNotices(user)).length;
+    } catch {
+      n = 0;
+    } finally {
+      refreshTeamBadge.loading = false;
+    }
+    try { sessionStorage.setItem(key, JSON.stringify({ n, t: Date.now() })); } catch {}
+  }
+  document.querySelectorAll('#tnNav a[href="/tournaments/team.html"], #tnBottomNav a[href="/tournaments/team.html"]').forEach((a) => {
+    a.querySelector(".tn-badge")?.remove();
+    if (n > 0) a.insertAdjacentHTML("beforeend", `<b class="tn-badge" title="${esc(exf(EX.ntNewPlayers, { n }))}">${n > 9 ? "9+" : n}</b>`);
   });
 }
 
@@ -223,6 +252,31 @@ export function paymentChip(reg = {}) {
 }
 
 // Aviso: partidos terminados donde mi equipo tiene que evaluar el espíritu del rival
+// Avisos de mis equipos: "X se unió a Equipo" (team.html). items = [{ squad, notice }]
+export function noticesHtml(items = []) {
+  if (!items.length) return "";
+  return `
+    <section class="sp-pending nt-card">
+      <div class="sp-pending__head">
+        <span class="sp-pending__icon"><i class="bi bi-person-plus-fill"></i></span>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-bold">${esc(exf(EX.ntNewPlayers, { n: items.length }))}</div>
+          <div class="small opacity-75">${esc(EX.ntSub)}</div>
+        </div>
+        <button class="btn btn-sm btn-light text-nowrap" id="ntSeen" type="button"><i class="bi bi-check2-all me-1"></i>${esc(EX.ntMarkSeen)}</button>
+      </div>
+      ${items.map(({ squad, notice: n }) => `
+        <a class="sp-pending__row" href="/tournaments/club.html?${new URLSearchParams({ s: squad.id, tab: "players" })}">
+          ${avatarHtml(n, 38)}
+          <div class="flex-grow-1 min-w-0">
+            <div class="text-truncate">${exf(esc(EX.ntJoined), { name: `<b>${esc(n.name || "—")}</b>`, team: `<b>${esc(squad.name || "")}</b>` })}</div>
+            <div class="small ev-muted text-truncate">${esc([n.number !== null && n.number !== undefined && n.number !== "" ? `#${n.number}` : "", n.gender || "", fmtWhen(n.at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })].filter(Boolean).join(" · "))}</div>
+          </div>
+          ${teamBadge(squad, 28)}
+        </a>`).join("")}
+    </section>`;
+}
+
 export function spiritPendingHtml(list = []) {
   if (!list.length) return "";
   return `

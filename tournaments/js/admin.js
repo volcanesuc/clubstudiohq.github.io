@@ -4,6 +4,7 @@
 import { EX, exf } from "/tournaments/js/strings.js";
 import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, listTeams, setApproval } from "/tournaments/js/services.js";
 import {
+  approveClaimRequest,
   assignPlayerAccount,
   importPreview,
   importTournament,
@@ -11,13 +12,16 @@ import {
   listAllProfiles,
   listAllSquads,
   listBundledImports,
+  listClaimRequests,
   loadBundledImport,
+  rejectClaimRequest,
   repairEventClaims,
   unassignPlayerAccount,
   unlinkTeamFromSquad,
   validateImport,
 } from "/tournaments/js/imports.js";
 import { profileUrl } from "/tournaments/js/squads.js";
+import { sameName } from "/tournaments/js/names.js";
 import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
@@ -237,6 +241,35 @@ function nameScore(a, b) {
 
 const linkedProfile = (uid) => (state.profiles || []).find((p) => p.id === uid) || null;
 
+// cuenta con el mismo nombre que todavía no juega en este torneo (sugerencia para vincular)
+function suggestedProfile(player) {
+  const used = new Set(state.pl.teams.flatMap((t) => (t.players || []).map((p) => p.uid)).filter(Boolean));
+  return (state.profiles || []).find((prof) => !used.has(prof.id) && sameName(player.name, prof.name)) || null;
+}
+
+// pedidos "soy yo" que mandaron los jugadores desde su perfil
+function claimRequestsSection() {
+  const reqs = state.claimReqs || [];
+  if (!reqs.length) return "";
+  return `
+    <section class="ev-card mb-3 cl-admin">
+      <h2 class="h6 fw-bold mb-1"><i class="bi bi-person-raised-hand me-1"></i>${esc(exf(EX.clmAdminTitle, { n: reqs.length }))}</h2>
+      <p class="small ev-muted mb-2">${esc(EX.clmAdminSub)}</p>
+      <div class="pa-list">
+        ${reqs.map((r) => `
+          <div class="pa-row">
+            ${avatarHtml({ name: r.profileName, photoURL: r.photoURL }, 36)}
+            <div class="flex-grow-1 min-w-0">
+              <div class="text-truncate">${exf(esc(EX.clmAdminLine), { profile: `<a class="fw-semibold text-decoration-none" href="${esc(profileUrl(r.uid))}" target="_blank" rel="noopener">${esc(r.profileName || r.uid)}</a>`, player: `<b>${esc(r.playerName)}</b>` })}</div>
+              <div class="small ev-muted text-truncate">${esc([r.teamName, r.eventName].filter(Boolean).join(" · "))}${r.at ? ` · ${esc(fmtWhen(r.at, { day: "numeric", month: "short" }))}` : ""}</div>
+            </div>
+            <button class="btn btn-sm btn-primary" data-act="claimOk" data-req="${esc(r.id)}"><i class="bi bi-check-lg me-1"></i>${esc(EX.clmApprove)}</button>
+            <button class="btn btn-sm btn-outline-danger" data-act="claimNo" data-req="${esc(r.id)}">${esc(EX.clmReject)}</button>
+          </div>`).join("")}
+      </div>
+    </section>`;
+}
+
 function playersTab() {
   const events = [...state.active, ...state.pending];
   if (!events.length) return `<div class="pa-empty small ev-muted">${esc(EX.plNoEvents)}</div>`;
@@ -248,6 +281,7 @@ function playersTab() {
     .filter((p) => (!onlyFree || !p.uid) && (!q || norm(p.name).includes(q)))
     .map((p) => {
       const prof = p.uid ? linkedProfile(p.uid) : null;
+      const guess = p.uid ? null : suggestedProfile(p);
       return `
         <div class="pa-row" data-team="${esc(t.id)}" data-player="${esc(p.id)}">
           ${avatarHtml(prof || p, 36)}
@@ -255,7 +289,9 @@ function playersTab() {
             <div class="fw-semibold text-truncate">${esc(playerLabel(p))}${p.gender ? ` <span class="ev-muted small">${esc(p.gender)}</span>` : ""}</div>
             ${p.uid
               ? `<a class="small text-decoration-none" href="${esc(profileUrl(p.uid))}" target="_blank" rel="noopener"><i class="bi bi-person-check me-1"></i>${esc(prof?.name || p.uid)}</a>`
-              : `<span class="pa-pill pa-pill--wait">${esc(EX.plFree)}</span>`}
+              : `<span class="pa-pill pa-pill--wait">${esc(EX.plFree)}</span>${guess ? `
+                <span class="pa-pill pa-pill--sugg"><i class="bi bi-magic"></i> ${exf(esc(EX.clmGuess), { name: `<a href="${esc(profileUrl(guess.id))}" target="_blank" rel="noopener">${esc(guess.name)}</a>` })}</span>
+                <button class="btn btn-sm btn-link p-0 align-baseline" data-act="suggestLink" data-uid="${esc(guess.id)}">${esc(EX.clmLinkIt)}</button>` : ""}`}
           </div>
           ${p.uid
             ? `<button class="btn btn-sm btn-outline-danger" data-act="unassign">${esc(EX.plUnassign)}</button>`
@@ -278,6 +314,7 @@ function playersTab() {
       </section>`;
   }).join("");
   return `
+    ${claimRequestsSection()}
     <section class="ev-card mb-3">
       <h2 class="h5 fw-bold mb-1"><i class="bi bi-person-badge me-1"></i>${esc(EX.plTitle)}</h2>
       <p class="small ev-muted mb-2">${esc(EX.plSub)}</p>
@@ -453,7 +490,7 @@ function render() {
       <button class="tp-tab ${state.tab === "pending" ? "is-active" : ""}" data-pa-tab="pending"><i class="bi bi-inbox"></i> ${esc(EX.adminPending)} <span class="pa-count">${pending.length}</span></button>
       <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-check2-circle"></i> ${esc(EX.adminActive)} <span class="pa-count">${active.length}</span></button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
-      <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}</button>
+      <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
     </nav>
 
     ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "pending"
@@ -468,9 +505,10 @@ function render() {
 }
 
 async function reload() {
-  const [pending, active] = await Promise.all([listApprovalRequests(), listApprovedEvents()]);
+  const [pending, active, claimReqs] = await Promise.all([listApprovalRequests(), listApprovedEvents(), listClaimRequests().catch(() => [])]);
   state.pending = pending;
   state.active = active;
+  state.claimReqs = claimReqs;
   render();
 }
 
@@ -562,6 +600,32 @@ root.addEventListener("click", (ev) => {
       await unlinkTeamFromSquad(state.pl.event, team);
       await loadPlayersEvent(state.pl.eventId);
     }, EX.saved, { reload: false });
+  }
+  if (tool?.dataset.act === "claimOk" || tool?.dataset.act === "claimNo") {
+    const req = (state.claimReqs || []).find((r) => r.id === tool.dataset.req);
+    if (!req) return;
+    const done = async () => {
+      state.claimReqs = await listClaimRequests().catch(() => []);
+      if (state.pl.eventId === req.eventId) await loadPlayersEvent(state.pl.eventId);
+    };
+    if (tool.dataset.act === "claimOk") {
+      if (!confirm(exf(EX.plConfirm, { profile: req.profileName || req.uid, player: req.playerName, team: req.teamName }))) return;
+      return act(async () => { await approveClaimRequest(req); await done(); }, exf(EX.plAssigned, { name: req.playerName }), { reload: false });
+    }
+    if (!confirm(exf(EX.clmRejectConfirm, { name: req.profileName || "" }))) return;
+    return act(async () => { await rejectClaimRequest(req); await done(); }, EX.saved, { reload: false });
+  }
+  if (tool?.dataset.act === "suggestLink") {
+    const row = tool.closest("[data-player]");
+    const team = state.pl.teams.find((t) => t.id === row.dataset.team);
+    const player = team?.players.find((p) => p.id === row.dataset.player);
+    const prof = linkedProfile(tool.dataset.uid);
+    if (!player || !prof) return;
+    if (!confirm(exf(EX.plConfirm, { profile: prof.name || prof.id, player: player.name, team: team.name }))) return;
+    return act(async () => {
+      await assignPlayerAccount(state.pl.event, team, player, prof);
+      await loadPlayersEvent(state.pl.eventId);
+    }, exf(EX.plAssigned, { name: player.name }), { reload: false });
   }
   if (tool?.dataset.act === "assign" || tool?.dataset.act === "unassign") {
     const row = tool.closest("[data-player]");

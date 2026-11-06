@@ -4,6 +4,7 @@
 import { EX, exf } from "/tournaments/js/strings.js";
 import { isPlatformAdmin } from "/tournaments/js/services.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
+import { cancelClaimRequest, CLAIM_REQ, findClaimSuggestions, myClaimRequests, requestClaim } from "/tournaments/js/imports.js";
 import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, pendingSpirit, playerHistory, profileUrl, saveProfile, squadUrl } from "/tournaments/js/squads.js";
 import {
   avatarHtml,
@@ -26,7 +27,7 @@ const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
 const PARAM_UID = new URLSearchParams(location.search).get("u") || "";
 
-const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false, editing: false, spirit: [] };
+const state = { user: null, uid: "", profile: null, squads: [], history: null, own: false, editing: false, spirit: [], claims: null };
 
 function alertBox(msg, kind = "success") {
   const el = document.getElementById("tnAlert");
@@ -108,6 +109,86 @@ function editForm() {
       </div>
     </form>`;
 }
+
+// "¿Sos vos?": fichas sin cuenta con mi nombre en torneos anteriores (ej. importados).
+// "Soy yo" manda un pedido al admin; "No soy yo" la esconde en este navegador.
+const claimKey = (x) => `${x.event.id}__${x.player.id}`;
+const dismissKey = () => `tnClaimNo:${state.uid}`;
+function dismissedClaims() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(dismissKey()) || "[]"));
+  } catch {
+    return new Set();
+  }
+}
+
+function claimsSection() {
+  if (!state.own || !state.claims) return "";
+  const { sugg, reqs } = state.claims;
+  const reqOf = new Map(reqs.map((r) => [`${r.eventId}__${r.playerId}`, r]));
+  const no = dismissedClaims();
+  const rows = sugg.filter((x) => !no.has(claimKey(x)) && reqOf.get(claimKey(x))?.status !== CLAIM_REQ.REJECTED);
+  if (!rows.length) return "";
+  return `
+    <section class="ev-card cl-card">
+      <div class="d-flex gap-2 align-items-start mb-2">
+        <span class="cl-card__icon"><i class="bi bi-person-bounding-box"></i></span>
+        <div>
+          <h2 class="h6 fw-bold mb-1">${esc(EX.clmTitle)}</h2>
+          <div class="small ev-muted">${esc(EX.clmSub)}</div>
+        </div>
+      </div>
+      ${rows.map((x) => {
+        const r = reqOf.get(claimKey(x));
+        return `
+        <div class="cl-row" data-claim="${esc(claimKey(x))}">
+          ${teamBadge(x.team, 36)}
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold text-truncate">${esc(x.player.name)}${hasNumber(x.player) ? ` <span class="ev-muted fw-normal">#${esc(x.player.number)}</span>` : ""}</div>
+            <div class="small ev-muted text-truncate"><a class="text-decoration-none" href="${esc(eventUrl(x.event))}">${esc(x.event.name || "—")}</a> · ${esc([x.team.name, fmtDateRange(x.event.startDate, x.event.endDate)].filter(Boolean).join(" · "))}</div>
+          </div>
+          ${r
+            ? `<div class="d-flex align-items-center gap-1 flex-shrink-0"><span class="ev-chip"><i class="bi bi-hourglass-split me-1"></i>${esc(EX.clmPending)}</span><button class="btn btn-sm btn-link text-danger px-1" data-claim-cancel="${esc(r.id)}">${esc(EX.cancel)}</button></div>`
+            : `<div class="d-flex gap-1 flex-shrink-0"><button class="btn btn-sm btn-primary" data-claim-yes>${esc(EX.clmYes)}</button><button class="btn btn-sm btn-light" data-claim-no>${esc(EX.clmNo)}</button></div>`}
+        </div>`;
+      }).join("")}
+    </section>`;
+}
+
+async function loadClaims() {
+  const [sugg, reqs] = await Promise.all([
+    findClaimSuggestions(state.uid, state.profile.name).catch(() => []),
+    myClaimRequests(state.uid).catch(() => []),
+  ]);
+  state.claims = { sugg, reqs };
+  if (sugg.length) render();
+}
+
+root.addEventListener("click", (ev) => {
+  const row = ev.target.closest("[data-claim]");
+  if (!row || !state.claims) return;
+  const key = row.dataset.claim;
+  const x = state.claims.sugg.find((c) => claimKey(c) === key);
+  const cancel = ev.target.closest("[data-claim-cancel]");
+  if (ev.target.closest("[data-claim-yes]") && x) {
+    run(async () => {
+      state.claims.reqs.push(await requestClaim(state.user, state.profile, x));
+      alertBox(EX.clmSent);
+      render();
+    });
+  } else if (ev.target.closest("[data-claim-no]")) {
+    const no = dismissedClaims();
+    no.add(key);
+    try { localStorage.setItem(dismissKey(), JSON.stringify([...no])); } catch {}
+    render();
+  } else if (cancel) {
+    run(async () => {
+      await cancelClaimRequest(cancel.dataset.claimCancel);
+      state.claims.reqs = state.claims.reqs.filter((r) => r.id !== cancel.dataset.claimCancel);
+      render();
+    });
+  }
+});
 
 function teamsSection() {
   return `
@@ -207,6 +288,7 @@ function render() {
       ${banner()}
       ${state.own ? spiritPendingHtml(state.spirit) : ""}
       ${editForm()}
+      ${claimsSection()}
       <div class="row g-3">
         <div class="col-12 col-lg-7 d-grid gap-3 align-content-start">${statsSection()}${historySection()}</div>
         <div class="col-12 col-lg-5">${teamsSection()}</div>
@@ -315,6 +397,7 @@ function renderSignIn() {
     }).catch(() => {});
     state.history = await playerHistory(state.uid, state.profile.squadIds || [], state.profile.hatEventIds || []);
     render();
+    if (state.own) loadClaims().catch(() => {});
   } catch (err) {
     console.error(err);
     alertBox(`${EX.error} ${err?.code || err?.message || ""}`, "danger");

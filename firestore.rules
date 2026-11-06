@@ -377,6 +377,19 @@ service cloud.firestore {
         allow delete: if isGoogle() && memberId == request.auth.uid;
       }
 
+      // avisos para los admins (ej. "X se unió al roster"): solo los admins los leen y marcan como vistos.
+      // El jugador que se unió crea el suyo, ya estando en el roster.
+      match /notices/{noticeId} {
+        allow read, delete: if isSquadAdmin(squadId);
+        allow update: if isSquadAdmin(squadId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readBy"]);
+        allow create: if isGoogle()
+          && request.resource.data.type == "member_joined"
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.readBy == []
+          && exists(/databases/$(database)/documents/squads/$(squadId)/members/$(request.auth.uid));
+      }
+
       // tokens vigentes de invitación
       match /private/{docId} {
         allow read, write: if isSquadAdmin(squadId);
@@ -417,6 +430,18 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isPlatformAdmin()
         && (request.resource == null || claimId == request.resource.data.eventId + "__" + request.resource.data.playerId);
+    }
+
+    // "Soy yo": un jugador pide que le asignen una ficha sin cuenta de un torneo (ej. importado).
+    // id = {eventId}__{playerId}__{uid}. Lo ve él y el admin de la plataforma, que la aprueba o la rechaza.
+    match /claim_requests/{reqId} {
+      allow read: if isPlatformAdmin() || (isGoogle() && resource.data.uid == request.auth.uid);
+      allow create: if isGoogle()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && reqId == request.resource.data.eventId + "__" + request.resource.data.playerId + "__" + request.auth.uid;
+      allow update: if isPlatformAdmin();
+      allow delete: if isPlatformAdmin() || (isGoogle() && resource.data.uid == request.auth.uid);
     }
 
     /* =========================

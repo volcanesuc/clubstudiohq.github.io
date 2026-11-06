@@ -169,14 +169,16 @@ function overview() {
   const upcoming = games.filter((g) => g.status === GAME_STATUS.SCHEDULED).slice(0, 6);
   const players = state.teams.reduce((n, t) => n + (t.players || []).length, 0);
   const goals = finals.concat(live).reduce((n, g) => n + (g.scoreA || 0) + (g.scoreB || 0), 0);
-  const tile = (v, l) => `<div class="ev-stat"><div class="ev-stat__value">${esc(v)}</div><div class="ev-stat__label">${esc(l)}</div></div>`;
+  const tile = (v, l, go = "") => (go
+    ? `<a class="ev-stat ev-stat--link" href="#${go.split(" ")[0]}" data-tab="${go.split(" ")[0]}"${go.includes(" ") ? ` data-sview="${go.split(" ")[1]}" data-q=""` : ""}><div class="ev-stat__value">${esc(v)}</div><div class="ev-stat__label">${esc(l)} <i class="bi bi-chevron-right"></i></div></a>`
+    : `<div class="ev-stat"><div class="ev-stat__value">${esc(v)}</div><div class="ev-stat__label">${esc(l)}</div></div>`);
   const list = (title, arr) => (arr.length ? `<h2 class="h6 mt-4 mb-2">${esc(title)}</h2><div class="d-grid gap-2">${arr.map(row).join("")}</div>` : "");
   return `
     ${state.event.description ? `<div class="ev-card mb-3" style="white-space:pre-line">${esc(state.event.description)}</div>` : ""}
     <div class="ev-stat-grid">
-      ${tile(state.teams.length, EX.overviewTeams)}
-      ${tile(players, EX.overviewPlayers)}
-      ${tile(`${finals.length}/${games.length}`, EX.overviewGames)}
+      ${tile(state.teams.length, EX.overviewTeams, "teams")}
+      ${tile(players, EX.overviewPlayers, "stats all")}
+      ${tile(`${finals.length}/${games.length}`, EX.overviewGames, "games")}
       ${tile(goals, EX.overviewGoals)}
     </div>
     ${highlightsHtml()}
@@ -187,6 +189,14 @@ function overview() {
     ${list(EX.results, finals.slice().reverse().slice(0, 6))}
     ${exportBar()}`;
 }
+
+// Equipo clickeable: con club en ClubStudioHQ abre su página; si no, su tarjeta en la pestaña Equipos
+const teamHref = (t) => (t?.squadId ? `/tournaments/club.html?s=${encodeURIComponent(t.squadId)}` : "#teams");
+const teamAttrs = (t) => `href="${esc(teamHref(t))}" data-team-go="${esc(t?.id || "")}"`;
+// Jugador clickeable: con cuenta abre su perfil; si no, sus números en "Todos los jugadores"
+const playerAttrs = (p) => (p.uid
+  ? `href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}"`
+  : `href="#stats" data-tab="stats" data-sview="all" data-q="${esc(p.name || "")}"`);
 
 /* ---------- Resumen: podio y mejores jugadores por división (femenino primero) ---------- */
 const GENDER_ORDER = { femenino: 0, mixto: 1 };
@@ -210,12 +220,12 @@ function highlightsHtml() {
       <div class="hl-card">
         <div class="hl-card__title"><i class="bi bi-trophy-fill"></i>${esc(done ? EX.hlPodium : EX.hlLeaders)}</div>
         ${top.map((x) => `
-          <div class="hl-row hl-row--${x.place}">
+          <a class="hl-row hl-row--${x.place} hl-link" ${teamAttrs(x.team)}>
             <span class="hl-pos">${x.place}</span>
             ${teamBadge(x.team, 30)}
             <span class="hl-name">${esc(x.team.name)}</span>
             ${x.rec ? `<span class="hl-val">${esc(x.rec)}</span>` : ""}
-          </div>`).join("")}
+          </a>`).join("")}
         <button class="btn btn-link btn-sm p-0 mt-1" data-tab="standings">${esc(EX.hlSeeStandings)} <i class="bi bi-chevron-right"></i></button>
       </div>` : "";
     // mejores jugadores (puntaje MVP); en mixto, mujeres y hombres por separado (mujeres primero)
@@ -230,12 +240,12 @@ function highlightsHtml() {
       <div class="hl-card">
         <div class="hl-card__title"><i class="bi bi-star-fill"></i>${esc(title)}</div>
         ${list.map((p, i) => `
-          <div class="hl-row hl-row--${i + 1}">
+          <a class="hl-row hl-row--${i + 1} hl-link" ${playerAttrs(p)}>
             <span class="hl-pos">${i + 1}</span>
             ${avatarHtml({ name: p.name, photoURL: photos.get(p.uid) || "" }, 30)}
             <span class="hl-name">${esc(p.name)}<small>${esc(p.teamName || "")}</small></span>
             <span class="hl-val" title="${esc(EX.stMvpLong)}">${p.mvp}</span>
-          </div>`).join("")}
+          </a>`).join("")}
         <button class="btn btn-link btn-sm p-0 mt-1" data-tab="stats">${esc(EX.hlSeeStats)} <i class="bi bi-chevron-right"></i></button>
       </div>`).join("");
     if (!podium && !mvp) return "";
@@ -323,13 +333,13 @@ function standingsTab() {
               <tr class="${i === 0 && r.played ? "is-leader" : ""}">
                 <td class="st-pos"><span class="st-rank">${i + 1}</span></td>
                 <td class="st-team">
-                  <div class="d-flex align-items-center gap-2">
+                  <a class="d-flex align-items-center gap-2 st-team-link" ${teamAttrs(r.team)}>
                     ${teamBadge(r.team, 30)}
                     <div class="min-w-0">
                       <div class="st-team__name">${esc(r.team.name)}</div>
                       ${r.team.city ? `<div class="st-team__sub d-none d-sm-block">${esc(r.team.city)}</div>` : ""}
                     </div>
-                  </div>
+                  </a>
                 </td>
                 <td class="num">${r.played}</td>
                 <td class="num fw-bold">${r.w}</td>
@@ -362,12 +372,12 @@ function standingsTab() {
     <section class="st-card">
       <header class="st-card__head"><div><div class="st-card__title">${esc(EX.finalStandings)}</div><div class="st-card__sub">${esc(divName)}</div></div></header>
       <div class="st-final">${placed.map((t) => `
-        <div class="st-final__row ${t.finalPlace <= 3 ? `is-top is-top-${t.finalPlace}` : ""}">
+        <a class="st-final__row st-team-link ${t.finalPlace <= 3 ? `is-top is-top-${t.finalPlace}` : ""}" ${teamAttrs(t)}>
           <span class="st-final__pos">${t.finalPlace}</span>
           ${teamBadge(t, 28)}
           <div class="min-w-0"><div class="st-team__name text-truncate">${esc(t.name)}</div>${t.city ? `<div class="st-team__sub">${esc(t.city)}</div>` : ""}</div>
           ${recordOf(t)}
-        </div>`).join("")}
+        </a>`).join("")}
       </div>
     </section>` : "";
   return `
@@ -586,7 +596,7 @@ function teamsTab() {
         const href = t.squadId ? `/tournaments/club.html?s=${encodeURIComponent(t.squadId)}` : "";
         const tag = href ? "a" : "div";
         return `
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-6" id="tm-${esc(t.id)}">
           <${tag} class="ev-card ev-team-card h-100 ${href ? "is-link" : ""}" ${href ? `href="${esc(href)}"` : ""}>
             <div class="d-flex align-items-center gap-2">
               ${teamBadge(t, 40)}
@@ -873,7 +883,7 @@ $("tnRoot").addEventListener("click", async (ev) => {
     return;
   }
   const sv = ev.target.closest("[data-sview]");
-  if (sv) {
+  if (sv && !sv.dataset.tab) {
     state.statsView = sv.dataset.sview;
     return render();
   }
@@ -925,11 +935,36 @@ $("tnRoot").addEventListener("click", async (ev) => {
     state.gameDay = gd.dataset.gday;
     return render();
   }
+  // equipo sin club: su tarjeta en Equipos (con club, el link abre su página)
+  const tg = ev.target.closest("[data-team-go]");
+  if (tg) {
+    const t = state.teams.find((x) => x.id === tg.dataset.teamGo);
+    if (!t || t.squadId) return;
+    ev.preventDefault();
+    if (divisions().length > 1) state.division = t.divisionId || divisions()[0].id;
+    state.tab = "teams";
+    history.replaceState(null, "", "#teams");
+    render();
+    const card = document.getElementById(`tm-${t.id}`);
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    card?.classList.add("is-flash");
+    setTimeout(() => card?.classList.remove("is-flash"), 1600);
+    return;
+  }
   const btn = ev.target.closest("[data-tab]");
   if (!btn) return;
+  ev.preventDefault();
   state.tab = btn.dataset.tab;
+  // atajos del resumen: "todos los jugadores" (y buscar uno en particular)
+  if (btn.dataset.sview) {
+    state.statsView = btn.dataset.sview;
+    state.statsTeam = "";
+  }
+  if (btn.dataset.q !== undefined) state.statsQ = btn.dataset.q;
   history.replaceState(null, "", `#${state.tab}`);
   render();
+  // desde el contenido (no desde las pestañas): vuelve arriba para ver la pestaña nueva
+  if (!btn.closest(".nav")) document.querySelector(".nav-tabs, .nav")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 $("tnRoot").addEventListener("change", (ev) => {

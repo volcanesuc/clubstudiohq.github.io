@@ -16,11 +16,13 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { computeGameState, DEFAULT_RULES, EVENT_STATUS, eventRules, gameSummary, GAME_STATUS } from "/tournaments/js/model.js";
-import { APPROVAL, listTeams, loadEvent } from "/tournaments/js/services.js";
+import { APPROVAL, listPublicEvents, listTeams, loadEvent } from "/tournaments/js/services.js";
+import { sameName } from "/tournaments/js/names.js";
 
 export const IMPORT_FORMAT = "cshq-import/1";
 const list = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -322,4 +324,81 @@ export async function assignPlayerAccount(event, team, player, profile) {
 export async function unassignPlayerAccount(event, team, player) {
   await setPlayerUid(event.id, team.id, player.id, null);
   await deleteDoc(doc(db, COL.playerClaims, claimId(event.id, player.id))).catch(() => {});
+}
+
+/* =========================
+   "Soy yo": sugerencias para vincular fichas sin cuenta
+========================= */
+export const CLAIM_REQ = { PENDING: "pending", REJECTED: "rejected" };
+const reqId = (eid, pid, uid) => `${eid}__${pid}__${uid}`;
+
+/**
+ * Fichas sin cuenta, en torneos públicos, con el mismo nombre que la persona (ej. torneos importados).
+ * No sugiere torneos donde ya juega con su cuenta.
+ * @returns {Promise<{ event, team, player }[]>} más recientes primero
+ */
+export async function findClaimSuggestions(uid, name) {
+  if (!uid || !name) return [];
+  const events = await listPublicEvents();
+  const out = [];
+  await Promise.all(events.map(async (event) => {
+    const teams = await listTeams(event.id).catch(() => []);
+    if (teams.some((t) => (t.players || []).some((p) => p.uid === uid))) return;
+    teams.forEach((team) => (team.players || []).forEach((player) => {
+      if (!player.uid && sameName(player.name, name)) out.push({ event, team, player });
+    }));
+  }));
+  return out.sort((a, b) => String(b.event.startDate || "").localeCompare(String(a.event.startDate || "")));
+}
+
+/** Mis pedidos "soy yo" (pendientes o rechazados; los aprobados se borran) */
+export async function myClaimRequests(uid) {
+  if (!uid) return [];
+  return list(await getDocs(query(collection(db, COL.claimRequests), where("uid", "==", uid))));
+}
+
+export async function requestClaim(user, profile, { event, team, player }) {
+  const id = reqId(event.id, player.id, user.uid);
+  const data = {
+    uid: user.uid,
+    profileName: profile.name || user.displayName || "",
+    photoURL: profile.photoURL || "",
+    eventId: event.id,
+    eventName: event.name || "",
+    startDate: event.startDate || "",
+    teamId: team.id,
+    teamName: team.name || "",
+    teamColor: team.color || "",
+    playerId: player.id,
+    playerName: player.name || "",
+    status: CLAIM_REQ.PENDING,
+    at: serverTimestamp(),
+  };
+  await setDoc(doc(db, COL.claimRequests, id), data);
+  return { id, ...data };
+}
+
+export async function cancelClaimRequest(id) {
+  await deleteDoc(doc(db, COL.claimRequests, id));
+}
+
+/** Admin: pedidos pendientes, más viejos primero */
+export async function listClaimRequests() {
+  const rows = list(await getDocs(query(collection(db, COL.claimRequests), where("status", "==", CLAIM_REQ.PENDING))));
+  return rows.sort((a, b) => (a.at?.toMillis?.() || 0) - (b.at?.toMillis?.() || 0));
+}
+
+/** Admin: aprueba el pedido = asigna la cuenta a la ficha (igual que "Asignar cuenta") y borra el pedido */
+export async function approveClaimRequest(req) {
+  const [event, teams] = await Promise.all([loadEvent(req.eventId), listTeams(req.eventId)]);
+  const team = teams.find((t) => t.id === req.teamId);
+  const player = (team?.players || []).find((p) => p.id === req.playerId);
+  if (!event || !player) throw new Error("La ficha ya no existe");
+  if (player.uid && player.uid !== req.uid) throw new Error(`${player.name} ya tiene otra cuenta asignada`);
+  await assignPlayerAccount(event, team, player, { id: req.uid, name: req.profileName });
+  await deleteDoc(doc(db, COL.claimRequests, req.id));
+}
+
+export async function rejectClaimRequest(req) {
+  await updateDoc(doc(db, COL.claimRequests, req.id), { status: CLAIM_REQ.REJECTED, decidedAt: serverTimestamp() });
 }

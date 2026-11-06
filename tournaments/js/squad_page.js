@@ -12,7 +12,9 @@ import {
   joinUrl,
   leaveSquad,
   listMembers,
+  listSquadNotices,
   listSquadTournaments,
+  markNoticesRead,
   loadProfile,
   loadSquad,
   profileUrl,
@@ -33,6 +35,7 @@ import {
   fmtDateRange,
   hideLoader,
   isGoogleUser,
+  refreshTeamBadge,
   regChip,
   renderNav,
   showLoader,
@@ -63,6 +66,8 @@ const state = {
   tab: ({ torneos: "tournaments", jugadores: "players" })[new URLSearchParams(location.search).get("tab")] || new URLSearchParams(location.search).get("tab") || "tournaments",
   results: null, // resultado del equipo en cada torneo (se carga aparte)
   spirit: [], // evaluaciones de espíritu que me tocan en este equipo
+  notices: [], // admins: avisos de jugadores que se unieron con el link
+  newUids: new Set(), // jugadores que se unieron y este admin todavía no vio
 };
 
 const admin = () => isSquadAdmin(state.squad, state.user?.uid);
@@ -101,6 +106,8 @@ async function load() {
   state.tournaments = tournaments;
   if (admin()) {
     // las inscripciones se actualizan con los datos actuales del roster (nombre, número, F/M, cuenta)
+    state.notices = await listSquadNotices(SID, state.user.uid).catch(() => []);
+    state.newUids = new Set(state.notices.filter((n) => n.unread).map((n) => n.uid));
     const [invites, owners, synced, events] = await Promise.all([
       getInvites(SID, state.user).catch(() => null),
       Promise.all((squad.ownerUids || []).map(async (uid) => ({ uid, ...((await loadProfile(uid).catch(() => null)) || {}) }))),
@@ -265,6 +272,7 @@ function rosterRow(m) {
   if (m.id === s.captainId) roles.push(`<span class="tp-role tp-role--cap" title="${esc(EX.captain)}"><i class="bi bi-star-fill"></i> ${esc(EX.tpCaptain)}</span>`);
   if (m.id === s.spiritCaptainId) roles.push(`<span class="tp-role tp-role--spirit" title="${esc(EX.spiritCaptain)}"><i class="bi bi-heart-fill"></i> ${esc(EX.tpSpiritCaptain)}</span>`);
   // quién administra el equipo solo lo ven los que están en el equipo
+  if (admin() && m.uid && state.newUids.has(m.uid)) roles.push(`<span class="tp-role tp-role--new"><i class="bi bi-person-plus-fill"></i> ${esc(EX.ntNew)}</span>`);
   if ((isMember() || admin()) && m.uid && (s.ownerUids || []).includes(m.uid)) roles.push(`<span class="tp-role"><i class="bi bi-shield-check"></i> ${esc(EX.sqAdminBadge)}</span>`);
   const sub = [m.number !== null && m.number !== undefined && m.number !== "" ? `#${m.number}` : "", m.gender || "", m.uid ? "" : EX.tpNoAccount].filter(Boolean).join(" · ");
   const inner = `
@@ -394,7 +402,7 @@ function render() {
   document.title = `${state.squad.name} · ClubStudioHQ`;
   const tabs = [
     ["tournaments", `<i class="bi bi-trophy"></i> ${esc(EX.tpTabEvents)}`],
-    ["players", `<i class="bi bi-people"></i> ${esc(EX.tpTabPlayers)}`],
+    ["players", `<i class="bi bi-people"></i> ${esc(EX.tpTabPlayers)}${unseen().length ? `<b class="tn-badge">${unseen().length}</b>` : ""}`],
     ...(admin() ? [["admin", `<i class="bi bi-gear"></i> ${esc(EX.tpTabAdmin)}`]] : []),
   ];
   if (!tabs.some(([id]) => id === state.tab)) state.tab = "tournaments";
@@ -408,7 +416,15 @@ function render() {
       </nav>
       <div class="tp-panel">${state.tab === "players" ? playersTab() : state.tab === "admin" ? adminTab() : tournamentsTab()}</div>
     </div>`;
+  // al abrir Jugadores, los nuevos quedan vistos (el chip "Nuevo" se mantiene mientras siga en la página)
+  if (state.tab === "players" && unseen().length) {
+    const seen = unseen();
+    seen.forEach((n) => { n.unread = false; });
+    markNoticesRead(seen, state.user.uid).then(() => refreshTeamBadge(state.user)).catch(() => {});
+  }
 }
+
+const unseen = () => (admin() ? state.notices.filter((n) => n.unread) : []);
 
 async function loadResults() {
   if (!state.tournaments.length) return;

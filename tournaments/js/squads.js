@@ -5,18 +5,23 @@
 //   squads/{sid}/members/{id}             roster: id = uid si el jugador tiene cuenta, si no lo cargó un admin
 //   squads/{sid}/private/invites          tokens vigentes { player, admin } (solo admins)
 //   squads/{sid}/tournaments/{eventId}    torneos donde se inscribió (puntero a la inscripción)
+//   squads/{sid}/notices/{id}             avisos para los admins (ej. un jugador se unió con el link)
 //   squad_invites/{token}                 { squadId, role } — quien tiene el link puede unirse
 //   profiles/{uid}                        perfil del jugador: foto, número, F/M, equipos (squadIds)
 import { db, COL } from "/tournaments/js/firebase.js";
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { GAME_STATUS, randomId, spiritTable, standings } from "/tournaments/js/model.js";
@@ -32,6 +37,7 @@ const squadRef = (sid) => doc(db, COL.squads, sid);
 const membersCol = (sid) => collection(db, COL.squads, sid, "members");
 const invitesRef = (sid) => doc(db, COL.squads, sid, "private", "invites");
 const profileRef = (uid) => doc(db, COL.profiles, uid);
+const noticesCol = (sid) => collection(db, COL.squads, sid, "notices");
 
 export const isSquadAdmin = (squad, uid) => !!uid && (squad?.ownerUids || []).includes(uid);
 export const joinUrl = (token) => `${location.origin}/tournaments/join.html?t=${encodeURIComponent(token)}`;
@@ -226,6 +232,7 @@ export async function joinSquad(user, invite, profile, { asPlayer = true } = {})
     await setDoc(squadRef(sid), { ownerUids: [...(squad.ownerUids || []), user.uid], joinToken: invite.token, updatedAt: serverTimestamp() }, { merge: true });
   }
   if (invite.role === INVITE_ROLE.PLAYER || asPlayer) {
+    const already = (await getDoc(doc(membersCol(sid), user.uid)).catch(() => null))?.exists();
     await setDoc(doc(membersCol(sid), user.uid), {
       uid: user.uid,
       name: profile.name,
@@ -236,6 +243,8 @@ export async function joinSquad(user, invite, profile, { asPlayer = true } = {})
       joinedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    // aviso a los capitanes/admins del equipo (no bloquea si falla)
+    if (!already) await noticeJoined(user, sid, profile).catch((err) => console.warn("[equipo] aviso:", err?.code || err));
   }
   await saveProfile(user, profile);
   await addSquadToProfile(user, sid);
@@ -247,6 +256,52 @@ export async function leaveSquad(user, squad) {
   if (isSquadAdmin(squad, user.uid) && squad.ownerUids.length > 1) {
     await setOwners(squad.id, squad.ownerUids.filter((u) => u !== user.uid));
   }
+}
+
+
+/* =========================
+   Avisos para los admins del equipo
+========================= */
+export const NOTICE = { JOINED: "member_joined" };
+const NOTICE_DAYS = 30; // los avisos más viejos ya no se muestran
+
+// El jugador que se acaba de unir deja el aviso (las reglas piden que ya esté en el roster)
+async function noticeJoined(user, sid, profile) {
+  await setDoc(doc(noticesCol(sid)), {
+    type: NOTICE.JOINED,
+    uid: user.uid,
+    name: profile.name || user.displayName || "",
+    photoURL: profile.photoURL || "",
+    number: profile.number ?? null,
+    gender: profile.gender || "",
+    at: serverTimestamp(),
+    readBy: [],
+  });
+}
+
+/** Admins: avisos recientes del equipo que no son míos. Cada uno trae `unread` para este admin. */
+export async function listSquadNotices(sid, uid) {
+  const since = Date.now() - NOTICE_DAYS * 86400000;
+  const snap = await getDocs(query(noticesCol(sid), orderBy("at", "desc"), limit(40)));
+  return list(snap)
+    .filter((n) => n.uid !== uid && (n.at?.toMillis?.() ?? Date.now()) >= since)
+    .map((n) => ({ ...n, squadId: sid, unread: !(n.readBy || []).includes(uid) }));
+}
+
+/** Avisos sin leer de todos los equipos que administro: [{ squad, notice }] (más nuevos primero) */
+export async function unreadNotices(user) {
+  if (!user) return [];
+  const owned = list(await getDocs(query(collection(db, COL.squads), where("ownerUids", "array-contains", user.uid))));
+  const all = await Promise.all(owned.map(async (squad) =>
+    (await listSquadNotices(squad.id, user.uid).catch(() => [])).filter((n) => n.unread).map((notice) => ({ squad, notice }))));
+  return all.flat().sort((a, b) => (b.notice.at?.toMillis?.() || 0) - (a.notice.at?.toMillis?.() || 0));
+}
+
+/** Marca los avisos como vistos por este admin (los demás admins los siguen viendo) */
+export async function markNoticesRead(notices, uid) {
+  await Promise.all(notices.filter((n) => n.unread !== false).map((n) =>
+    updateDoc(doc(noticesCol(n.squadId), n.id), { readBy: arrayUnion(uid) }).catch(() => {})));
+  try { sessionStorage.removeItem(`tnNotices:${uid}`); } catch {}
 }
 
 /* =========================

@@ -8,8 +8,8 @@ import { EX, exf } from "/tournaments/js/strings.js";
 import { eventRules, rosterProblem } from "/tournaments/js/model.js";
 import { REG, isApproved, registrationIsOpen, rosterLocked, isPlatformAdmin, listPublicEvents, listTeams, loadEvent, loadPublicEventBySlug, loadRegistration, saveRegistration, withdrawRegistration, fmtMoney, submitRegistrationPayment, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
 import { countryOptions, countryName, flagOf } from "/tournaments/js/countries.js";
-import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, myRegistrationsFor, pendingSpirit, squadUrl } from "/tournaments/js/squads.js";
-import { avatarHtml, esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, regChip, renderNav, showLoader, signInGoogle, spiritPendingHtml, teamBadge, waitForUser, paymentChip, shrinkImage } from "/tournaments/js/ui.js";
+import { createSquad, isSquadAdmin, listMembers, listMySquads, loadSquad, markNoticesRead, myRegistrationsFor, pendingSpirit, squadUrl, unreadNotices } from "/tournaments/js/squads.js";
+import { avatarHtml, esc, eventUrl, fmtDateRange, hideLoader, noticesHtml, refreshTeamBadge, isGoogleUser, regChip, renderNav, showLoader, signInGoogle, spiritPendingHtml, teamBadge, waitForUser, paymentChip, shrinkImage } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -69,6 +69,7 @@ async function renderList() {
       </div>
       <a class="btn btn-outline-secondary btn-sm" href="/tournaments/profile.html"><i class="bi bi-person me-1"></i>${esc(EX.navProfile)}</a>
     </div>
+    <div id="ntPending"></div>
     <div id="spPending"></div>
     ${squads.length ? `<div class="mt-grid">${squads.map((s) => {
       const isAdmin = isSquadAdmin(s, state.user.uid);
@@ -129,6 +130,18 @@ async function renderList() {
           : ""}
       </div>`;
     }).join("") : `<div class="ev-card ev-muted">${esc(EX.noOpenRegistrations)}</div>`}`;
+
+  // jugadores nuevos en los equipos que administro (no bloquea la lista)
+  unreadNotices(state.user).then((items) => {
+    const el = document.getElementById("ntPending");
+    if (!el || !items.length) return;
+    el.innerHTML = noticesHtml(items);
+    el.querySelector("#ntSeen").onclick = async () => {
+      el.innerHTML = "";
+      await markNoticesRead(items.map((x) => x.notice), state.user.uid);
+      refreshTeamBadge(state.user);
+    };
+  }).catch(() => {});
 
   // evaluaciones de espíritu pendientes (no bloquea la lista)
   pendingSpirit(state.user).then((list) => {
