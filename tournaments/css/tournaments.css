@@ -952,3 +952,7 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .hl-name small { display: block; font-weight: 500; font-size: .72rem; color: #6b6785; overflow: hidden; text-overflow: ellipsis; }
 .hl-val { flex-shrink: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
 .hl-card .btn-link { align-self: flex-start; text-decoration: none; font-weight: 600; }
+
+/* roster del hat: los jugadores con cuenta abren su perfil */
+.ev-roster-link { color: var(--ev-main); font-weight: 600; text-decoration: none; }
+.ev-roster-link:hover { text-decoration: underline; }

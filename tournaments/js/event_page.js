@@ -562,7 +562,14 @@ function teamsTab() {
               ${href ? `<i class="bi bi-chevron-right ev-muted"></i>` : ""}
             </div>
             ${t.hat && (t.players || []).length ? `
-              <div class="small mt-2 ev-team-roster">${(t.players || []).map((p) => `<span class="${state.user?.uid && p.uid === state.user.uid ? "fw-bold" : ""}">${esc(p.name)}${p.number !== null && p.number !== undefined && p.number !== "" ? ` <span class="ev-muted">#${esc(p.number)}</span>` : ""}</span>`).join(" · ")}</div>` : ""}
+              <div class="small mt-2 ev-team-roster">${(t.players || []).map((p) => {
+                const num = p.number !== null && p.number !== undefined && p.number !== "" ? ` <span class="ev-muted">#${esc(p.number)}</span>` : "";
+                const me = state.user?.uid && p.uid === state.user.uid ? "fw-bold" : "";
+                // con cuenta: abre su perfil (estadísticas de todos sus torneos)
+                return p.uid && !href
+                  ? `<a class="ev-roster-link ${me}" href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}" title="${esc(EX.rosterSeeProfile)}">${esc(p.name)}</a>${num}`
+                  : `<span class="${me}">${esc(p.name)}${num}</span>`;
+              }).join(" · ")}</div>` : ""}
           </${tag}>
         </div>`;
       }).join("") || `<div class="col-12"><div class="ev-card ev-muted">${esc(EX.noTeams)}</div></div>`}

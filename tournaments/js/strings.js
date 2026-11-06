@@ -270,6 +270,7 @@ export const EX = {
   tabOverview: "Resumen",
   tabStandings: "Posiciones",
   tabBracket: "Bracket",
+  rosterSeeProfile: "Ver perfil y estadísticas",
   hlPodium: "Podio",
   hlLeaders: "Líderes",
   hlMvp: "Mejores jugadores",
