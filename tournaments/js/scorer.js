@@ -332,24 +332,49 @@ function scoreHeader() {
     </div>`;
 }
 
+// Antes de empezar: quién ataca primero (tarjetas con el escudo y color de cada equipo)
+// y, en mixto, la proporción del primer punto.
 function renderPreGame() {
   const mixed = ratioAtStart();
   const ready = !!state.offenseChoice && (!mixed || !!state.ratioChoice);
+  const step = (n, title, hint, done) => `
+    <div class="sk-step">
+      <span class="sk-step__n ${done ? "is-done" : ""}">${done ? `<i class="bi bi-check-lg"></i>` : n}</span>
+      <div class="min-w-0"><div class="sk-step__title">${esc(title)}</div><div class="sk-step__hint">${esc(hint)}</div></div>
+    </div>`;
+  const teamCard = (k) => {
+    const on = state.offenseChoice === k;
+    const off = !!state.offenseChoice && !on;
+    return `
+      <button type="button" class="sk-pick sk-pick--team ${on ? "is-on" : ""} ${off ? "is-off" : ""}" style="${teamVars(k)}" data-offense="${k}" aria-pressed="${on}">
+        ${on ? `<span class="sk-pick__check"><i class="bi bi-check-lg"></i></span>` : ""}
+        ${teamBadge(teamObj(k), 56)}
+        <span class="sk-pick__name">${esc(teamName(k))}</span>
+        <span class="sk-pick__tag">${on ? `${possessionDot(9, true)} ${esc(EX.skAttacksFirst)}` : esc(EX.skTapToPick)}</span>
+      </button>`;
+  };
+  const ratioCard = (k) => {
+    const on = state.ratioChoice === k;
+    const off = !!state.ratioChoice && !on;
+    return `
+      <button type="button" class="sk-pick sk-pick--ratio sk-pick--${k} ${on ? "is-on" : ""} ${off ? "is-off" : ""}" data-ratio="${k}" aria-pressed="${on}">
+        ${on ? `<span class="sk-pick__check"><i class="bi bi-check-lg"></i></span>` : ""}
+        <span class="sk-pick__icon"><i class="bi ${k === "F" ? "bi-gender-female" : "bi-gender-male"}"></i></span>
+        <span class="sk-pick__name">${esc(k === "F" ? EX.skFmp : EX.skMmp)}</span>
+        <span class="sk-pick__tag">${esc(ratioLabel(k, state.rules.playersOnField))}</span>
+      </button>`;
+  };
+  const missing = !state.offenseChoice ? EX.skPickStarter : mixed && !state.ratioChoice ? EX.skPickRatio : "";
   return `
     ${scoreHeader()}
-    <div class="ev-card mt-3">
-      <div class="fw-bold">${esc(EX.skWhoStarts)}</div>
-      <div class="small ev-muted mb-2">${esc(EX.skWhoStartsHint)}</div>
-      <div class="sk-choice mb-3">
-        ${["A", "B"].map((k) => `<button type="button" class="btn ${state.offenseChoice === k ? "btn-primary" : "btn-outline-primary"}" data-offense="${k}"><span class="ev-team-dot me-1" style="background:${esc(teamColor(k))}"></span>${esc(teamName(k))}</button>`).join("")}
-      </div>
+    <div class="ev-card mt-3 sk-setup">
+      ${step(1, EX.skWhoStarts, EX.skWhoStartsHint, !!state.offenseChoice)}
+      <div class="sk-pick-grid">${teamCard("A")}${teamCard("B")}</div>
       ${mixed ? `
-        <div class="fw-bold">⚥ ${esc(EX.skFirstRatio)}</div>
-        <div class="small ev-muted mb-2">${esc(ratioHint())}</div>
-        <div class="sk-choice mb-3">
-          ${["F", "M"].map((k) => `<button type="button" class="btn sk-ratio-btn ${state.ratioChoice === k ? "btn-primary" : "btn-outline-primary"}" data-ratio="${k}"><b>${esc(k === "F" ? EX.skFmp : EX.skMmp)}</b><small>${esc(ratioLabel(k, state.rules.playersOnField))}</small></button>`).join("")}
-        </div>` : ""}
-      <button class="btn btn-primary btn-lg w-100" id="skStart" ${ready ? "" : "disabled"}><i class="bi bi-play-fill me-1"></i>${esc(EX.skStart)}</button>
+        ${step(2, EX.skFirstRatio, ratioHint(), !!state.ratioChoice)}
+        <div class="sk-pick-grid">${ratioCard("F")}${ratioCard("M")}</div>` : ""}
+      <button class="btn btn-primary btn-lg w-100 sk-start" id="skStart" ${ready ? "" : "disabled"}><i class="bi bi-play-fill me-1"></i>${esc(EX.skStart)}</button>
+      ${missing ? `<div class="sk-start__hint">${esc(missing)}</div>` : ""}
     </div>`;
 }
 

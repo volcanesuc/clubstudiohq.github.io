@@ -626,6 +626,33 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 
 .sk-ratio-btn { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .sk-ratio-btn small { font-weight: 500; opacity: .85; white-space: nowrap; }
+/* planillero, antes de empezar: pasos y tarjetas grandes para elegir */
+.sk-setup { display: grid; gap: .75rem; }
+.sk-step { display: flex; gap: .6rem; align-items: flex-start; }
+.sk-step__n { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .85rem; background: #ede9fe; color: #5b21b6; }
+.sk-step__n.is-done { background: #16a34a; color: #fff; }
+.sk-step__title { font-weight: 800; line-height: 1.2; }
+.sk-step__hint { font-size: .8rem; color: var(--ev-muted); line-height: 1.35; margin-top: .1rem; }
+.sk-pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.sk-pick {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: .35rem; min-width: 0;
+  padding: 1rem .5rem .85rem; border-radius: 18px; border: 2px solid var(--ev-border); background: #fff; color: inherit;
+  transition: transform .12s, border-color .12s, background .12s, opacity .12s;
+}
+.sk-pick:active { transform: scale(.98); }
+.sk-pick__name { font-weight: 800; font-size: 1rem; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
+.sk-pick__tag { font-size: .75rem; font-weight: 700; color: var(--ev-muted); display: inline-flex; align-items: center; gap: .3rem; }
+.sk-pick__check { position: absolute; top: .45rem; right: .45rem; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #16a34a; color: #fff; font-size: .85rem; }
+.sk-pick.is-off { opacity: .55; }
+.sk-pick--team.is-on { border-color: var(--tc); background: color-mix(in srgb, var(--tc) 12%, #fff); box-shadow: 0 0 0 2px var(--tc); }
+.sk-pick--team.is-on .sk-pick__tag { color: #15803d; }
+.sk-pick__icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+.sk-pick--F .sk-pick__icon { background: #fce7f3; color: #be185d; }
+.sk-pick--M .sk-pick__icon { background: #dbeafe; color: #1d4ed8; }
+.sk-pick--ratio.sk-pick--F.is-on { border-color: #db2777; background: #fdf2f8; box-shadow: 0 0 0 2px #db2777; }
+.sk-pick--ratio.sk-pick--M.is-on { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 2px #2563eb; }
+.sk-start { border-radius: 16px; min-height: 56px; font-weight: 800; margin-top: .25rem; }
+.sk-start__hint { text-align: center; font-size: .8rem; color: var(--ev-muted); margin-top: -.35rem; }
 
 /* Diálogo propio (confirmaciones y popup de espíritu) */
 .tn-dialog { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 10, 30, .55); }
