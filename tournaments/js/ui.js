@@ -60,6 +60,25 @@ export function revealActiveTab(bar, selector = ".is-active, .active") {
   bar.scrollLeft = Math.max(0, el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2);
 }
 
+// Barra de pestañas que no entra en pantalla: degradado y flecha del lado donde hay más.
+// `box` es un .tn-scroll con la barra adentro (.tn-scroll__bar) y los botones .tn-scroll__btn.
+export function scrollHints(box) {
+  const bar = box?.querySelector(".tn-scroll__bar");
+  if (!bar) return;
+  const update = () => {
+    const max = bar.scrollWidth - bar.clientWidth;
+    box.classList.toggle("has-left", bar.scrollLeft > 4);
+    box.classList.toggle("has-right", bar.scrollLeft < max - 4);
+  };
+  bar.addEventListener("scroll", update, { passive: true });
+  box.querySelectorAll("[data-scroll]").forEach((b) =>
+    b.addEventListener("click", () => bar.scrollBy({ left: Number(b.dataset.scroll) * bar.clientWidth * 0.7, behavior: "smooth" })));
+  if (!scrollHints.ro && "ResizeObserver" in window) scrollHints.ro = new ResizeObserver((els) => els.forEach((x) => x.target._hint?.()));
+  bar._hint = update;
+  scrollHints.ro?.observe(bar);
+  update();
+}
+
 // Celular: los tabs van en una barra fija abajo (íconos + texto), como en la app de clubes.
 function renderBottomNav({ active, isAdmin, google }) {
   let bar = document.getElementById("tnBottomNav");

@@ -142,6 +142,15 @@ a.st-final__row:hover { border-color: rgba(124, 58, 237, .45); }
 .ev-hero h1 { font-weight: 900; font-size: clamp(1.5rem, 4vw, 2.3rem); margin: 0 0 .4rem; }
 .ev-hero__meta { display: flex; flex-wrap: wrap; gap: .4rem 1rem; opacity: .9; font-size: .95rem; }
 .ev-tabs { overflow-x: auto; flex-wrap: nowrap; white-space: nowrap; }
+/* pestañas que no entran: degradado + flecha del lado donde hay más */
+.tn-scroll { position: relative; --tn-scroll-bg: var(--ev-bg, #f6f5fb); }
+.tn-scroll__btn {
+  position: absolute; top: 0; bottom: 0; width: 44px; border: 0; padding: 0; display: flex; align-items: center;
+  color: var(--ev-main, #6d28d9); font-size: 1rem; opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.tn-scroll__btn--l { left: 0; justify-content: flex-start; background: linear-gradient(90deg, var(--tn-scroll-bg) 45%, transparent); }
+.tn-scroll__btn--r { right: 0; justify-content: flex-end; background: linear-gradient(270deg, var(--tn-scroll-bg) 45%, transparent); }
+.tn-scroll.has-left .tn-scroll__btn--l, .tn-scroll.has-right .tn-scroll__btn--r { opacity: 1; pointer-events: auto; }
 .ev-game-row {
   display: grid; grid-template-columns: 1fr auto 1fr; gap: .6rem; align-items: center;
   padding: 14px 16px; border-radius: 16px; background: #fff; border: 1px solid var(--ev-border);

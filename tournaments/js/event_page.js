@@ -19,7 +19,7 @@ import { deadlineEnd, REG, isApproved, isPlatformAdmin, leaveHat, listGameKeys, 
 import { isHatEvent } from "/tournaments/js/hat.js";
 import { bracketHtml, finalPlaces, hasBracket } from "/tournaments/js/bracket_view.js";
 import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
-import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams, atMinutes, downloadIcs, scheduleDays, scheduleGridHtml } from "/tournaments/js/ui.js";
+import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, scrollHints, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams, atMinutes, downloadIcs, scheduleDays, scheduleGridHtml } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const KEY = new URLSearchParams(location.search).get("e") || "";
@@ -886,11 +886,16 @@ function render() {
       ${myRegistrationHtml()}
       ${waiverBanner()}
     </section>
-    <ul class="nav nav-pills mb-3 ev-tabs">
-      ${tabs.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
-    </ul>
+    <div class="tn-scroll mb-3">
+      <ul class="nav nav-pills ev-tabs tn-scroll__bar">
+        ${tabs.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
+      </ul>
+      <button type="button" class="tn-scroll__btn tn-scroll__btn--l" data-scroll="-1" tabindex="-1" aria-hidden="true"><i class="bi bi-chevron-left"></i></button>
+      <button type="button" class="tn-scroll__btn tn-scroll__btn--r" data-scroll="1" tabindex="-1" aria-hidden="true"><i class="bi bi-chevron-right"></i></button>
+    </div>
     <div id="evpTab">${tab[2]()}</div>`;
   revealActiveTab(document.querySelector(".ev-tabs"));
+  scrollHints(document.querySelector(".tn-scroll"));
 }
 
 $("tnRoot").addEventListener("click", async (ev) => {
