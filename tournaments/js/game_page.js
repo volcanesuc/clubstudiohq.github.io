@@ -90,7 +90,7 @@ function render() {
       <div class="ev-score__pts">${score[k]}</div>
       ${live ? `<div class="ev-score__disc">${possessionDot(14, calc.possession === k)}</div>` : ""}
     </div>`;
-  const ctx = { playersById: state.playersById, teamName };
+  const ctx = { playersById: state.playersById, teamName, teamColor };
   const feed = feedPlays(state.plays, state.rules).reverse();
 
   $("tnRoot").innerHTML = `

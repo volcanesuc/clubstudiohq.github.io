@@ -415,7 +415,7 @@ function breakBanner() {
 function renderLive() {
   const paused = !!state.game.clock?.pausedAt;
   const feed = feedPlays(state.plays, state.rules).reverse().slice(0, 60);
-  const ctx = { playersById: state.playersById, teamName };
+  const ctx = { playersById: state.playersById, teamName, teamColor };
   return `
     ${scoreHeader()}
     ${pointInfo()}

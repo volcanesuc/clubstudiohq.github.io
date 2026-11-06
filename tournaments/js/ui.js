@@ -443,7 +443,7 @@ export function feedItemHtml(play, ctx, { actions = "", audit = false } = {}) {
     ? [play.deletedAt !== undefined ? exf(EX.evVoidedAt, { time: fmtClock((play.deletedAt || 0) * 1000) }) : "", roleLabel(play.deletedByRole)].filter(Boolean).join(" · ")
     : "";
   return `
-    <div class="ev-feed__item ev-feed__item--${d.cls} ${voided ? "is-voided" : ""}" data-play="${esc(play.id)}">
+    <div class="ev-feed__item ev-feed__item--${d.cls} ${voided ? "is-voided" : ""}" data-play="${esc(play.id)}"${play.type === PLAY.GOAL && ctx.teamColor && play.team ? ` style="--fc:${esc(ctx.teamColor(play.team))}"` : ""}>
       <div class="ev-feed__time">${esc(fmtClock((play.t || 0) * 1000))}</div>
       <div class="min-w-0">
         <div class="ev-feed__type">${voided ? `<span class="ev-chip ev-chip--void me-1">${esc(EX.evVoided)}</span>` : ""}<span class="ev-feed__what">${esc(d.type)}</span></div>
