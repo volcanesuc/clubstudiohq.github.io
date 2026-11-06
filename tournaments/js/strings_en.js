@@ -545,6 +545,7 @@ export const EN = {
   navOrganize: "Organize",
   navAdmin: "Admin",
   navAdminShort: "Admin",
+  navDocs: "Docs",
   signIn: "Sign in with Google",
   signInShort: "Sign in",
   signOut: "Sign out",

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-title-en="Docs · ClubStudioHQ">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,19 +10,22 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <link rel="stylesheet" href="/assets/landing.css" />
+  <script src="/assets/lang.js"></script>
 </head>
 <body class="lp">
   <nav class="navbar navbar-dark lp-nav sticky-top">
     <div class="container py-1">
       <a class="lp-brand" href="/"><img src="/assets/favicon.svg" width="34" height="34" alt="" /><span>ClubStudio<span class="lp-grad-text">HQ</span></span></a>
       <div class="d-flex gap-2">
-        <a class="btn btn-lp-ghost btn-sm px-3 d-none d-sm-inline-block" href="/tournaments/">Ver torneos</a>
-        <a class="btn btn-lp btn-sm px-3" href="/tournaments/organize.html">Organizar</a>
+        <button class="btn btn-lp-ghost btn-sm px-3" type="button" data-set-lang><span data-lang="es">EN</span><span data-lang="en">ES</span></button>
+        <a class="btn btn-lp-ghost btn-sm px-3 d-none d-sm-inline-block" href="/tournaments/"><span data-lang="es">Ver torneos</span><span data-lang="en">Tournaments</span></a>
+        <a class="btn btn-lp btn-sm px-3" href="/tournaments/organize.html"><span data-lang="es">Organizar</span><span data-lang="en">Organize</span></a>
       </div>
     </div>
   </nav>
 
-  <main class="container lp-section pt-5 lp-doc">
+  <!-- ===== ESPAÑOL ===== -->
+  <main class="container lp-section pt-5 lp-doc" data-lang="es">
     <span class="lp-eyebrow"><i class="bi bi-book"></i>Documentación</span>
     <h1 class="mt-2">Cómo usar ClubStudioHQ</h1>
     <p>Todo lo que necesitás para organizar un torneo, planillar partidos en vivo y tener tu equipo en orden. ¿No encontrás algo? Escribinos por <a data-wa="Hola! Tengo una duda sobre cómo usar ClubStudioHQ." href="https://wa.me/50670567463">WhatsApp</a> o por Instagram a <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener">@clubstudiohq</a>.</p>
@@ -106,25 +109,102 @@
     <p>Qué datos guardamos y quién los ve: <a href="/privacidad.html">política de privacidad</a>.</p>
   </main>
 
+  <!-- ===== ENGLISH ===== -->
+  <main class="container lp-section pt-5 lp-doc" data-lang="en">
+    <span class="lp-eyebrow"><i class="bi bi-book"></i>Docs</span>
+    <h1 class="mt-2">How to use ClubStudioHQ</h1>
+    <p>Everything you need to run a tournament, score games live and keep your team organized. Can't find something? Message us on <a data-wa="Hi! I have a question about using ClubStudioHQ." href="https://wa.me/50670567463">WhatsApp</a> or on Instagram at <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener">@clubstudiohq</a>.</p>
+
+    <div class="lp-toc">
+      <a href="#start">Getting started</a>
+      <a href="#organize">Organize a tournament</a>
+      <a href="#hat-en">Hat</a>
+      <a href="#scoring">Scoring</a>
+      <a href="#teams">Teams and clubs</a>
+      <a href="#players">Players</a>
+      <a href="#migrate">Migrate a tournament</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+
+    <h2 id="start">Getting started</h2>
+    <ul>
+      <li>You don't need an account to <strong>follow tournaments</strong>: go to <a href="/tournaments/">Tournaments</a> and open any of them to see the schedule, results, standings and stats.</li>
+      <li>To <strong>organize, register a team or join as a player</strong>, sign in with your Google account ("Sign in" button, top right).</li>
+      <li>The platform is available in Spanish and English: switch with the <code>EN</code> / <code>ES</code> button in the top bar.</li>
+    </ul>
+
+    <h2 id="organize">Organize a tournament</h2>
+    <ol>
+      <li><strong>Create the tournament.</strong> In <a href="/tournaments/organize.html">Organize</a>, tap "New tournament" and choose a team tournament or a hat. Fill in the name, dates, venue, country, surface and logo.</li>
+      <li><strong>Divisions.</strong> Add the divisions you'll play (for example Mixed, Open, Women's or Masters) and the team cap for each one.</li>
+      <li><strong>Registration and fees.</strong> Set the registration dates and the fee per team or per player. Teams register with their roster and upload proof of payment; you approve or reject it.</li>
+      <li><strong>Activate.</strong> Request activation for the tournament. Your first tournament is free; after that you pay based on registered teams or players (see <a href="#pricing">Pricing</a>).</li>
+      <li><strong>Schedule.</strong> Pick the format (round-robin pools, brackets, placement games), fields and time slots, and generate the schedule. If a team joins later, regenerate it.</li>
+      <li><strong>During the tournament.</strong> Share the scoring links, move game times if needed and fix scores. Results, standings and brackets update automatically on the public page.</li>
+    </ol>
+    <div class="lp-note"><i class="bi bi-lightbulb me-1"></i>You can export registrations, rosters and results to Excel from the organizer screen.</div>
+
+    <h2 id="hat-en">Hat</h2>
+    <p>In a hat tournament, players sign up individually and you build the teams.</p>
+    <ul>
+      <li>Each player picks a division, jersey size, position and, optionally, a teammate to play with (honored only when both pick each other).</li>
+      <li>They answer a short, private self-assessment; only the organizer sees the score and can adjust it.</li>
+      <li>You see the pool per division: F/M, ages, payments, jersey sizes and waitlist.</li>
+      <li>The generator builds teams balanced by skill, gender, handlers and age. You can swap players by hand and publish when you're happy. From then on the hat works like any other tournament.</li>
+    </ul>
+
+    <h2 id="scoring">Scoring games</h2>
+    <ul>
+      <li>Every game has its own scorekeeper link. Send it to whoever keeps score; they don't need an account.</li>
+      <li>From a phone they record points with the scorer and assist, blocks, turnovers, timeouts, halftime and the game clock.</li>
+      <li>Everything shows live on the tournament page. After the game, each team rates the opponent's spirit.</li>
+    </ul>
+
+    <h2 id="teams">Teams and clubs</h2>
+    <ul>
+      <li>In <a href="/tournaments/team.html">My team</a> you create your club's permanent team, with logo, colors, city and country.</li>
+      <li>Invite players or co-admins with a link. The roster is saved and reused every time you register for a tournament.</li>
+      <li>The club's public page shows its tournament history and roster in the <a href="/tournaments/clubs.html">club directory</a>.</li>
+    </ul>
+
+    <h2 id="players">Players</h2>
+    <ul>
+      <li>Your <a href="/tournaments/profile.html">profile</a> collects every tournament and team you've played for, with your stats.</li>
+      <li>If you appear in an imported tournament that isn't linked to your account, tap "That's me" on your name and an admin will confirm it.</li>
+      <li>If the tournament requires it, sign the waiver from the link the organizer shares.</li>
+    </ul>
+
+    <h2 id="migrate">Migrate a tournament from another platform</h2>
+    <p>Is your tournament or league on Ultie, UFT (Ultimate Central), a spreadsheet or some other page? We'll move it for you.</p>
+    <ol>
+      <li>Go to <a href="/tournaments/#migrate">Tournaments → Migrate my tournament</a>.</li>
+      <li>Paste the tournament link and your WhatsApp number, and add notes if you like (dates, number of teams, whether it's a league).</li>
+      <li>We'll reach out to set it up. We migrate teams, rosters, schedule and results.</li>
+    </ol>
+
+    <h2 id="pricing">Pricing</h2>
+    <ul>
+      <li><strong>First tournament:</strong> free, with every feature.</li>
+      <li><strong>Tournament or league:</strong> $3.50 per team. Same price for 4v4, 5v5 or 7v7.</li>
+      <li><strong>Hat:</strong> $0.50 per player.</li>
+    </ul>
+    <p>Prices in USD. See the <a href="/#precios">pricing cards</a> or <a data-wa="Hi! I'd like a quote for an event on ClubStudioHQ." href="https://wa.me/50670567463">message us</a> for large events.</p>
+
+    <h2>Privacy</h2>
+    <p>What data we store and who can see it: <a href="/privacidad.html">privacy policy</a>.</p>
+  </main>
+
   <footer class="lp-footer">
     <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3 tiny">
       <div class="d-flex flex-wrap gap-3">
-        <a href="/">Inicio</a>
-        <a href="/tournaments/">Torneos</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/privacidad.html">Privacidad</a>
+        <a href="/"><span data-lang="es">Inicio</span><span data-lang="en">Home</span></a>
+        <a href="/tournaments/"><span data-lang="es">Torneos</span><span data-lang="en">Tournaments</span></a>
+        <a href="/docs/"><span data-lang="es">Documentación</span><span data-lang="en">Docs</span></a>
+        <a href="/privacidad.html"><span data-lang="es">Privacidad</span><span data-lang="en">Privacy</span></a>
         <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener"><i class="bi bi-instagram me-1"></i>@clubstudiohq</a>
       </div>
       <div class="muted">© <span id="lpYear"></span> ClubStudioHQ</div>
     </div>
   </footer>
-  <script>
-    document.getElementById("lpYear").textContent = new Date().getFullYear();
-    document.querySelectorAll("[data-wa]").forEach(function (a) {
-      a.href = "https://wa.me/50670567463?text=" + encodeURIComponent(a.getAttribute("data-wa"));
-      a.target = "_blank";
-      a.rel = "noopener";
-    });
-  </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-title-en="Privacy · ClubStudioHQ">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,19 +10,22 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <link rel="stylesheet" href="/assets/landing.css" />
+  <script src="/assets/lang.js"></script>
 </head>
 <body class="lp">
   <nav class="navbar navbar-dark lp-nav sticky-top">
     <div class="container py-1">
       <a class="lp-brand" href="/"><img src="/assets/favicon.svg" width="34" height="34" alt="" /><span>ClubStudio<span class="lp-grad-text">HQ</span></span></a>
       <div class="d-flex gap-2">
-        <a class="btn btn-lp-ghost btn-sm px-3" href="/docs/">Documentación</a>
-        <a class="btn btn-lp-ghost btn-sm px-3 d-none d-sm-inline-block" href="/tournaments/">Ver torneos</a>
+        <button class="btn btn-lp-ghost btn-sm px-3" type="button" data-set-lang><span data-lang="es">EN</span><span data-lang="en">ES</span></button>
+        <a class="btn btn-lp-ghost btn-sm px-3" href="/docs/"><span data-lang="es">Documentación</span><span data-lang="en">Docs</span></a>
+        <a class="btn btn-lp-ghost btn-sm px-3 d-none d-sm-inline-block" href="/tournaments/"><span data-lang="es">Ver torneos</span><span data-lang="en">Tournaments</span></a>
       </div>
     </div>
   </nav>
 
-  <main class="container lp-section pt-5 lp-doc">
+  <!-- ===== ESPAÑOL ===== -->
+  <main class="container lp-section pt-5 lp-doc" data-lang="es">
     <span class="lp-eyebrow"><i class="bi bi-shield-check"></i>Privacidad</span>
     <h1 class="mt-2">Política de privacidad</h1>
     <p class="muted">Última actualización: 6 de noviembre de 2026</p>
@@ -87,25 +90,83 @@
     <p class="muted tiny">Si cambiamos esta política, actualizamos la fecha de arriba. Los cambios importantes los avisamos en la plataforma.</p>
   </main>
 
+  <!-- ===== ENGLISH ===== -->
+  <main class="container lp-section pt-5 lp-doc" data-lang="en">
+    <span class="lp-eyebrow"><i class="bi bi-shield-check"></i>Privacy</span>
+    <h1 class="mt-2">Privacy policy</h1>
+    <p class="muted">Last updated: November 6, 2026</p>
+    <p>ClubStudioHQ is a platform for running ultimate tournaments and managing teams and clubs. This page explains, in plain words, what data we store, why, who can see it and how to ask us to delete it.</p>
+
+    <h2>What data we store</h2>
+    <h3>Account</h3>
+    <ul>
+      <li>If you sign in with Google: your Google name, email and profile photo, plus an internal account ID.</li>
+      <li>If you only browse tournaments, an anonymous session is created so the data can be read. We don't know who you are.</li>
+    </ul>
+    <h3>Player profile</h3>
+    <ul>
+      <li>Name, jersey number, gender (for mixed tournaments), photo, and the teams and tournaments you've played in.</li>
+      <li>Game stats: goals, assists, blocks and so on, recorded by scorekeepers.</li>
+    </ul>
+    <h3>Tournament and hat registrations</h3>
+    <ul>
+      <li>Rosters, fees and the proof of payment you upload.</li>
+      <li>For hats: date of birth (to check age divisions), jersey size, position and your self-assessment answers.</li>
+      <li>Waivers: signature, date of birth, your guardian's name if you're a minor, an emergency contact and any medical information you choose to share.</li>
+    </ul>
+    <h3>Organizers and contact</h3>
+    <ul>
+      <li>Data for the tournaments you create (venues, dates, divisions, schedule and results).</li>
+      <li>If you ask us to migrate a tournament: the link, your WhatsApp number, your name and any notes you write.</li>
+    </ul>
+
+    <h2>What is public and what isn't</h2>
+    <ul>
+      <li><strong>Public:</strong> published tournaments, their teams, rosters (name and number), schedule, results, standings and stats, and player and club profiles.</li>
+      <li><strong>Tournament organizer only:</strong> proof of payment, waivers, medical and emergency details, date of birth and the hat self-assessment. Not even you can see your self-assessment after sending it, so team building stays fair.</li>
+      <li><strong>ClubStudioHQ admins only:</strong> migration requests. Admins can also view and edit tournaments and clubs to provide support.</li>
+    </ul>
+
+    <h2>How we use it</h2>
+    <ul>
+      <li>To run tournaments: registration, scheduling, live scoring, standings, stats and spirit scores.</li>
+      <li>So organizers can verify payments, age divisions and waivers, and build balanced hat teams.</li>
+      <li>To contact you when you message us or request a migration.</li>
+    </ul>
+    <p>We don't sell your data, we don't show ads and we don't use advertising trackers.</p>
+
+    <h2>Where it's stored</h2>
+    <p>Data lives in Firebase (Google Cloud): Firestore for the database and Firebase Authentication for sign-in. The site is served from GitHub Pages. These providers process data only to deliver the service to us.</p>
+    <p>In your browser we only keep small preferences: language (Spanish or English), your sign-in session and notices you've dismissed. We don't use advertising cookies.</p>
+
+    <h2>Your rights</h2>
+    <ul>
+      <li>You can edit your profile (photo, number and name) anytime from <a href="/tournaments/profile.html">My profile</a>.</li>
+      <li>You can leave a hat or ask the organizer to remove you from a roster.</li>
+      <li>You can ask us for a copy of your data or to delete your account and personal information. Results of games already played are kept, but your name can be removed from them.</li>
+    </ul>
+
+    <h2>Minors</h2>
+    <p>Underage players may appear in rosters and stats for youth tournaments. A minor's waiver asks for their legal guardian's name. If you're a minor's guardian and want their information removed, message us.</p>
+
+    <h2>Contact</h2>
+    <div class="lp-note">
+      For any question or request about your data, message us on <a data-wa="Hi! I have a question about my data on ClubStudioHQ." href="https://wa.me/50670567463">WhatsApp</a> or on Instagram at <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener">@clubstudiohq</a>. We reply within a few days.
+    </div>
+    <p class="muted tiny">If we change this policy, we update the date above. Important changes are announced on the platform.</p>
+  </main>
+
   <footer class="lp-footer">
     <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3 tiny">
       <div class="d-flex flex-wrap gap-3">
-        <a href="/">Inicio</a>
-        <a href="/tournaments/">Torneos</a>
-        <a href="/docs/">Documentación</a>
-        <a href="/privacidad.html">Privacidad</a>
+        <a href="/"><span data-lang="es">Inicio</span><span data-lang="en">Home</span></a>
+        <a href="/tournaments/"><span data-lang="es">Torneos</span><span data-lang="en">Tournaments</span></a>
+        <a href="/docs/"><span data-lang="es">Documentación</span><span data-lang="en">Docs</span></a>
+        <a href="/privacidad.html"><span data-lang="es">Privacidad</span><span data-lang="en">Privacy</span></a>
         <a href="https://www.instagram.com/clubstudiohq/" target="_blank" rel="noopener"><i class="bi bi-instagram me-1"></i>@clubstudiohq</a>
       </div>
       <div class="muted">© <span id="lpYear"></span> ClubStudioHQ</div>
     </div>
   </footer>
-  <script>
-    document.getElementById("lpYear").textContent = new Date().getFullYear();
-    document.querySelectorAll("[data-wa]").forEach(function (a) {
-      a.href = "https://wa.me/50670567463?text=" + encodeURIComponent(a.getAttribute("data-wa"));
-      a.target = "_blank";
-      a.rel = "noopener";
-    });
-  </script>
 </body>
 </html>

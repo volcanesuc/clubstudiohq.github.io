@@ -205,7 +205,14 @@ body.tn-body { background: #f6f5fb; color: #1d1b26; min-height: 100vh; }
 .tn-nav__avatar { width: 30px; height: 30px; border-radius: 50%; }
 /* botón de idioma (ES/EN) */
 .tn-nav__lang { flex-shrink: 0; min-width: 2.4rem; padding: .2rem .45rem; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; color: #fff; font-size: .75rem; font-weight: 800; letter-spacing: .04em; background: transparent; }
-.tn-nav__tabs + .tn-nav__lang { margin-left: auto; }
+.tn-nav__tabs ~ .tn-nav__lang { margin-left: auto; }
+/* Guía: en celular los tabs se esconden, queda el ícono "?" al lado del idioma */
+.tn-nav__help { display: none; color: rgba(255, 255, 255, .8); border: 1px solid rgba(255, 255, 255, .25); padding: .2rem .5rem; }
+.tn-nav__help:hover { color: #fff; }
+@media (max-width: 767.98px) {
+  .tn-nav__help { display: inline-block; margin-left: auto; }
+  .tn-nav__help + .tn-nav__lang { margin-left: 0; }
+}
 .tn-nav__lang:hover, .tn-nav__lang:focus-visible { background: rgba(255, 255, 255, .14); color: #fff; border-color: rgba(255, 255, 255, .6); }
 .tn-nav__out-icon, .tn-nav__in-short { display: none; }
 /* Celular: arriba solo el logo y la cuenta; los tabs van en la barra de abajo (.tn-bnav) */
