@@ -364,6 +364,7 @@ body.tn-busy::before {
 .dir-row__logo--empty { font-size: 1.2rem; }
 .dir-row__main { flex: 1; min-width: 0; }
 .dir-row__go { color: var(--ev-muted); }
+.ev-chip.dir-chip-hat { background: #fef3c7; color: #92400e; font-weight: 700; }
 .dir-filters { display: flex; gap: .5rem; flex-wrap: wrap; align-items: stretch; }
 .dir-filters .pa-search { min-width: 14rem; }
 .dir-country { width: auto; min-width: 11rem; flex: 0 1 auto; }

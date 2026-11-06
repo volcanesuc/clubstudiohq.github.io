@@ -4,6 +4,7 @@
 import { countryName, flagOf } from "/tournaments/js/countries.js";
 import { EX, exf } from "/tournaments/js/strings.js";
 import { SURFACES, SURFACE_ICONS } from "/tournaments/js/model.js";
+import { isHatEvent } from "/tournaments/js/hat.js";
 import { normName } from "/tournaments/js/names.js";
 import { isPlatformAdmin, listPublicEvents, registrationIsOpen } from "/tournaments/js/services.js";
 import { esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, renderNav, showLoader, waitForUser } from "/tournaments/js/ui.js";
@@ -15,7 +16,9 @@ const PAST_PAGE = 9; // finalizados visibles al inicio (después "Ver más")
 const state = { events: [], q: "", country: "", pastShown: PAST_PAGE };
 
 const place = (e) => [e.venue, e.country ? `${flagOf(e.country)} ${countryName(e.country)}` : ""].filter(Boolean).join(" · ");
-const chips = (e) => (e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("");
+// etiqueta "Hat" primero (equipos armados por el organizador) y después las categorías
+const chips = (e) => `${isHatEvent(e) ? `<span class="ev-chip dir-chip-hat"><i class="bi bi-shuffle"></i> ${esc(EX.crTypeHat)}</span>` : ""}${(e.divisions || []).map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}`;
+const hasChips = (e) => isHatEvent(e) || (e.divisions || []).length > 0;
 const logoHtml = (e, cls) => e.logo
   ? `<span class="${cls}" style="background-image:url('${esc(e.logo)}')"></span>`
   : `<span class="${cls} ${cls}--empty"><i class="bi bi-trophy"></i></span>`;
@@ -44,7 +47,7 @@ function cardUpcoming(e) {
           <div class="dir-card__name">${esc(e.name || "—")}</div>
           <div class="dir-card__meta"><i class="bi bi-calendar-event"></i> ${esc(fmtDateRange(e.startDate, e.endDate))}</div>
           ${place(e) ? `<div class="dir-card__meta"><i class="bi bi-geo-alt"></i> ${esc(place(e))}${SURFACES.includes(e.surface) ? ` · <i class="bi ${SURFACE_ICONS[e.surface]}"></i> ${esc(EX[`surface_${e.surface}`])}` : ""}</div>` : ""}
-          ${(e.divisions || []).length ? `<div class="mt-2 d-flex flex-wrap justify-content-center gap-1">${chips(e)}</div>` : ""}
+          ${hasChips(e) ? `<div class="mt-2 d-flex flex-wrap justify-content-center gap-1">${chips(e)}</div>` : ""}
         </div>
       </a>
     </div>`;
@@ -59,7 +62,7 @@ function cardPast(e) {
         <span class="dir-row__main">
           <span class="dir-card__name">${esc(e.name || "—")}</span>
           <span class="dir-card__meta">${esc([fmtDateRange(e.startDate, e.endDate), place(e)].filter(Boolean).join(" · "))}</span>
-          ${(e.divisions || []).length ? `<span class="d-flex flex-wrap gap-1 mt-1">${chips(e)}</span>` : ""}
+          ${hasChips(e) ? `<span class="d-flex flex-wrap gap-1 mt-1">${chips(e)}</span>` : ""}
         </span>
         <i class="bi bi-chevron-right dir-row__go"></i>
       </a>
@@ -67,7 +70,7 @@ function cardPast(e) {
 }
 
 // texto donde se busca: nombre, sede, dirección, país (nombre y código) y categorías
-const haystack = (e) => normName([e.name, e.venue, e.address, e.city, countryName(e.country), e.country, ...(e.divisions || []).map((d) => d.name)].filter(Boolean).join(" "));
+const haystack = (e) => normName([e.name, e.venue, e.address, e.city, countryName(e.country), e.country, ...(e.divisions || []).map((d) => d.name), isHatEvent(e) ? "hat" : ""].filter(Boolean).join(" "));
 
 function matches(e) {
   if (state.country && e.country !== state.country) return false;
