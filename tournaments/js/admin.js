@@ -2,7 +2,7 @@
 // Admin de la plataforma: aprobar torneos (prueba gratis o pagado), rechazar y desactivar.
 // Un admin es quien tenga un doc en platform_admins/{uid} (se crea a mano en la consola de Firebase).
 import { EX, exf } from "/tournaments/js/strings.js";
-import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, listDraftEvents, listTeams, setApproval } from "/tournaments/js/services.js";
+import { APPROVAL, deleteMigrationRequest, isPlatformAdmin, listApprovalRequests, listApprovedEvents, listDraftEvents, listMigrationRequests, listTeams, setApproval, setMigrationStatus } from "/tournaments/js/services.js";
 import {
   approveClaimRequest,
   assignPlayerAccount,
@@ -27,7 +27,7 @@ import { sameName } from "/tournaments/js/names.js";
 import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, setAdminMode, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
-const TABS = ["pending", "drafts", "active", "clubs", "import", "players"];
+const TABS = ["pending", "drafts", "active", "clubs", "migrations", "import", "players"];
 const HASH_TAB = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "";
 const state = {
   pending: [],
@@ -37,6 +37,7 @@ const state = {
   search: "",
   clubs: null, // pestaña Clubes (se carga al abrirla)
   clubQ: "",
+  migrations: [], // pedidos de migración desde otras plataformas
   // importar
   bundled: null,
   imp: null, // { data, preview, exists, label }
@@ -97,6 +98,39 @@ function ownerLine(e) {
 const editEventUrl = (id) => `/tournaments/organize.html?${new URLSearchParams({ id })}`;
 
 // Pestaña Clubes: todos los clubes, para entrar a editarlos como admin
+function waLink(phone, text) {
+  let digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length === 8) digits = `506${digits}`; // número tico sin código de país
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
+function migrationsTab() {
+  const rows = state.migrations;
+  return `
+    <div class="small ev-muted mb-2">${esc(EX.adMigHint)}</div>
+    ${rows.length ? `<div class="pa-list">${rows.map((r) => {
+      const done = r.status === "done";
+      return `
+      <div class="pa-row ${done ? "opacity-50" : ""}" data-mig="${esc(r.id)}">
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-bold">${esc(r.name || r.email || "—")}</span>
+            <span class="ev-chip ${done ? "" : "dir-chip-hat"}">${esc(done ? EX.adMigDoneTag : EX.adMigNew)}</span>
+            <span class="small ev-muted">${esc(ago(r.createdAt))}</span>
+          </div>
+          <a class="small d-block text-truncate" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">${esc(r.link)}</a>
+          <div class="small"><i class="bi bi-whatsapp me-1"></i>${esc(r.phone)}${r.email ? ` · ${esc(r.email)}` : ""}</div>
+          ${r.notes ? `<div class="small ev-muted mt-1">${esc(r.notes)}</div>` : ""}
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0 flex-wrap justify-content-end">
+          <a class="btn btn-sm btn-success" href="${esc(waLink(r.phone, EX.adMigWa))}" target="_blank" rel="noopener" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+          <button class="btn btn-sm ${done ? "btn-light" : "btn-admin"}" data-act="${done ? "migReopen" : "migDone"}"><i class="bi ${done ? "bi-arrow-counterclockwise" : "bi-check2"}"></i><span class="d-none d-sm-inline ms-1">${esc(done ? EX.adMigReopen : EX.adMigDone)}</span></button>
+          <button class="btn btn-sm btn-light" data-act="migDelete" title="${esc(EX.delete || "Borrar")}"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>`;
+    }).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(EX.adNoMigrations)}</div>`}`;
+}
+
 function clubsTab() {
   if (state.clubs === null) return `<div class="pa-empty small ev-muted">${esc(EX.loading)}</div>`;
   const words = normName(state.clubQ).split(/\s+/).filter(Boolean);
@@ -529,11 +563,12 @@ function render() {
       <button class="tp-tab ${state.tab === "drafts" ? "is-active" : ""}" data-pa-tab="drafts"><i class="bi bi-pencil-square"></i> ${esc(EX.adTabDrafts)} <span class="pa-count">${state.drafts.length}</span></button>
       <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-trophy"></i> ${esc(EX.adTabEvents)} <span class="pa-count">${active.length}</span></button>
       <button class="tp-tab ${state.tab === "clubs" ? "is-active" : ""}" data-pa-tab="clubs"><i class="bi bi-shield"></i> ${esc(EX.adTabClubs)}${state.clubs ? ` <span class="pa-count">${state.clubs.length}</span>` : ""}</button>
+      <button class="tp-tab ${state.tab === "migrations" ? "is-active" : ""}" data-pa-tab="migrations"><i class="bi bi-arrow-left-right"></i> ${esc(EX.adTabMigrations)}${state.migrations.some((r) => r.status !== "done") ? ` <span class="pa-count pa-count--alert">${state.migrations.filter((r) => r.status !== "done").length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
       <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
     </nav>
 
-    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "drafts"
+    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "migrations" ? migrationsTab() : state.tab === "drafts"
       ? `<div class="small ev-muted mb-2">${esc(EX.adDraftsHint)}</div>${state.drafts.length ? `<div class="d-grid gap-3">${state.drafts.map(pendingCard).join("")}</div>`
         : `<div class="pa-empty small ev-muted">${esc(EX.adNoDrafts)}</div>`}`
       : state.tab === "pending"
@@ -548,7 +583,8 @@ function render() {
 }
 
 async function reload() {
-  const [pending, active, claimReqs, drafts] = await Promise.all([listApprovalRequests(), listApprovedEvents(), listClaimRequests().catch(() => []), listDraftEvents().catch(() => [])]);
+  const [pending, active, claimReqs, drafts, migrations] = await Promise.all([listApprovalRequests(), listApprovedEvents(), listClaimRequests().catch(() => []), listDraftEvents().catch(() => []), listMigrationRequests().catch(() => [])]);
+  state.migrations = migrations;
   state.pending = pending;
   state.drafts = drafts;
   state.active = active;
@@ -630,6 +666,14 @@ root.addEventListener("click", (ev) => {
     }, EX.imDone);
   }
   if (tool?.dataset.act === "goAssign") return openTab("players", tool.dataset.id);
+  if (["migDone", "migReopen", "migDelete"].includes(tool?.dataset.act)) {
+    const id = tool.closest("[data-mig]").dataset.mig;
+    if (tool.dataset.act === "migDelete") {
+      if (!confirm(EX.adMigDelete)) return;
+      return act(() => deleteMigrationRequest(id), EX.saved);
+    }
+    return act(() => setMigrationStatus(id, tool.dataset.act === "migDone" ? "done" : "new"), EX.saved);
+  }
   if (tool?.dataset.act === "linkSquad" || tool?.dataset.act === "unlinkSquad") {
     const holder = tool.closest("[data-team]");
     const team = state.pl.teams.find((t) => t.id === holder.dataset.team);

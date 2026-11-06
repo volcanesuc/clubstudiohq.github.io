@@ -21,4 +21,5 @@ export const COL = {
   profiles: "profiles", // profiles/{uid}: perfil del jugador (foto, número, equipos)
   playerClaims: "player_claims", // player_claims/{eventId}__{playerId}: cuenta asignada por un admin a un jugador importado
   claimRequests: "claim_requests", // claim_requests/{eventId}__{playerId}__{uid}: "soy yo" pedido por el jugador
+  migrationRequests: "migration_requests", // migration_requests/{id}: pedido para pasar un torneo de otra plataforma
 };

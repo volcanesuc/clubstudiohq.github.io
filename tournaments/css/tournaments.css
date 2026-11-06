@@ -380,6 +380,16 @@ body.tn-busy::before {
 .dir-row__main { flex: 1; min-width: 0; }
 .dir-row__go { color: var(--ev-muted); }
 .ev-chip.dir-chip-hat { background: #fef3c7; color: #92400e; font-weight: 700; }
+
+/* Migrar un torneo desde otra plataforma */
+.mig-card { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #fff; box-shadow: 0 10px 30px rgba(15, 23, 42, .18); }
+.mig-card__icon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, .12); font-size: 1.4rem; flex-shrink: 0; }
+.mig-card__title { font-weight: 800; font-size: 1.05rem; }
+.mig-card__text { opacity: .8; font-size: .9rem; }
+@media (max-width: 575.98px) {
+  .mig-card { flex-wrap: wrap; }
+  .mig-card .btn { width: 100%; }
+}
 .dir-filters { display: flex; gap: .5rem; flex-wrap: wrap; align-items: stretch; }
 .dir-filters .pa-search { min-width: 14rem; }
 .dir-country { width: auto; min-width: 11rem; flex: 0 1 auto; }

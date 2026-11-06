@@ -153,6 +153,37 @@ export async function isPlatformAdmin(uid) {
 }
 
 /* =========================
+   Pedidos de migración (torneos de otras plataformas)
+========================= */
+export async function submitMigrationRequest({ name = "", phone, link, notes = "" }) {
+  const id = randomId("mig_");
+  await setDoc(doc(db, COL.migrationRequests, id), {
+    uid: auth.currentUser?.uid || "",
+    email: auth.currentUser?.email || "",
+    name: String(name).trim().slice(0, 120),
+    phone: String(phone).trim().slice(0, 40),
+    link: String(link).trim().slice(0, 500),
+    notes: String(notes).trim().slice(0, 1000),
+    status: "new",
+    createdAt: serverTimestamp(),
+  });
+  return id;
+}
+
+export async function listMigrationRequests() {
+  const snap = await getDocs(collection(db, COL.migrationRequests));
+  return list(snap).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+}
+
+export async function setMigrationStatus(id, status) {
+  await updateDoc(doc(db, COL.migrationRequests, id), { status, updatedAt: serverTimestamp() });
+}
+
+export async function deleteMigrationRequest(id) {
+  await deleteDoc(doc(db, COL.migrationRequests, id));
+}
+
+/* =========================
    Torneos
 ========================= */
 export async function listPublicEvents() {

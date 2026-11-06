@@ -435,6 +435,20 @@ service cloud.firestore {
 
     // "Soy yo": un jugador pide que le asignen una ficha sin cuenta de un torneo (ej. importado).
     // id = {eventId}__{playerId}__{uid}. Lo ve él y el admin de la plataforma, que la aprueba o la rechaza.
+    // Pedidos para migrar un torneo desde otra plataforma (formulario público en /tournaments/)
+    match /migration_requests/{reqId} {
+      allow read, update, delete: if isPlatformAdmin();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(["uid", "email", "name", "phone", "link", "notes", "status", "createdAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == "new"
+        && request.resource.data.phone is string && request.resource.data.phone.size() >= 7 && request.resource.data.phone.size() <= 40
+        && request.resource.data.link is string && request.resource.data.link.matches("https?://.+") && request.resource.data.link.size() <= 500
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && request.resource.data.notes is string && request.resource.data.notes.size() <= 1000
+        && request.resource.data.createdAt == request.time;
+    }
+
     match /claim_requests/{reqId} {
       allow read: if isPlatformAdmin() || (isGoogle() && resource.data.uid == request.auth.uid);
       allow create: if isGoogle()

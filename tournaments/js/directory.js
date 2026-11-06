@@ -6,7 +6,7 @@ import { EX, LOCALE, exf, withDivisionNames } from "/tournaments/js/strings.js";
 import { SURFACES, SURFACE_ICONS } from "/tournaments/js/model.js";
 import { isHatEvent } from "/tournaments/js/hat.js";
 import { normName } from "/tournaments/js/names.js";
-import { isPlatformAdmin, listPublicEvents, registrationIsOpen } from "/tournaments/js/services.js";
+import { isPlatformAdmin, listPublicEvents, registrationIsOpen, submitMigrationRequest } from "/tournaments/js/services.js";
 import { esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, renderNav, showLoader, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
@@ -124,7 +124,96 @@ function render() {
             ${countries.map((c) => `<option value="${esc(c)}" ${c === state.country ? "selected" : ""}>${flagOf(c)} ${esc(countryName(c))}</option>`).join("")}
           </select>` : ""}
       </div>` : ""}
-    <div id="dirList">${listHtml()}</div>`;
+    <div id="dirList">${listHtml()}</div>
+    ${migrateCard()}`;
+}
+
+function migrateCard() {
+  return `
+    <section class="mig-card mt-4" id="migrar">
+      <div class="mig-card__icon"><i class="bi bi-box-arrow-in-right"></i></div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="mig-card__title">${esc(EX.migTitle)}</div>
+        <div class="mig-card__text">${esc(EX.migText)}</div>
+      </div>
+      <button class="btn tn-btn-grad flex-shrink-0" type="button" data-mig-open><i class="bi bi-arrow-left-right me-1"></i>${esc(EX.migBtn)}</button>
+    </section>`;
+}
+
+function ensureMigModal() {
+  let el = document.getElementById("migModal");
+  if (el) return el;
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="modal fade" id="migModal" tabindex="-1" aria-labelledby="migModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="migForm" novalidate>
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" id="migModalTitle">${esc(EX.migFormTitle)}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${esc(EX.close || "Cerrar")}"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small ev-muted">${esc(EX.migFormLead)}</p>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="migLink">${esc(EX.migLink)} *</label>
+              <input class="form-control" id="migLink" type="url" inputmode="url" required placeholder="${esc(EX.migLinkPh)}" />
+              <div class="form-text">${esc(EX.migLinkHint)}</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="migPhone">${esc(EX.migPhone)} *</label>
+              <input class="form-control" id="migPhone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="${esc(EX.migPhonePh)}" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="migName">${esc(EX.migName)}</label>
+              <input class="form-control" id="migName" autocomplete="name" />
+            </div>
+            <div>
+              <label class="form-label small fw-semibold" for="migNotes">${esc(EX.migNotes)}</label>
+              <textarea class="form-control" id="migNotes" rows="2" placeholder="${esc(EX.migNotesPh)}"></textarea>
+            </div>
+            <div class="alert alert-danger small py-2 mt-3 mb-0 d-none" id="migErr"></div>
+            <div class="alert alert-success small py-2 mt-3 mb-0 d-none" id="migOk"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn tn-btn-grad w-100" type="submit" id="migSend"><i class="bi bi-send me-1"></i>${esc(EX.migSend)}</button>
+          </div>
+        </form>
+      </div>
+    </div>`);
+  el = document.getElementById("migModal");
+  const form = el.querySelector("#migForm");
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const v = (id) => form.querySelector(`#${id}`).value.trim();
+    const err = form.querySelector("#migErr");
+    const ok = form.querySelector("#migOk");
+    const btn = form.querySelector("#migSend");
+    err.classList.add("d-none");
+    const link = v("migLink");
+    const phone = v("migPhone");
+    if (!/^https?:\/\/\S+\.\S+/i.test(link)) return showErr(EX.migBadLink);
+    if (phone.replace(/\D/g, "").length < 7) return showErr(EX.migBadPhone);
+    btn.disabled = true;
+    try {
+      await submitMigrationRequest({ name: v("migName"), phone, link, notes: v("migNotes") });
+      ok.textContent = EX.migSent;
+      ok.classList.remove("d-none");
+      form.querySelectorAll("input, textarea").forEach((i) => { i.value = ""; i.disabled = true; });
+      btn.classList.add("d-none");
+    } catch (e) {
+      console.error("[migrate]", e);
+      showErr(`${EX.error} ${e?.code || ""}`);
+      btn.disabled = false;
+    }
+    function showErr(msg) {
+      err.textContent = msg;
+      err.classList.remove("d-none");
+    }
+  });
+  return el;
+}
+
+function openMigrate() {
+  window.bootstrap.Modal.getOrCreateInstance(ensureMigModal()).show();
 }
 
 root.addEventListener("input", (ev) => {
@@ -138,6 +227,7 @@ root.addEventListener("change", (ev) => {
   renderList();
 });
 root.addEventListener("click", (ev) => {
+  if (ev.target.closest("[data-mig-open]")) return openMigrate();
   if (ev.target.closest("#dirMore")) {
     state.pastShown += PAST_PAGE;
     return renderList();
@@ -160,6 +250,10 @@ root.addEventListener("click", (ev) => {
     renderNav({ active: "dir", user, isAdmin: isGoogleUser(user) && (await isPlatformAdmin(user.uid)) });
     state.events = (await listPublicEvents()).map(withDivisionNames);
     render();
+    if (location.hash === "#migrar" || location.hash === "#migrate") {
+      document.getElementById("migrar")?.scrollIntoView({ block: "center" });
+      openMigrate();
+    }
   } catch (err) {
     console.error("[directory]", err);
     root.innerHTML = `<div class="ev-card ev-muted">${esc(EX.error)}</div>`;
