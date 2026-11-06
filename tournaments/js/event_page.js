@@ -770,7 +770,7 @@ function bracketTab() {
   const divName = divisions().find((d) => d.id === state.division)?.name || divisions()[0]?.name || "";
   return `
     <div class="sb-toolbar">${divisionPicker()}</div>
-    ${bracketHtml({ teams, games, title: divName, href: (g) => gameUrl(state.event.id, g.id) })}`;
+    ${bracketHtml({ teams, games, title: divName, section: state.bkSection, href: (g) => gameUrl(state.event.id, g.id) })}`;
 }
 
 function render() {
@@ -876,6 +876,11 @@ $("tnRoot").addEventListener("click", async (ev) => {
   if (ics) {
     const games = state.games.filter(inDivision(state.division)).filter((g) => toMillis(g.startAt));
     return downloadIcs(games, state.event, `${state.event.slug || "torneo"}.ics`);
+  }
+  const bks = ev.target.closest("[data-bk-section]");
+  if (bks) {
+    state.bkSection = bks.dataset.bkSection;
+    return render();
   }
   const gd = ev.target.closest("[data-gday]");
   if (gd) {

@@ -285,6 +285,8 @@ export const EX = {
   bkFinals: "Finales",
   bkRound: "Bracket",
   bkResults: "Posiciones finales",
+  bkAll: "Todo",
+  bkCrossovers: "Cruces",
   bkEmpty: "Este torneo no tiene bracket.",
   tabStats: "Estadísticas",
   tabTeamsPublic: "Equipos",

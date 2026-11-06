@@ -106,16 +106,72 @@ function gameBox(g, teams, href) {
     </a>`;
 }
 
+// Puestos que se juegan en cada partido: [desde, hasta] (ej. "Puestos 17-32 · Octavos de final 3" → [17, 32])
+const SIZE_OF_ROUND = { Dieciseisavos: 32, Octavos: 16, Cuartos: 8, Semifinal: 4 };
+function rangeOf(g) {
+  const p = String(g.phase || "");
+  let m = p.match(/^Puestos (\d+)-(\d+)/);
+  if (m) return [Number(m[1]), Number(m[2])];
+  m = p.match(/^Puesto (\d+)-(\d+)$/);
+  if (m) return [Number(m[1]), Number(m[2])];
+  const place = placeOfPhase(p);
+  if (place) return [place, place + 1];
+  m = p.match(/^Ronda de (\d+)/);
+  if (m) return [1, Number(m[1])];
+  const word = Object.keys(SIZE_OF_ROUND).find((w) => p.startsWith(w));
+  return word ? [1, SIZE_OF_ROUND[word]] : null;
+}
+
 /**
- * @param {{ teams: object[], games: object[], href: (g) => string, title?: string }} p  equipos y partidos de UNA división
+ * Secciones del bracket para filtrar en torneos grandes (como el mundial): "Cruces", "1-16", "17-32", "33-40".
+ * Cada bracket principal de 16+ equipos se parte en su mitad de arriba y de abajo; su 1ª ronda son los cruces.
+ * @returns {{ id: string, label: string, from: number, to: number, exact?: boolean }[]} vacío si no hace falta filtrar
  */
-export function bracketHtml({ teams, games, href, title = "" }) {
+export function bracketSections(games = []) {
   const bracket = games.filter(isBracketGame);
+  if (bracket.length < 16) return [];
+  const ranges = bracket.map(rangeOf).filter(Boolean);
+  const tops = ranges
+    .filter(([a, b]) => !ranges.some(([c, d]) => c <= a && d >= b && (d - c) > (b - a)))
+    .filter(([a, b], i, list) => list.findIndex(([c, d]) => c === a && d === b) === i)
+    .sort((x, y) => x[0] - y[0]);
+  const out = [];
+  tops.forEach(([a, b]) => {
+    const n = b - a + 1;
+    if (n >= 16) {
+      out.push({ id: `x${a}-${b}`, label: EX.bkCrossovers, from: a, to: b, exact: true });
+      out.push({ id: `${a}-${a + n / 2 - 1}`, label: `${a}-${a + n / 2 - 1}`, from: a, to: a + n / 2 - 1 });
+      out.push({ id: `${a + n / 2}-${b}`, label: `${a + n / 2}-${b}`, from: a + n / 2, to: b });
+    } else out.push({ id: `${a}-${b}`, label: `${a}-${b}`, from: a, to: b });
+  });
+  return out.length > 1 ? out : [];
+}
+
+/**
+ * @param {{ teams: object[], games: object[], href: (g) => string, title?: string, section?: string }} p
+ *   equipos y partidos de UNA división; section = id de bracketSections() ("" = todo)
+ */
+export function bracketHtml({ teams, games, href, title = "", section = "" }) {
+  let bracket = games.filter(isBracketGame);
   if (!bracket.length) return `<div class="ev-card ev-muted">${esc(EX.bkEmpty)}</div>`;
   const byId = new Map(teams.map((t) => [t.id, t]));
+  const sections = bracketSections(games);
+  const sec = sections.find((s) => s.id === section) || null;
+  if (sec) {
+    bracket = bracket.filter((g) => {
+      const r = rangeOf(g);
+      if (!r) return false;
+      return sec.exact ? r[0] === sec.from && r[1] === sec.to : r[0] >= sec.from && r[1] <= sec.to;
+    });
+  }
+  const chips = sections.length ? `
+    <div class="sb-days bk-sections">
+      <button class="sb-day sb-day--all ${!sec ? "is-active" : ""}" data-bk-section="">${esc(EX.bkAll)}</button>
+      ${sections.map((s) => `<button class="sb-day ${sec?.id === s.id ? "is-active" : ""}" data-bk-section="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
+    </div>` : "";
 
-  // 1) grupos (o la tabla general si no hubo grupos)
-  const stage = games.filter((g) => !isBracketGame(g));
+  // 1) grupos (o la tabla general si no hubo grupos); solo en "Todos"
+  const stage = sec ? [] : games.filter((g) => !isBracketGame(g));
   const pools = [...new Set(teams.map((t) => String(t.pool || "").toUpperCase()))].sort();
   const groupCol = stage.length ? `
     <div class="bk-col">
@@ -156,7 +212,7 @@ export function bracketHtml({ teams, games, href, title = "" }) {
     </div>`).join("");
 
   // 3) posiciones finales
-  const places = [...finalPlaces(teams, games).entries()].sort((a, b) => a[1] - b[1]);
+  const places = [...finalPlaces(teams, games).entries()].sort((a, b) => a[1] - b[1]).filter(([, p]) => !sec || sec.exact || (p >= sec.from && p <= sec.to));
   const placesCol = places.length ? `
     <div class="bk-col">
       <div class="bk-col__title">${esc(EX.bkResults)}</div>
@@ -174,7 +230,7 @@ export function bracketHtml({ teams, games, href, title = "" }) {
       </div>
     </div>` : "";
 
-  return `<div class="bk-scroll"><div class="bk-board">${groupCol}${roundCols}${placesCol}</div></div>`;
+  return `${chips}<div class="bk-scroll"><div class="bk-board">${groupCol}${roundCols}${sec?.exact ? "" : placesCol}</div></div>`;
 }
 
 export const hasBracket = (games = []) => games.some(isBracketGame);
