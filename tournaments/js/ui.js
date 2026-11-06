@@ -290,6 +290,25 @@ export async function shrinkImage(file, max = 256) {
 }
 
 // Logo del equipo, o un círculo con su color e inicial
+// Texto legible sobre un color de fondo: blanco u oscuro (contraste WCAG)
+const DARK_TEXT = "#1f1446";
+export function textOn(color) {
+  let hex = String(color || "").trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(hex)) hex = hex.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return "#fff";
+  const lum = (h) => {
+    const [r, g, b] = [0, 2, 4].map((i) => {
+      const v = parseInt(h.slice(i, i + 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const bg = lum(hex);
+  const contrast = (l) => (Math.max(bg, l) + 0.05) / (Math.min(bg, l) + 0.05);
+  // blanco mientras se lea bien (3:1, letra grande en negrita); en colores claros (amarillo, celeste…) texto oscuro
+  return contrast(1) >= 3 || contrast(1) >= contrast(lum(DARK_TEXT.slice(1))) ? "#fff" : DARK_TEXT;
+}
+
 export function teamBadge(team = {}, size = 32) {
   const style = `width:${size}px;height:${size}px`;
   // llave sin definir ("Ganador de Semifinal 1"): círculo gris con "?"
@@ -300,7 +319,7 @@ export function teamBadge(team = {}, size = 32) {
     return `<img class="tn-team-logo" src="${esc(team.logo)}" alt="" style="${style}" />`;
   }
   const initial = String(team.name || "?").trim().charAt(0).toUpperCase() || "?";
-  return `<span class="tn-team-logo tn-team-logo--empty" style="${style};background:${esc(team.color || "#19473f")};font-size:${Math.round(size * 0.45)}px">${esc(initial)}</span>`;
+  return `<span class="tn-team-logo tn-team-logo--empty" style="${style};background:${esc(team.color || "#19473f")};color:${textOn(team.color || "#19473f")};font-size:${Math.round(size * 0.45)}px">${esc(initial)}</span>`;
 }
 
 export function phaseLabel(g) {
