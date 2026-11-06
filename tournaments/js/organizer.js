@@ -1091,6 +1091,8 @@ function wizardDefaults() {
     kind: saved.kind || (!isHatEvent(e) && evDays.length > 4 ? "league" : "tournament"),
     format: saved.format || e.format || "round_robin",
     thirdPlace: !!saved.thirdPlace,
+    placement: !!saved.placement,
+    rest: !!saved.rest,
     advance: saved.advance || 2,
     divisions: (saved.divisions || divisions().map((d) => d.id)).filter((id) => divisions().some((d) => d.id === id)),
     days,
@@ -1135,8 +1137,10 @@ function wizardHtml() {
           <label class="form-label small">${esc(EX.wzDivisions)}</label>
           <div class="wz-chips">${divisions().map((d) => `<label class="wz-check"><input type="checkbox" data-wz-div="${esc(d.id)}" ${w.divisions.includes(d.id) ? "checked" : ""} /> ${esc(d.name)} <span class="ev-muted">(${state.teams.filter((t) => (t.divisionId || divisions()[0].id) === d.id).length})</span></label>`).join("")}</div>
         </div>
-        ${(f.options || []).includes("thirdPlace") ? `<div class="col-12 col-md-6"><label class="wz-check"><input type="checkbox" id="wzThird" ${w.thirdPlace ? "checked" : ""} /> ${esc(EX.optThirdPlace)}</label></div>` : ""}
-        ${(f.options || []).includes("advance") ? `<div class="col-6 col-md-3"><label class="form-label small" for="wzAdvance">${esc(EX.optAdvance)}</label><select class="form-select form-select-sm" id="wzAdvance">${[1, 2, 3, 4].map((n) => `<option ${n === Number(w.advance) ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
+        ${(f.options || []).includes("placement") ? `<div class="col-12 col-md-6"><label class="wz-check"><input type="checkbox" id="wzPlacement" ${w.placement ? "checked" : ""} /> ${esc(EX.optPlacement)}</label></div>` : ""}
+        ${(f.options || []).includes("thirdPlace") && !((f.options || []).includes("placement") && w.placement) ? `<div class="col-12 col-md-6"><label class="wz-check"><input type="checkbox" id="wzThird" ${w.thirdPlace ? "checked" : ""} /> ${esc(EX.optThirdPlace)}</label></div>` : ""}
+        ${(f.options || []).includes("rest") ? `<div class="col-12 col-md-6"><label class="wz-check"><input type="checkbox" id="wzRest" ${w.rest ? "checked" : ""} /> ${esc(EX.optRest)}</label></div>` : ""}
+        ${(f.options || []).includes("advance") ? `<div class="col-6 col-md-3"><label class="form-label small" for="wzAdvance">${esc(EX.optAdvance)}</label><select class="form-select form-select-sm" id="wzAdvance">${[1, 2, 3, 4, 5, 6, 8].map((n) => `<option ${n === Number(w.advance) ? "selected" : ""}>${n}</option>`).join("")}</select></div>` : ""}
         <div class="col-12"><div class="form-text m-0">${esc(EX[`formatHint_${f.id}`] ? exf(EX[`formatHint_${f.id}`], { n: swissRound(w.divisions[0]) }) : "")}</div></div>
       </div>`)}
 
@@ -1217,6 +1221,8 @@ function readWizard() {
   const q = (sel) => box.querySelector(sel);
   if (q("#wzFormat")) w.format = q("#wzFormat").value;
   w.thirdPlace = !!q("#wzThird")?.checked;
+  w.placement = !!q("#wzPlacement")?.checked;
+  w.rest = !!q("#wzRest")?.checked;
   if (q("#wzAdvance")) w.advance = Number(q("#wzAdvance").value) || 2;
   w.divisions = [...box.querySelectorAll("[data-wz-div]")].filter((c) => c.checked).map((c) => c.dataset.wzDiv);
   box.querySelectorAll("[data-wz-dayon]").forEach((c) => (w.days[c.dataset.wzDayon].on = c.checked));
@@ -1263,7 +1269,7 @@ function renderWizard() {
   };
   // cambios que muestran u ocultan opciones (formato, categorías, días)
   box.onchange = (ev) => {
-    if (ev.target.matches("#wzFormat, [data-wz-div], [data-wz-dayon], #wzLFrom, #wzLTo, #wzLEvery, #wzLSkip")) {
+    if (ev.target.matches("#wzFormat, #wzPlacement, [data-wz-div], [data-wz-dayon], #wzLFrom, #wzLTo, #wzLEvery, #wzLSkip")) {
       readWizard();
       renderWizard();
     }
@@ -1302,7 +1308,7 @@ function planWizard() {
     const unplayed = existing.filter(isUnplayed);
     replaced.push(...unplayed);
     const played = new Set(existing.filter((g) => !isUnplayed(g)).map((g) => pairKey(g.teamA?.id, g.teamB?.id)));
-    byDivision[div] = format.generate(teams, { divisionId: div, thirdPlace: w.thirdPlace, advance: w.advance })
+    byDivision[div] = format.generate(teams, { divisionId: div, thirdPlace: w.thirdPlace, placement: w.placement, rest: w.rest, advance: w.advance })
       .filter((g) => !(g.teamA?.id && g.teamB?.id && played.has(pairKey(g.teamA.id, g.teamB.id))));
   });
   const replacedIds = new Set(replaced.map((g) => g.id));

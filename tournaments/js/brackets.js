@@ -14,6 +14,10 @@ const LABELS = {
   semi: "Semifinal",
   quarter: "Cuartos de final",
   eighth: "Octavos de final",
+  sixteenth: "Dieciseisavos de final",
+  roundOf: (n) => `Ronda de ${n}`,
+  places: (a, b) => `Puestos ${a}-${b}`,
+  placeGame: (a) => `Puesto ${a}-${a + 1}`,
   round: (n) => `Ronda ${n}`,
   third: "Tercer lugar",
   fifth: "Quinto lugar",
@@ -23,7 +27,7 @@ const LABELS = {
   grandFinal: "Gran final",
   winnerOf: (label) => `Ganador de ${label}`,
   loserOf: (label) => `Perdedor de ${label}`,
-  poolRank: (rank, pool) => `${rank}º del Grupo ${pool}`,
+  poolRank: (rank, pool) => `${rank}º del Pool ${pool}`,
   bye: "Descansa",
 };
 
@@ -82,6 +86,48 @@ function elimination(seeds, { prefix = "", phase = "", thirdPlace = false, start
     games.push({ key: `${prefix}3P`, base: phase ? `${phase} · ${LABELS.third}` : LABELS.third, round: startRound + rounds - 1, slotA: L(semis[0]), slotB: L(semis[1]) });
   }
   return { games, finalKey: prev[0], rounds };
+}
+
+// Nombre de la ronda según cuántos equipos quedan en esa llave (8 → cuartos, 4 → semis…)
+const roundBySize = (n) => ({ 4: LABELS.semi, 8: LABELS.quarter, 16: LABELS.eighth, 32: LABELS.sixteenth })[n] || LABELS.roundOf(n);
+// Partido que define un puesto: 1-2 final, 3-4 tercer lugar, 5-6, 7-8; después "Puesto 9-10"…
+const placeName = (p) => ({ 1: LABELS.final, 3: LABELS.third, 5: LABELS.fifth, 7: LABELS.seventh })[p] || LABELS.placeGame(p);
+
+/**
+ * Llave con todos los puestos (como en los mundiales): en cada ronda los ganadores siguen por los puestos de
+ * arriba y los perdedores por los de abajo, hasta definir del 1º al último.
+ * Ej. 16 equipos: octavos → ganadores 1-8 (cuartos…), perdedores 9-16 (su propia llave).
+ */
+function placementBracket(seeds, { prefix = "", startPlace = 1, startRound = 1 } = {}) {
+  const size = pow2(seeds.length);
+  const order = seedOrder(size);
+  const slotOf = (seed) => {
+    const s = seeds[seed - 1];
+    if (!s) return BYE;
+    return s.team || s.pool || s.from ? s : slotTeam(s);
+  };
+  const games = [];
+  const play = (slots, start, round, key) => {
+    const n = slots.length;
+    if (n === 2) {
+      games.push({ key, base: placeName(start), round, slotA: slots[0], slotB: slots[1] });
+      return;
+    }
+    const name = roundBySize(n);
+    const base = start === 1 && startPlace === 1 ? name : `${LABELS.places(start, start + n - 1)} · ${name}`;
+    const winners = [];
+    const losers = [];
+    for (let i = 0; i < n / 2; i++) {
+      const k = `${key}-${i + 1}`;
+      games.push({ key: k, base, round, slotA: slots[i * 2], slotB: slots[i * 2 + 1] });
+      winners.push(W(k));
+      losers.push(L(k));
+    }
+    play(winners, start, round + 1, `${key}W`);
+    play(losers, start + n / 2, round + 1, `${key}L`);
+  };
+  play(order.map(slotOf), startPlace, startRound, `${prefix}X`);
+  return { games };
 }
 
 /**
@@ -174,7 +220,8 @@ function withLabels(games) {
    Generadores (los registra formats.js)
 ========================= */
 // teams en orden de siembra (el organizador los ordena; si no, alfabético)
-export function singleElimination(teams, { thirdPlace = false } = {}) {
+export function singleElimination(teams, { thirdPlace = false, placement = false } = {}) {
+  if (placement) return withLabels(collapseByes(placementBracket(teams).games));
   return withLabels(collapseByes(elimination(teams, { thirdPlace }).games));
 }
 
@@ -183,17 +230,30 @@ export function doubleElim(teams) {
 }
 
 /**
- * Grupos + playoffs: round robin por grupo y una llave con los mejores de cada grupo.
- * @param {object[]} rrGames partidos de grupos ya armados (round robin)
+ * Pools + bracket: round robin por pool y un bracket con los mejores de cada pool.
+ *  - placement: se juegan todos los puestos del bracket (los que pierden siguen jugando por los de abajo);
+ *  - rest: los que no pasan juegan su propio bracket por los últimos puestos (ej. 33-40).
+ * Con 8 pools y pasan 4 + placement queda como el mundial: cruces (ronda de 32) → 1-16 y 17-32.
+ * @param {object[]} rrGames partidos de pools ya armados (round robin)
  */
-export function poolsPlayoffs(teams, rrGames, { advance = 2, thirdPlace = false, divisionId = "" } = {}) {
-  const pools = [...new Set(teams.map((t) => String(t.pool || "").trim().toUpperCase() || "A"))].sort();
-  // siembra: 1º de cada grupo, después 2º de cada grupo… (A1, B1, A2, B2 → A1 vs B2, B1 vs A2)
-  const seeds = [];
-  for (let r = 1; r <= advance; r++) pools.forEach((pool) => seeds.push({ pool, rank: r, divisionId }));
-  const lastPoolRound = Math.max(0, ...rrGames.map((g) => g.round || 0));
-  const bracket = withLabels(collapseByes(elimination(seeds, { prefix: "P", thirdPlace, startRound: lastPoolRound + 1 }).games));
-  return { pools, bracket };
+export function poolsPlayoffs(teams, rrGames, { advance = 2, thirdPlace = false, placement = false, rest = false, divisionId = "" } = {}) {
+  const poolOf = (t) => String(t.pool || "").trim().toUpperCase() || "A";
+  const pools = [...new Set(teams.map(poolOf))].sort();
+  const sizeOf = (pool) => teams.filter((t) => poolOf(t) === pool).length;
+  // siembra: 1º de cada pool, después 2º de cada pool… (A1, B1, A2, B2 → A1 vs B2, B1 vs A2)
+  const seedsFor = (from, to) => {
+    const list = [];
+    for (let r = from; r <= to; r++) pools.forEach((pool) => r <= sizeOf(pool) && list.push({ pool, rank: r, divisionId }));
+    return list;
+  };
+  const seeds = seedsFor(1, advance);
+  const startRound = Math.max(0, ...rrGames.map((g) => g.round || 0)) + 1;
+  let games = placement
+    ? placementBracket(seeds, { prefix: "P", startRound }).games
+    : elimination(seeds, { prefix: "P", thirdPlace, startRound }).games;
+  const others = rest ? seedsFor(advance + 1, Math.max(...pools.map(sizeOf))) : [];
+  if (others.length >= 2) games = games.concat(placementBracket(others, { prefix: "Q", startPlace: seeds.length + 1, startRound }).games);
+  return { pools, bracket: withLabels(collapseByes(games)) };
 }
 
 /**

@@ -179,12 +179,73 @@ function overview() {
       ${tile(`${finals.length}/${games.length}`, EX.overviewGames)}
       ${tile(goals, EX.overviewGoals)}
     </div>
+    ${highlightsHtml()}
     ${registrationInfoCard()}
     ${venueCard()}
     ${list(EX.liveNow, live)}
     ${list(EX.upcoming, upcoming)}
     ${list(EX.results, finals.slice().reverse().slice(0, 6))}
     ${exportBar()}`;
+}
+
+/* ---------- Resumen: podio y mejores jugadores por división (femenino primero) ---------- */
+const GENDER_ORDER = { femenino: 0, mixto: 1 };
+function highlightsHtml() {
+  const divs = divisions().slice().sort((a, b) => (GENDER_ORDER[a.gender] ?? 2) - (GENDER_ORDER[b.gender] ?? 2));
+  const multi = divs.length > 1;
+  const blocks = divs.map((d) => {
+    const inDiv = (x) => (x.divisionId || divisions()[0].id) === d.id;
+    const teams = state.teams.filter(inDiv);
+    const games = state.games.filter(inDiv);
+    const finals = games.filter((g) => g.status === GAME_STATUS.FINAL);
+    if (!finals.length) return "";
+    // podio: puestos finales; si todavía no hay, los líderes de la tabla
+    const places = finalPlaces(teams, games);
+    const byId = new Map(teams.map((t) => [t.id, t]));
+    const done = places.size > 0;
+    const top = done
+      ? [...places].sort((a, b) => a[1] - b[1]).slice(0, 3).map(([id, p]) => ({ team: byId.get(id), place: p })).filter((x) => x.team)
+      : standings(teams, finals.filter((g) => !g.phase && !g.key)).filter((r) => r.played).slice(0, 3).map((r, i) => ({ team: r.team, place: i + 1, rec: `${r.w}-${r.l}` }));
+    const podium = top.length ? `
+      <div class="hl-card">
+        <div class="hl-card__title"><i class="bi bi-trophy-fill"></i>${esc(done ? EX.hlPodium : EX.hlLeaders)}</div>
+        ${top.map((x) => `
+          <div class="hl-row hl-row--${x.place}">
+            <span class="hl-pos">${x.place}</span>
+            ${teamBadge(x.team, 30)}
+            <span class="hl-name">${esc(x.team.name)}</span>
+            ${x.rec ? `<span class="hl-val">${esc(x.rec)}</span>` : ""}
+          </div>`).join("")}
+        <button class="btn btn-link btn-sm p-0 mt-1" data-tab="standings">${esc(EX.hlSeeStandings)} <i class="bi bi-chevron-right"></i></button>
+      </div>` : "";
+    // mejores jugadores (puntaje MVP); en mixto, mujeres y hombres por separado (mujeres primero)
+    const totals = playerTotals(finals, teams, state.rules).filter((p) => p.teamId);
+    const rank = (list) => list.slice().sort((a, b) => (b.mvp || 0) - (a.mvp || 0) || (b.goals || 0) - (a.goals || 0)).filter((p) => p.mvp > 0).slice(0, 3);
+    const mixed = d.gender === "mixto" || d.mixed;
+    const groups = mixed
+      ? [[EX.hlMvpWomen, rank(totals.filter((p) => p.gender === "F"))], [EX.hlMvpMen, rank(totals.filter((p) => p.gender === "M"))]]
+      : [[EX.hlMvp, rank(totals)]];
+    ensurePhotos([...new Set(groups.flatMap(([, l]) => l.map((p) => p.uid)).filter(Boolean))]);
+    const mvp = groups.filter(([, l]) => l.length).map(([title, list]) => `
+      <div class="hl-card">
+        <div class="hl-card__title"><i class="bi bi-star-fill"></i>${esc(title)}</div>
+        ${list.map((p, i) => `
+          <div class="hl-row hl-row--${i + 1}">
+            <span class="hl-pos">${i + 1}</span>
+            ${avatarHtml({ name: p.name, photoURL: photos.get(p.uid) || "" }, 30)}
+            <span class="hl-name">${esc(p.name)}<small>${esc(p.teamName || "")}</small></span>
+            <span class="hl-val" title="${esc(EX.stMvpLong)}">${p.mvp}</span>
+          </div>`).join("")}
+        <button class="btn btn-link btn-sm p-0 mt-1" data-tab="stats">${esc(EX.hlSeeStats)} <i class="bi bi-chevron-right"></i></button>
+      </div>`).join("");
+    if (!podium && !mvp) return "";
+    return `
+      <section class="hl-block">
+        ${multi ? `<h2 class="h6 mb-2">${esc(d.name)}</h2>` : ""}
+        <div class="hl-grid">${podium}${mvp}</div>
+      </section>`;
+  }).join("");
+  return blocks ? `<div class="mt-3">${blocks}</div>` : "";
 }
 
 // Descargar el torneo (partidos, posiciones, equipos, jugadores, espíritu)
@@ -326,7 +387,7 @@ function ensurePhotos(uids) {
   Promise.all(missing.map(async (u) => photos.set(u, (await loadProfile(u).catch(() => null))?.photoURL || "")))
     .finally(() => {
       photosLoading = false;
-      if (state.tab === "stats") render();
+      if (state.tab === "stats" || state.tab === "overview") render();
     });
 }
 

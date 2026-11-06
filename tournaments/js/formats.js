@@ -77,8 +77,8 @@ registerFormat({
   id: "single_elim",
   label: "Eliminación simple",
   available: true,
-  options: ["thirdPlace"],
-  generate: (teams, { thirdPlace = false } = {}) => singleElimination(bySeed(teams), { thirdPlace }).map(toGame),
+  options: ["thirdPlace", "placement"],
+  generate: (teams, { thirdPlace = false, placement = false } = {}) => singleElimination(bySeed(teams), { thirdPlace, placement }).map(toGame),
 });
 
 registerFormat({
@@ -90,13 +90,13 @@ registerFormat({
 
 registerFormat({
   id: "pools_playoffs",
-  label: "Fase de grupos + playoffs",
+  label: "Pools + bracket (playoffs)",
   available: true,
-  options: ["advance", "thirdPlace"],
-  generate(teams, { advance = 2, thirdPlace = false, divisionId = "" } = {}) {
+  options: ["advance", "thirdPlace", "placement", "rest"],
+  generate(teams, { advance = 2, thirdPlace = false, placement = false, rest = false, divisionId = "" } = {}) {
     const rr = FORMATS.get("round_robin").generate(teams);
-    // con un solo grupo los partidos no llevan "pool": la llave lo busca igual
-    const { bracket } = poolsPlayoffs(teams, rr, { advance, thirdPlace, divisionId });
+    // con un solo pool los partidos no llevan "pool": el bracket lo busca igual
+    const { bracket } = poolsPlayoffs(teams, rr, { advance, thirdPlace, placement, rest, divisionId });
     return [...rr, ...bracket.map(toGame)];
   },
 });
@@ -105,7 +105,7 @@ registerFormat({
 const poolOf = (t) => String(t.pool || "").trim().toUpperCase();
 registerFormat({
   id: "groups_byes",
-  label: "2 grupos + llave (1º de cada grupo directo a semis)",
+  label: "2 pools + bracket (1º de cada pool directo a semis)",
   available: true,
   minTeams: 6,
   maxTeams: 8,

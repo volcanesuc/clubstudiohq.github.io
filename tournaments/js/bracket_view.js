@@ -14,7 +14,7 @@ const PLACE_PHASES = [
   [/^Tercer lugar/i, 3],
   [/^Quinto lugar/i, 5],
   [/^S[ée]ptimo lugar/i, 7],
-  [/^Puestos? (\d+)/i, null],
+  [/^Puesto (\d+)-\d+$/i, null],
 ];
 function placeOfPhase(phase = "") {
   for (const [re, place] of PLACE_PHASES) {
@@ -44,9 +44,20 @@ export function finalPlaces(teams = [], games = []) {
   return out;
 }
 
-// Columna de cada partido de llave: [orden, título]
+// Nombre de la ronda sin el rango de puestos ni el número: "Puestos 5-8 · Semifinal 2" → "Semifinal"
+const roundBase = (phase = "") => String(phase).split(" · ").pop().replace(/\s*(\(\d+\)|\d+)$/, "").trim();
+const PLURAL = { Semifinal: EX.bkSemis, "Cuartos de final": EX.bkQuarters, "Octavos de final": EX.bkEighths };
+// Primer puesto que se juega en ese partido (para ordenar: bracket principal arriba, 5-8 después…)
+const startPlaceOf = (g) => {
+  const m = String(g.phase || "").match(/^Puestos (\d+)-/);
+  return m ? Number(m[1]) : placeOfPhase(g.phase) || 1;
+};
+
+// Columna de cada partido de bracket: [orden, título]
 function columnOf(g) {
   const p = String(g.phase || "");
+  // armados acá (con ronda): una columna por ronda, con el nombre de la ronda del bracket principal
+  if (g.key && Number(g.round)) return [Number(g.round), null];
   if (/^Octavos/i.test(p)) return [20, EX.bkEighths];
   if (/^Cuartos/i.test(p)) return [30, EX.bkQuarters];
   if (/^Semifinal/i.test(p)) return [40, EX.bkSemis];
@@ -56,10 +67,19 @@ function columnOf(g) {
   return [10 + Math.min(9, Number(g.round) || 0) / 10, base];
 }
 
-const orderInColumn = (g) => {
-  const place = placeOfPhase(g.phase);
-  return place ? place : 100;
-};
+const orderInColumn = (g) => startPlaceOf(g);
+
+// Título de una columna por ronda: la ronda del bracket principal; si solo hay partidos por puesto, "Finales"
+function roundTitle(games) {
+  const main = games.filter((g) => !/^Puestos /.test(g.phase || "") && !placeOfPhase(g.phase));
+  if (main.length) {
+    const base = roundBase(main[0].phase);
+    return PLURAL[base] || base;
+  }
+  if (games.some((g) => /^Final$/i.test(g.phase || ""))) return EX.bkFinals;
+  const any = games.find((g) => !placeOfPhase(g.phase));
+  return any ? PLURAL[roundBase(any.phase)] || roundBase(any.phase) : EX.bkFinals;
+}
 
 function gameBox(g, teams, href) {
   const game = withLiveTeams(g, teams);
@@ -126,6 +146,7 @@ export function bracketHtml({ teams, games, href, title = "" }) {
     if (!cols.has(k)) cols.set(k, { order, name, games: [] });
     cols.get(k).games.push(g);
   });
+  cols.forEach((c) => (c.name = c.name || roundTitle(c.games)));
   const roundCols = [...cols.values()].sort((a, b) => a.order - b.order).map((c) => `
     <div class="bk-col">
       <div class="bk-col__title">${esc(c.name)}</div>
