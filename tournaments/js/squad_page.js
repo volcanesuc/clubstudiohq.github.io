@@ -139,7 +139,7 @@ function header() {
   const playerLink = admin() && state.invites?.player ? joinUrl(state.invites.player) : "";
   return `
     <section class="tp-hero">
-      <div class="tp-hero__banner" style="background: radial-gradient(120% 140% at 100% 0%, rgba(34, 211, 238, .35) 0%, transparent 55%), linear-gradient(135deg, ${esc(color)}, #2e1065)"></div>
+      <div class="tp-hero__banner" style="background: radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, .22) 0%, transparent 55%), linear-gradient(135deg, ${esc(color)}, color-mix(in srgb, ${esc(color)} 45%, #0b0a12))"></div>
       <div class="tp-hero__body">
         <div class="tp-hero__logo">${teamBadge(s, 112)}</div>
         <h1 class="tp-hero__name">${esc(s.name)}</h1>

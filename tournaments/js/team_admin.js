@@ -76,7 +76,7 @@ async function renderList() {
       const n = counts.get(s.id);
       return `
       <a class="mt-card" href="${esc(squadUrl(s.id))}">
-        <div class="mt-card__banner" style="background: linear-gradient(135deg, ${esc(s.color || "#19473f")}, #2e1065)"></div>
+        <div class="mt-card__banner" style="background: linear-gradient(135deg, ${esc(s.color || "#19473f")}, color-mix(in srgb, ${esc(s.color || "#19473f")} 45%, #0b0a12))"></div>
         <div class="mt-card__body">
           <div class="mt-card__logo">${teamBadge(s, 72)}</div>
           <div class="min-w-0 flex-grow-1">

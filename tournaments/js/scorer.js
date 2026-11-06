@@ -323,6 +323,7 @@ function scoreHeader() {
       ${side("A")}
       <div class="ev-score__mid">
         <div class="ev-score__clock" id="skClock">${view.text}</div>
+        ${isLive() ? pointMeta() : ""}
         ${clock.pausedAt && !clock.break ? `<div class="ev-chip mt-1">${esc(EX.evPause)}</div>` : ""}
         ${caps.map((c) => `<div class="ev-chip mt-1 ${c === EX.skTimeUp || c === EX.skCapHard ? "ev-chip--alert" : ""}">${esc(c)}</div>`).join("")}
         ${isFinal() ? `<div class="ev-chip ev-chip--final mt-1">${esc(EX.gameFinal)}</div>` : ""}
@@ -352,22 +353,26 @@ function renderPreGame() {
     </div>`;
 }
 
-// Punto en juego: número, proporción (mixto) y quién tiene el disco
+// Punto en juego (dentro del marcador): número y proporción del mixto.
+// El disco se ve con el puntito y el borde de la columna del equipo que ataca.
+const pointLetter = () => (mixedRatio() ? pointRatio(state.rules, state.game, state.plays, state.calc.points.length) : "");
+function pointMeta() {
+  const letter = pointLetter();
+  return `
+    <div class="sk-score__point">${esc(exf(EX.skPointN, { n: state.calc.points.length + 1 }))}</div>
+    ${letter ? `<div class="sk-score__ratio">${esc(ratioText(letter))}</div>` : ""}`;
+}
+
+// La ofensiva elige la proporción de cada punto: botones para marcarla (solo en ese modo)
 function pointInfo() {
-  const n = state.calc.points.length;
-  const letter = mixedRatio() ? pointRatio(state.rules, state.game, state.plays, n) : "";
-  // la ofensiva elige: se marca la proporción de cada punto
-  const perPoint = mixedRatio() && ratioPerPoint(state.rules) && isLive();
+  if (!(mixedRatio() && ratioPerPoint(state.rules) && isLive())) return "";
+  const letter = pointLetter();
   return `
     <div class="sk-point-info">
-      <span class="ev-chip">${esc(exf(EX.skPointN, { n: n + 1 }))}</span>
-      ${perPoint ? `
-        <span class="sk-ratio-pick ${letter ? "" : "is-missing"}" title="${esc(EX.skPointRatio)}">
-          ${letter ? "" : `<span class="small fw-semibold">${esc(EX.skPointRatioPick)}</span>`}
-          ${["F", "M"].map((k) => `<button type="button" class="btn btn-sm ${letter === k ? "btn-success" : "btn-outline-secondary"}" data-point-ratio="${k}">${esc(ratioText(k))}</button>`).join("")}
-        </span>`
-      : letter ? `<span class="ev-chip ev-chip--ok">${esc(ratioText(letter))}</span>` : ""}
-      <span class="ev-chip">${possessionDot(10, true)} ${esc(exf(EX.skDiscWith, { team: teamName(state.calc.possession) }))}</span>
+      <span class="sk-ratio-pick ${letter ? "" : "is-missing"}" title="${esc(EX.skPointRatio)}">
+        ${letter ? "" : `<span class="small fw-semibold">${esc(EX.skPointRatioPick)}</span>`}
+        ${["F", "M"].map((k) => `<button type="button" class="btn btn-sm ${letter === k ? "btn-success" : "btn-outline-secondary"}" data-point-ratio="${k}">${esc(ratioText(k))}</button>`).join("")}
+      </span>
     </div>`;
 }
 
