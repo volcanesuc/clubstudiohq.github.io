@@ -8,7 +8,7 @@ import {
   signInWithPopup,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, LANG, LOCALE, exf, setLang, trData } from "/tournaments/js/strings.js";
 import { GAME_STATUS, PLAY, fmtClock } from "/tournaments/js/model.js";
 
 export function esc(v) {
@@ -88,6 +88,13 @@ function renderBottomNav({ active, isAdmin, google }) {
 // Cache de "es admin de la plataforma" por uid (para no consultar en cada página).
 const adminCache = new Map();
 
+// Título de la pestaña en inglés: los HTML lo traen en español ("Torneos · ClubStudioHQ")
+const TITLES_EN = { Aprobaciones: "Approvals", Equipo: "Team", Clubes: "Clubs", Torneo: "Tournament", "Partido en vivo": "Live game", Torneos: "Tournaments", "Unirme a un equipo": "Join a team", "Organizar torneos": "Organize tournaments", Perfil: "Profile", Planillaje: "Scoring", "Espíritu de juego": "Spirit of the game", "Mi equipo": "My team", Formulario: "Form" };
+if (LANG === "en") {
+  const [first, ...rest] = document.title.split(" · ");
+  if (TITLES_EN[first]) document.title = [TITLES_EN[first], ...rest].join(" · ");
+}
+
 export function renderNav({ active = "", isAdmin, user = null } = {}) {
   let nav = document.getElementById("tnNav");
   if (!nav) {
@@ -124,6 +131,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
         ${link("org", "/tournaments/organize.html", EX.navOrganize)}
         ${isAdmin ? link("admin", "/tournaments/admin.html", EX.navAdmin) : ""}
       </div>
+      <button class="btn btn-sm tn-nav__lang" id="tnLang" title="${esc(EX.langSwitchTitle)}" aria-label="${esc(EX.langSwitchTitle)}">${LANG === "en" ? "ES" : "EN"}</button>
       ${google
         ? `<div class="d-flex align-items-center gap-2">
             <a href="/tournaments/profile.html" title="${esc(EX.navProfile)}" class="${active === "profile" ? "is-active" : ""}">${user.photoURL ? `<img class="tn-nav__avatar" src="${esc(user.photoURL)}" alt="${esc(EX.navProfile)}" referrerpolicy="no-referrer" />` : `<i class="bi bi-person-circle text-white fs-5"></i>`}</a>
@@ -144,6 +152,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
     await signOutUser();
     location.reload();
   });
+  nav.querySelector("#tnLang")?.addEventListener("click", () => setLang(LANG === "en" ? "es" : "en"));
   nav.querySelector("#tnSignIn")?.addEventListener("click", async () => {
     try {
       await signInGoogle();
@@ -196,7 +205,6 @@ export function hideLoader() {
 /* =========================
    Fechas
 ========================= */
-const LOCALE = "es-CR";
 
 export function fmtWhen(value, opts = { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) {
   const ms = toMillis(value);
@@ -377,7 +385,7 @@ export function teamBadge(team = {}, size = 32) {
 }
 
 export function phaseLabel(g) {
-  if (g.phase) return g.phase;
+  if (g.phase) return trData(g.phase);
   const parts = [];
   if (g.pool) parts.push(exf(EX.phasePool, { pool: g.pool }));
   if (g.round) parts.push(exf(EX.phaseRound, { n: g.round }));

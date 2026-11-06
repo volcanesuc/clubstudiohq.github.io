@@ -1,7 +1,7 @@
 // /tournaments/js/export.js
 // Exportar el torneo a Excel (una hoja por sección) y a PDF (tablas): partidos, posiciones, equipos,
 // jugadores y espíritu. Las librerías se cargan solo cuando alguien toca "Descargar".
-import { EX } from "/tournaments/js/strings.js";
+import { EX, LOCALE } from "/tournaments/js/strings.js";
 import { GAME_STATUS, SPIRIT_KEYS, eventRules, playerTotals, spiritTable, standings } from "/tournaments/js/model.js";
 import { phaseLabel, playerLabel, toMillis } from "/tournaments/js/ui.js";
 import { finalPlaces } from "/tournaments/js/bracket_view.js";
@@ -26,8 +26,8 @@ function loadScript(src) {
   return loaded.get(src);
 }
 
-const fmtDate = (v) => (toMillis(v) ? new Date(toMillis(v)).toLocaleDateString("es", { weekday: "short", day: "numeric", month: "short" }) : "");
-const fmtTime = (v) => (toMillis(v) ? new Date(toMillis(v)).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" }) : "");
+const fmtDate = (v) => (toMillis(v) ? new Date(toMillis(v)).toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "short" }) : "");
+const fmtTime = (v) => (toMillis(v) ? new Date(toMillis(v)).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" }) : "");
 const statusText = (g) => (g.status === GAME_STATUS.FINAL ? EX.gameFinal : g.status === GAME_STATUS.LIVE ? EX.gameLive : EX.exScheduled);
 
 /**

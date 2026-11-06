@@ -1,5 +1,6 @@
 // /tournaments/js/countries.js
 // Países para los clubes: código ISO (se guarda en squads/{id}.country), nombre en español y bandera.
+import { LANG, LOCALE } from "/tournaments/js/strings.js";
 const CODES = [
   // América (primero, es donde más se usa)
   "CR", "PA", "NI", "HN", "SV", "GT", "BZ", "MX", "CU", "DO", "PR", "JM",
@@ -16,7 +17,7 @@ const CODES = [
 let names = null;
 function nameOf(code) {
   try {
-    names = names || new Intl.DisplayNames(["es"], { type: "region" });
+    names = names || new Intl.DisplayNames([LANG], { type: "region" });
     return names.of(code) || code;
   } catch {
     return code;
@@ -31,7 +32,7 @@ export const countryLabel = (code) => (code ? `${flagOf(code)} ${nameOf(code)}` 
 
 // <option>s ordenados por nombre; el seleccionado (o "" para "elegí")
 export function countryOptions(selected = "", placeholder = "") {
-  const list = CODES.map((c) => ({ c, n: nameOf(c) })).sort((a, b) => a.n.localeCompare(b.n, "es"));
+  const list = CODES.map((c) => ({ c, n: nameOf(c) })).sort((a, b) => a.n.localeCompare(b.n, LOCALE));
   if (selected && !CODES.includes(selected)) list.unshift({ c: selected, n: nameOf(selected) });
   return `<option value="">${placeholder}</option>` + list.map(({ c, n }) => `<option value="${c}" ${c === selected ? "selected" : ""}>${flagOf(c)} ${n}</option>`).join("");
 }

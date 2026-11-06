@@ -1,7 +1,7 @@
 // /tournaments/js/clubs.js
 // Clubes: todos los equipos de la plataforma, con filtro por rama (según los torneos que jugaron)
 // y búsqueda. Cada club abre su página (jugadores, torneos, resultados).
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, LOCALE, exf, trData } from "/tournaments/js/strings.js";
 import { loadDivisionOptions } from "/tournaments/js/services.js";
 import { listClubDirectory, squadUrl } from "/tournaments/js/squads.js";
 import { countryName, flagOf } from "/tournaments/js/countries.js";
@@ -34,7 +34,7 @@ function card(c) {
         <div class="fw-bold text-truncate">${esc(s.name || "—")}</div>
         ${s.city || s.country ? `<div class="small ev-muted text-truncate">${s.country ? `${flagOf(s.country)} ` : ""}${esc([s.city, countryName(s.country)].filter(Boolean).join(", "))}</div>` : ""}
         <div class="small ev-muted">${esc([c.players === 1 ? EX.clPlayer : exf(EX.clPlayers, { n: c.players }), c.tournaments === 1 ? EX.clTournament : exf(EX.clTournaments, { n: c.tournaments })].join(" · "))}</div>
-        ${names.length || c.levels.length ? `<div class="d-flex flex-wrap gap-1 mt-1">${[...c.levels, ...names].map((n) => `<span class="ev-chip">${esc(n)}</span>`).join("")}</div>` : ""}
+        ${names.length || c.levels.length ? `<div class="d-flex flex-wrap gap-1 mt-1">${[...c.levels.map(trData), ...names].map((n) => `<span class="ev-chip">${esc(n)}</span>`).join("")}</div>` : ""}
       </div>
       <i class="bi bi-chevron-right ev-muted"></i>
     </a>`;
@@ -51,8 +51,8 @@ function renderList() {
 function render() {
   // solo las ramas que algún club jugó (más "Todos")
   const used = state.genders.filter((g) => state.clubs.some((c) => c.genders.includes(g.id)));
-  const countries = [...new Set(state.clubs.map((c) => c.squad.country).filter(Boolean))].sort((a, b) => countryName(a).localeCompare(countryName(b), "es"));
-  const levels = [...new Set(state.clubs.flatMap((c) => c.levels))].sort((a, b) => a.localeCompare(b, "es"));
+  const countries = [...new Set(state.clubs.map((c) => c.squad.country).filter(Boolean))].sort((a, b) => countryName(a).localeCompare(countryName(b), LOCALE));
+  const levels = [...new Set(state.clubs.flatMap((c) => c.levels))].sort((a, b) => a.localeCompare(b, LOCALE));
   const count = (id) => (id === "all" ? state.clubs.length : state.clubs.filter((c) => c.genders.includes(id)).length);
   root.innerHTML = `
     <section class="ev-hero mb-3">
@@ -69,7 +69,7 @@ function render() {
       </select>` : ""}
       ${levels.length ? `<select class="form-select" id="clLevel" aria-label="${esc(EX.clAllLevels)}">
         <option value="">${esc(EX.clAllLevels)}</option>
-        ${levels.map((l) => `<option value="${esc(l)}" ${state.level === l ? "selected" : ""}>${esc(l)}</option>`).join("")}
+        ${levels.map((l) => `<option value="${esc(l)}" ${state.level === l ? "selected" : ""}>${esc(trData(l))}</option>`).join("")}
       </select>` : ""}
     </div>
     <div class="ui-search-wrap mb-3">
@@ -118,7 +118,7 @@ root.addEventListener("input", (ev) => {
     renderNav({ active: "clubs", user });
     const [clubs, opts] = await Promise.all([listClubDirectory(), loadDivisionOptions()]);
     state.clubs = clubs;
-    state.genders = opts.genders || [];
+    state.genders = (opts.genders || []).map((g) => ({ ...g, name: trData(g.name) }));
     if (state.filter !== "all" && !state.genders.some((g) => g.id === state.filter)) state.filter = "all";
     render();
   } catch (err) {

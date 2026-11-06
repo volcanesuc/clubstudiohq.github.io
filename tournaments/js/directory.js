@@ -2,7 +2,7 @@
 // Directorio público de torneos publicados en la plataforma.
 // Buscador por texto (nombre, sede, categoría, país) y filtro por país; los finalizados se muestran de a poco.
 import { countryName, flagOf } from "/tournaments/js/countries.js";
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, LOCALE, exf, withDivisionNames } from "/tournaments/js/strings.js";
 import { SURFACES, SURFACE_ICONS } from "/tournaments/js/model.js";
 import { isHatEvent } from "/tournaments/js/hat.js";
 import { normName } from "/tournaments/js/names.js";
@@ -26,7 +26,7 @@ const logoHtml = (e, cls) => e.logo
 function dateStamp(iso) {
   if (!iso) return "";
   const d = new Date(`${iso}T12:00:00Z`);
-  const month = new Intl.DateTimeFormat("es", { month: "short", timeZone: "UTC" }).format(d).replace(".", "");
+  const month = new Intl.DateTimeFormat(LOCALE, { month: "short", timeZone: "UTC" }).format(d).replace(".", "");
   return `<span class="dir-date"><b>${d.getUTCDate()}</b><small>${esc(month)}</small></span>`;
 }
 
@@ -106,7 +106,7 @@ function renderList() {
 function render() {
   // países que tienen torneos (para el filtro), ordenados por nombre
   const countries = [...new Set(state.events.map((e) => e.country).filter(Boolean))]
-    .sort((a, b) => countryName(a).localeCompare(countryName(b), "es"));
+    .sort((a, b) => countryName(a).localeCompare(countryName(b), LOCALE));
   root.innerHTML = `
     <section class="ev-hero mb-3 d-flex justify-content-between align-items-end flex-wrap gap-3">
       <div>
@@ -158,7 +158,7 @@ root.addEventListener("click", (ev) => {
   try {
     const user = await waitForUser();
     renderNav({ active: "dir", user, isAdmin: isGoogleUser(user) && (await isPlatformAdmin(user.uid)) });
-    state.events = await listPublicEvents();
+    state.events = (await listPublicEvents()).map(withDivisionNames);
     render();
   } catch (err) {
     console.error("[directory]", err);

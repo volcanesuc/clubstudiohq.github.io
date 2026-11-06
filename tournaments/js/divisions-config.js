@@ -18,7 +18,7 @@ export const GAME_MODES = [
   { id: "5v5", label: "5 vs 5", players: 5 },
   { id: "4v4", label: "4 vs 4", players: 4 },
   { id: "3v3", label: "3 vs 3", players: 3 },
-  { id: "other", label: "Otra", players: null },
+  { id: "other", label: "Otra", en: "Other", players: null },
 ];
 
 // Torneos hat: edades por categoría para precargar la elegibilidad de cada división.
@@ -34,6 +34,6 @@ export const HAT_AGE_DEFAULTS = {
 // Camisetas del hat: talla y corte
 export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 export const JERSEY_CUTS = [
-  { id: "hombre", label: "Hombre" },
-  { id: "mujer", label: "Mujer" },
+  { id: "hombre", label: "Hombre", en: "Men's" },
+  { id: "mujer", label: "Mujer", en: "Women's" },
 ];

@@ -3,7 +3,7 @@
 // Sirve para torneos armados acá (slots que se llenan solos) y para los importados (solo tienen la fase).
 
 import { GAME_STATUS, standings } from "/tournaments/js/model.js";
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, LOCALE, exf, trData } from "/tournaments/js/strings.js";
 import { esc, fmtTimeOnly, fmtWhen, teamBadge, toMillis, withLiveTeams } from "/tournaments/js/ui.js";
 
 const isBracketGame = (g) => !!(g.phase || g.key);
@@ -63,8 +63,8 @@ function columnOf(g) {
   if (/^Semifinal/i.test(p)) return [40, EX.bkSemis];
   if (placeOfPhase(p)) return [50, EX.bkFinals];
   // otras llaves (ej. "Ronda 1", "Ganadores · Ronda 2"): por ronda, antes de cuartos
-  const base = p.replace(/\s*(\(\d+\)|\d+)$/, "").trim() || EX.bkRound;
-  return [10 + Math.min(9, Number(g.round) || 0) / 10, base];
+  const base = p.replace(/\s+(\(\d+\)|\d+)$/, "").trim() || EX.bkRound;
+  return [10 + Math.min(9, Number(g.round) || 0) / 10, trData(base)];
 }
 
 const orderInColumn = (g) => startPlaceOf(g);
@@ -74,11 +74,11 @@ function roundTitle(games) {
   const main = games.filter((g) => !/^Puestos /.test(g.phase || "") && !placeOfPhase(g.phase));
   if (main.length) {
     const base = roundBase(main[0].phase);
-    return PLURAL[base] || base;
+    return PLURAL[base] || trData(base);
   }
   if (games.some((g) => /^Final$/i.test(g.phase || ""))) return EX.bkFinals;
   const any = games.find((g) => !placeOfPhase(g.phase));
-  return any ? PLURAL[roundBase(any.phase)] || roundBase(any.phase) : EX.bkFinals;
+  return any ? PLURAL[roundBase(any.phase)] || trData(roundBase(any.phase)) : EX.bkFinals;
 }
 
 function gameBox(g, teams, href) {
@@ -100,7 +100,7 @@ function gameBox(g, teams, href) {
   const when = live ? `<span class="bk-live">${esc(EX.gameLive)}</span>` : !final && toMillis(game.startAt) ? esc(fmtWhen(game.startAt, { weekday: "short" }) + " " + fmtTimeOnly(game.startAt)) : "";
   return `
     <a class="bk-game ${live ? "is-live" : ""}" href="${esc(href(game))}">
-      <div class="bk-game__head"><span class="text-truncate">${esc(game.phase || "")}</span><span>${when}</span></div>
+      <div class="bk-game__head"><span class="text-truncate">${esc(trData(game.phase || ""))}</span><span>${when}</span></div>
       ${row(game.teamA, a, b)}
       ${row(game.teamB, b, a)}
     </a>`;
@@ -207,7 +207,7 @@ export function bracketHtml({ teams, games, href, title = "", section = "" }) {
     <div class="bk-col">
       <div class="bk-col__title">${esc(c.name)}</div>
       <div class="bk-col__games">
-        ${c.games.slice().sort((a, b) => orderInColumn(a) - orderInColumn(b) || String(a.phase).localeCompare(String(b.phase), "es", { numeric: true }) || toMillis(a.startAt) - toMillis(b.startAt)).map((g) => gameBox(g, teams, href)).join("")}
+        ${c.games.slice().sort((a, b) => orderInColumn(a) - orderInColumn(b) || String(a.phase).localeCompare(String(b.phase), LOCALE, { numeric: true }) || toMillis(a.startAt) - toMillis(b.startAt)).map((g) => gameBox(g, teams, href)).join("")}
       </div>
     </div>`).join("");
 

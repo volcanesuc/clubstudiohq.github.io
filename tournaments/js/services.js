@@ -10,6 +10,7 @@
 //   game_keys/{token}                       link de planillero -> { eventId, gameId }
 //   game_claims/{gameId}_{uid}              sesión que reclamó un link
 //   platform_admins/{uid}                   quién aprueba torneos (se crea a mano en la consola)
+import { LOCALE, trData } from "/tournaments/js/strings.js";
 import { auth, db, COL } from "/tournaments/js/firebase.js";
 import { onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
@@ -56,7 +57,7 @@ export const CURRENCIES = ["CRC", "USD", "EUR", "MXN", "COP", "GTQ", "HNL", "NIO
 export const teamFee = (event) => Number(event?.fees?.team) || 0;
 export function fmtMoney(amount, currency = "USD") {
   try {
-    return new Intl.NumberFormat("es", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(amount) || 0);
+    return new Intl.NumberFormat(LOCALE, { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(amount) || 0);
   } catch {
     return `${currency} ${Number(amount) || 0}`;
   }
@@ -393,13 +394,19 @@ export async function rejectRegistration(eid, rid, note = "") {
 const teamRef = (t) => (t && t.id ? { id: t.id, name: t.name || "", color: t.color || "" } : { id: "", name: "" });
 
 // Los partidos de llave (eliminación, playoffs) se devuelven con sus equipos ya resueltos (ver brackets.js)
+// Llaves sin definir: "Ganador de Semifinal 1" se muestra en el idioma de la página
+const withNames = (games) =>
+  games.map((g) => (g.teamA?.placeholder || g.teamB?.placeholder
+    ? { ...g, ...(g.teamA?.placeholder ? { teamA: { ...g.teamA, name: trData(g.teamA.name) } } : {}), ...(g.teamB?.placeholder ? { teamB: { ...g.teamB, name: trData(g.teamB.name) } } : {}) }
+    : g));
+
 export async function listGames(eid) {
   const snap = await getDocs(gamesCol(eid));
-  return resolveGames(list(snap)).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt) || String(a.field || "").localeCompare(String(b.field || "")));
+  return withNames(resolveGames(list(snap))).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt) || String(a.field || "").localeCompare(String(b.field || "")));
 }
 
 export function subscribeGames(eid, cb) {
-  return onSnapshot(gamesCol(eid), (snap) => cb(resolveGames(list(snap)).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt))));
+  return onSnapshot(gamesCol(eid), (snap) => cb(withNames(resolveGames(list(snap))).sort((a, b) => toMillis(a.startAt) - toMillis(b.startAt))));
 }
 
 export function subscribeGame(eid, gid, cb) {

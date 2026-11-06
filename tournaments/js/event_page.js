@@ -2,7 +2,7 @@
 // Página pública de un evento (?e=slug): resumen, posiciones, estadísticas (MVP y líderes), equipos,
 // partidos y espíritu. Los partidos se actualizan en vivo.
 import { countryName, flagOf } from "/tournaments/js/countries.js";
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, LOCALE, exf, withDivisionNames } from "/tournaments/js/strings.js";
 import {
   GAME_STATUS,
   SPIRIT_KEYS,
@@ -596,7 +596,7 @@ const ROSTER_PREVIEW = 10;
 function rosterHtml(t, href) {
   const players = [...(t.players || [])];
   ensurePhotos([...new Set(players.map((p) => p.uid).filter(Boolean))]);
-  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es");
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), LOCALE);
   const groups = [["F", EX.rosterWomen], ["M", EX.rosterMen], ["", EX.rosterOthers]]
     .map(([g, label]) => [label, players.filter((p) => (g ? p.gender === g : p.gender !== "F" && p.gender !== "M")).sort(byName)])
     .filter(([, list]) => list.length);
@@ -1047,7 +1047,7 @@ $("tnRoot").addEventListener("input", (ev) => {
       $("tnAlert").textContent = EX.eventNotFound;
       return;
     }
-    state.event = event;
+    state.event = withDivisionNames(event);
     state.rules = eventRules(event);
     state.division = divisions().length > 1 ? divisions()[0].id : "";
     state.teams = await listTeams(event.id);

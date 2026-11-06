@@ -1,6 +1,6 @@
 // /tournaments/js/game_page.js
 // Partido en vivo (público): marcador, reloj, jugadas, estadísticas por jugador y resumen por equipo.
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, exf, withDivisionNames } from "/tournaments/js/strings.js";
 import {
   GAME_STATUS,
   clockView,
@@ -157,7 +157,7 @@ setInterval(() => {
       $("tnAlert").textContent = EX.eventNotFound;
         return;
     }
-    state.event = event;
+    state.event = withDivisionNames(event);
     state.rules = eventRules(event);
     state.teams = teams;
     state.playersById = new Map(teams.flatMap((t) => (t.players || []).map((p) => [p.id, p])));

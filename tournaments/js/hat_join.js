@@ -3,7 +3,7 @@
 // 1) perfil (F/M y fecha de nacimiento obligatorios), 2) división (solo las que le tocan),
 // 3) camiseta y compañero(a), 4) autoevaluación privada, 5) cuota. Después: formulario (waiver) si el torneo lo pide.
 // Con ?d= edita su ficha en esa división; sin parámetros y ya inscrito(a) muestra su resumen.
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, L, exf, withDivisionNames } from "/tournaments/js/strings.js";
 import { HAT_QUESTIONS } from "/tournaments/js/hat-config.js";
 import { HAT_STATUS, eligibility, hatGenders, hatPlayerId, isHatEvent, selfScore } from "/tournaments/js/hat.js";
 import { JERSEY_CUTS, JERSEY_SIZES } from "/tournaments/js/divisions-config.js";
@@ -273,7 +273,7 @@ function detailsStep() {
         <label class="form-label small" for="hatCut">${esc(EX.hatJerseyCut)}</label>
         <select class="form-select form-select-lg" id="hatCut" required>
           <option value="">—</option>
-          ${JERSEY_CUTS.map((c) => `<option value="${c.id}" ${f.jersey?.cut === c.id ? "selected" : ""}>${esc(c.label)}</option>`).join("")}
+          ${JERSEY_CUTS.map((c) => `<option value="${c.id}" ${f.jersey?.cut === c.id ? "selected" : ""}>${esc(L(c))}</option>`).join("")}
         </select>
       </div>
     </div>
@@ -302,12 +302,12 @@ function ratingStep() {
     <div class="d-grid gap-3 ${skip ? "d-none" : ""}" id="hatQuestions">
       ${HAT_QUESTIONS.map((q, i) => `
         <fieldset class="hat-q">
-          <legend class="hat-q__label">${i + 1}. ${esc(q.label)}</legend>
+          <legend class="hat-q__label">${i + 1}. ${esc(L(q))}</legend>
           <div class="d-grid gap-1">
             ${q.options.map((o) => `
               <label class="hat-choice hat-choice--sm">
                 <input class="form-check-input" type="radio" name="q_${esc(q.id)}" value="${esc(o.id)}" ${state.answers[q.id] === o.id ? "checked" : ""} />
-                <span>${esc(o.label)}</span>
+                <span>${esc(L(o))}</span>
               </label>`).join("")}
           </div>
         </fieldset>`).join("")}
@@ -454,7 +454,7 @@ function entryCard(m) {
         ${chip}
         ${fee ? paymentChip(m) : ""}
       </div>
-      <div class="small ev-muted">${esc([m.jersey?.size && m.jersey?.cut ? exf(EX.hatJerseyLine, { size: m.jersey.size, cut: JERSEY_CUTS.find((c) => c.id === m.jersey.cut)?.label || m.jersey.cut }) : "", m.teammateUid ? exf(EX.hatTeammateLine, { name: state.pool.find((p) => p.uid === m.teammateUid && p.divisionId === m.divisionId)?.name || "—" }) : ""].filter(Boolean).join(" · "))}</div>
+      <div class="small ev-muted">${esc([m.jersey?.size && m.jersey?.cut ? exf(EX.hatJerseyLine, { size: m.jersey.size, cut: L(JERSEY_CUTS.find((c) => c.id === m.jersey.cut)) || m.jersey.cut }) : "", m.teammateUid ? exf(EX.hatTeammateLine, { name: state.pool.find((p) => p.uid === m.teammateUid && p.divisionId === m.divisionId)?.name || "—" }) : ""].filter(Boolean).join(" · "))}</div>
       ${canPay ? `
         <div>
           <label class="form-label small mb-1" for="hatLateProof_${esc(m.id)}">${esc(exf(EX.hatPayLaterLabel, { fee: fmtMoney(fee, currency()) }))}</label>
@@ -570,7 +570,7 @@ function startWizard(entry = null) {
     renderNav({ active: "dir", user, isAdmin: await isPlatformAdmin(state.user?.uid) });
     const event = (await loadEvent(EK).catch(() => null)) || (await loadPublicEventBySlug(EK).catch(() => null));
     if (!event) return message("🔍", EX.eventNotFound);
-    state.event = event;
+    state.event = withDivisionNames(event);
     if (!isHatEvent(event)) return message("🧢", EX.hatNotHat, backToEvent());
     if (!state.user) return renderSignIn();
     const [profile, birthDate, mine, pool, teams] = await Promise.all([

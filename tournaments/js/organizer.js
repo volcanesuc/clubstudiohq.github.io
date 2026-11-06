@@ -2,7 +2,7 @@
 // Organizador (cualquier cuenta de Google): mis torneos, info y reglas, equipos, calendario (formatos),
 // activación (aprobación + plan) y links de planillero.
 import { countryOptions } from "/tournaments/js/countries.js";
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, L, exf, trData } from "/tournaments/js/strings.js";
 import {
   DEFAULT_RULES,
   EVENT_STATUS,
@@ -223,10 +223,10 @@ function divisionRow(d = {}) {
     <div class="tn-div-item" data-div-item>
     <div class="tn-div-row" data-div-row data-id="${esc(d.id || "")}">
       <select class="form-select" data-div="level" aria-label="${esc(EX.divLevel)}">
-        ${opts.levels.map((l) => `<option ${l === level ? "selected" : ""}>${esc(l)}</option>`).join("")}
+        ${opts.levels.map((l) => `<option value="${esc(l)}" ${l === level ? "selected" : ""}>${esc(trData(l))}</option>`).join("")}
       </select>
       <select class="form-select" data-div="gender" aria-label="${esc(EX.divGender)}">
-        ${opts.genders.map((g) => `<option value="${esc(g.id)}" ${g.id === gender ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
+        ${opts.genders.map((g) => `<option value="${esc(g.id)}" ${g.id === gender ? "selected" : ""}>${esc(trData(g.name))}</option>`).join("")}
       </select>
       <button type="button" class="btn btn-light text-danger" data-div-del title="${esc(EX.delete)}"><i class="bi bi-x-lg"></i></button>
     </div>
@@ -1132,7 +1132,7 @@ function wizardHtml() {
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <label class="form-label small" for="wzFormat">${esc(EX.format)}</label>
-          <select class="form-select" id="wzFormat">${listFormats().map((x) => `<option value="${esc(x.id)}" ${x.id === w.format ? "selected" : ""}>${esc(x.label)}</option>`).join("")}</select>
+          <select class="form-select" id="wzFormat">${listFormats().map((x) => `<option value="${esc(x.id)}" ${x.id === w.format ? "selected" : ""}>${esc(L(x))}</option>`).join("")}</select>
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label small">${esc(EX.wzDivisions)}</label>

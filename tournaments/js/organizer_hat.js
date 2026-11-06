@@ -2,7 +2,7 @@
 // Pestaña Hat del organizador: pool de jugadores por división (puntajes, pagos, camisetas, lista de espera),
 // cantidad de equipos sugerida y, después, armado de equipos (hat.js), cambios y publicación por división.
 // Los puntajes son privados: se leen de hat_ratings y nunca se escriben en los equipos.
-import { EX, exf } from "/tournaments/js/strings.js";
+import { EX, L, exf } from "/tournaments/js/strings.js";
 import { HAT_QUESTIONS } from "/tournaments/js/hat-config.js";
 import { HAT_STATUS, ageOn, ageRefOf, balanceGap, eligibility, generateTeams, jerseyTotals, mutualPairs, normalize, rawScore, suggestTeamCount, teamStats } from "/tournaments/js/hat.js";
 import { JERSEY_CUTS } from "/tournaments/js/divisions-config.js";
@@ -38,7 +38,7 @@ const divisions = () => C.divisions();
 const divById = (id) => divisions().find((d) => d.id === id) || null;
 const feeMode = () => ev().fees?.playerMode || "free";
 const feeFor = (div) => (feeMode() === "free" ? 0 : Number(div?.hat?.fee ?? ev().fees?.player) || 0);
-const cutLabel = (id) => JERSEY_CUTS.find((c) => c.id === id)?.label || id || "?";
+const cutLabel = (id) => L(JERSEY_CUTS.find((c) => c.id === id)) || id || "?";
 
 export async function renderHat(tab, ctx) {
   C = ctx;
@@ -187,7 +187,7 @@ function teamCountHtml(div, players) {
     </section>`;
 }
 
-const POS = Object.fromEntries((HAT_QUESTIONS.find((q) => q.id === "position")?.options || []).map((o) => [o.id, o.label]));
+const POS = Object.fromEntries((HAT_QUESTIONS.find((q) => q.id === "position")?.options || []).map((o) => [o.id, L(o)]));
 
 function poolHtml(div, rows) {
   const q = hs.q.trim().toLowerCase();
@@ -278,7 +278,7 @@ function detailHtml(p) {
     <div class="row g-3">
       <div class="col-12 col-lg-6">
         <div class="small fw-bold mb-1">${esc(EX.hatAnswers)}</div>
-        ${p.rated ? `<ul class="small mb-0 ps-3">${HAT_QUESTIONS.map((q) => `<li><span class="ev-muted">${esc(q.label)}</span> ${esc(q.options.find((o) => o.id === answers[q.id])?.label || "—")}</li>`).join("")}</ul>` : `<div class="small ev-muted">${esc(EX.hatNoAnswers)}</div>`}
+        ${p.rated ? `<ul class="small mb-0 ps-3">${HAT_QUESTIONS.map((q) => `<li><span class="ev-muted">${esc(L(q))}</span> ${esc(L(q.options.find((o) => o.id === answers[q.id])) || "—")}</li>`).join("")}</ul>` : `<div class="small ev-muted">${esc(EX.hatNoAnswers)}</div>`}
         <label class="form-label small fw-bold mt-2 mb-1" for="hatNotes">${esc(EX.hatNotes)}</label>
         <textarea class="form-control form-control-sm" id="hatNotes" data-hat-notes="${esc(p.uid)}" rows="2">${esc(p.rating.notes || "")}</textarea>
       </div>

@@ -1,7 +1,44 @@
 // /tournaments/js/strings.js
-// Textos de la plataforma de torneos (ClubStudioHQ).
+// Textos de la plataforma de torneos (ClubStudioHQ). Español (por defecto) e inglés.
+//
+// Idioma: lo que eligió la persona (botón ES/EN, guardado en el navegador) o ?lang=en en el link;
+// si no eligió, el del navegador (si no tiene español y sí inglés → inglés); si no, español.
+// Los textos en inglés están en strings_en.js con las mismas claves; si falta una, sale en español.
 
-export const EX = {
+const LANG_KEY = "tn_lang";
+function detectLang() {
+  if (typeof navigator === "undefined") return "es";
+  try {
+    const q = new URLSearchParams(location.search).get("lang");
+    if (q === "es" || q === "en") {
+      localStorage.setItem(LANG_KEY, q);
+      return q;
+    }
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved === "es" || saved === "en") return saved;
+  } catch {}
+  const langs = navigator.languages?.length ? navigator.languages : [navigator.language || "es"];
+  if (langs.some((l) => /^es\b/i.test(l))) return "es";
+  return langs.some((l) => /^en\b/i.test(l)) ? "en" : "es";
+}
+export const LANG = detectLang();
+// para fechas, números y orden alfabético
+export const LOCALE = LANG === "en" ? "en-US" : "es-CR";
+if (typeof document !== "undefined") document.documentElement.lang = LANG;
+
+// Cambia el idioma y recarga la página
+export function setLang(lang) {
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+  } catch {}
+  const url = new URL(location.href);
+  url.searchParams.delete("lang");
+  // con #pestaña en el link, location.replace no recarga: se limpia ?lang y se recarga
+  history.replaceState(history.state, "", url.toString());
+  location.reload();
+}
+
+const ES = {
   // general
   appTitle: "Eventos",
   loading: "Cargando…",
@@ -1274,8 +1311,64 @@ export const EX = {
   plUnlinkConfirm: "¿Desvincular {team} del equipo {squad}?",
   plLinkedOk: "Equipos vinculados.",
   pfNoHistory: "Todavía no hay torneos. Cuando tu equipo juegue uno, tus estadísticas aparecen acá.",
+  langSwitch: "English",
+  langSwitchTitle: "Cambiar a inglés",
 };
+
+const EN = LANG === "en" ? (await import("/tournaments/js/strings_en.js")).EN : null;
+export const EX = EN ? { ...ES, ...EN } : ES;
+
+// Textos de configuración con versión en inglés ({ label, en } o { name, en })
+export const L = (x) => (LANG === "en" && x?.en) || x?.label || x?.name || "";
+
+// Datos guardados en español (nombres de fases del bracket, ramas de división): en inglés se traducen al mostrarlos.
+// No cambia lo que está guardado; solo cómo se ve.
+const DATA_EN = [
+  [/^Gran final\b/i, "Grand final"],
+  [/^Final\b/i, "Final"],
+  [/^Semifinal\b/i, "Semifinal"],
+  [/^Cuartos de final\b/i, "Quarterfinal"],
+  [/^Octavos de final\b/i, "Round of 16"],
+  [/^Dieciseisavos de final\b/i, "Round of 32"],
+  [/^Ronda de (\d+)/i, "Round of $1"],
+  [/^Ronda (\d+)/i, "Round $1"],
+  [/^Puestos (\d+)-(\d*)/i, "Places $1-$2"],
+  [/^Puesto (\d+)-(\d+)/i, "$1-$2 place"],
+  [/^Tercer lugar/i, "Third place"],
+  [/^Quinto lugar/i, "Fifth place"],
+  [/^Séptimo lugar/i, "Seventh place"],
+  [/^Ganadores\b/i, "Winners"],
+  [/^Perdedores\b/i, "Losers"],
+  [/^Ganador de /i, "Winner of "],
+  [/^Perdedor de /i, "Loser of "],
+  [/^(\d+)º del Pool /i, "Pool $1 #"],
+  [/^Descansa$/i, "Bye"],
+];
+const WORDS_EN = { Mixto: "Mixed", Masculino: "Men", Femenino: "Women", Universitario: "University", Recreativo: "Recreational" };
+export function trData(text) {
+  if (LANG !== "en" || !text) return text ?? "";
+  return String(text)
+    .split(" · ")
+    .map((part) => {
+      let out = part;
+      for (const [re, to] of DATA_EN) {
+        if (re.test(out)) {
+          out = out.replace(re, to);
+          break;
+        }
+      }
+      // "Ganador de Semifinal 1" → "Winner of Semifinal 1": la fase de adentro también se traduce
+      out = out.replace(/^(Winner of |Loser of )(.+)$/, (m, a, b) => a + trData(b));
+      out = out.replace(/^Pool (\d+) #(\w+)$/, (m, rank, pool) => `Pool ${pool} #${rank}`);
+      return out.replace(/\b(Mixto|Masculino|Femenino|Universitario|Recreativo)\b/g, (w) => WORDS_EN[w]).replace(/\bSub-(\d+)/g, "U-$1");
+    })
+    .join(" · ");
+}
 
 export function exf(text, vars = {}) {
   return String(text ?? "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null ? String(vars[k]) : ""));
 }
+
+// Evento con los nombres de división traducidos, para páginas que solo muestran (no guardan el evento)
+export const withDivisionNames = (event) =>
+  LANG === "en" && event?.divisions ? { ...event, divisions: event.divisions.map((d) => ({ ...d, name: trData(d.name) })) } : event;

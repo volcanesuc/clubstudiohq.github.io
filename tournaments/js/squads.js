@@ -8,6 +8,7 @@
 //   squads/{sid}/notices/{id}             avisos para los admins (ej. un jugador se unió con el link)
 //   squad_invites/{token}                 { squadId, role } — quien tiene el link puede unirse
 //   profiles/{uid}                        perfil del jugador: foto, número, F/M, equipos (squadIds)
+import { LOCALE, trData } from "/tournaments/js/strings.js";
 import { db, COL } from "/tournaments/js/firebase.js";
 import {
   arrayUnion,
@@ -403,7 +404,7 @@ export async function squadResults(sid, pointers) {
       l: me.l,
       played: me.played,
       spiritFirst: base.finished && spirit[0]?.team.id === team.id && spirit[0].count > 0,
-      divisionName: (event.divisions || []).length > 1 ? event.divisions.find((d) => d.id === div)?.name || "" : "",
+      divisionName: (event.divisions || []).length > 1 ? trData(event.divisions.find((d) => d.id === div)?.name || "") : "",
     };
   }));
 }
@@ -540,5 +541,5 @@ export async function listClubDirectory() {
       if (div?.level) levels.add(div.level);
     });
     return { squad, players, tournaments, genders: [...genders], levels: [...levels] };
-  }).sort((a, b) => String(a.squad.name || "").localeCompare(String(b.squad.name || ""), "es"));
+  }).sort((a, b) => String(a.squad.name || "").localeCompare(String(b.squad.name || ""), LOCALE));
 }

@@ -48,6 +48,7 @@ export function roundRobinPairs(teams) {
 registerFormat({
   id: "round_robin",
   label: "Round robin (todos contra todos)",
+  en: "Round robin (everyone plays everyone)",
   available: true,
   // teams: [{ id, name, pool }]; un round robin por grupo
   generate(teams) {
@@ -76,6 +77,7 @@ const toGame = (g) => ({ key: g.key, phase: g.label, round: g.round, slotA: g.sl
 registerFormat({
   id: "single_elim",
   label: "Eliminación simple",
+  en: "Single elimination",
   available: true,
   options: ["thirdPlace", "placement"],
   generate: (teams, { thirdPlace = false, placement = false } = {}) => singleElimination(bySeed(teams), { thirdPlace, placement }).map(toGame),
@@ -84,6 +86,7 @@ registerFormat({
 registerFormat({
   id: "double_elim",
   label: "Eliminación doble",
+  en: "Double elimination",
   available: true,
   generate: (teams) => doubleElim(bySeed(teams)).map(toGame),
 });
@@ -91,6 +94,7 @@ registerFormat({
 registerFormat({
   id: "pools_playoffs",
   label: "Pools + bracket (playoffs)",
+  en: "Pools + bracket (playoffs)",
   available: true,
   options: ["advance", "thirdPlace", "placement", "rest"],
   generate(teams, { advance = 2, thirdPlace = false, placement = false, rest = false, divisionId = "" } = {}) {
@@ -106,6 +110,7 @@ const poolOf = (t) => String(t.pool || "").trim().toUpperCase();
 registerFormat({
   id: "groups_byes",
   label: "2 pools + bracket (1º de cada pool directo a semis)",
+  en: "2 pools + bracket (1st of each pool straight to semis)",
   available: true,
   minTeams: 6,
   maxTeams: 8,
@@ -124,6 +129,7 @@ registerFormat({
 registerFormat({
   id: "swiss",
   label: "Sistema suizo",
+  en: "Swiss system",
   available: true,
   incremental: true, // se genera ronda por ronda
   generate(teams, { played = [] } = {}) {
