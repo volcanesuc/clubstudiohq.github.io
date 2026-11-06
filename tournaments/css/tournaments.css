@@ -389,6 +389,10 @@ body.tn-busy::before {
 .ev-chip.dir-chip-hat { background: #fef3c7; color: #92400e; font-weight: 700; }
 
 /* Pie de página */
+/* páginas cortas: el pie queda abajo de la pantalla (el contenido crece y lo empuja) */
+body.tn-body.has-footer { display: flex; flex-direction: column; }
+body.tn-body.has-footer > main { flex: 1 0 auto; width: 100%; }
+body.tn-body.has-footer > .tn-footer { flex-shrink: 0; }
 .tn-footer { border-top: 1px solid var(--ev-border); margin-top: 2.5rem; padding: 1.25rem 0 1.5rem; font-size: .85rem; color: var(--ev-muted); }
 .tn-footer a { color: var(--ev-muted); text-decoration: none; }
 .tn-footer a:hover { color: var(--ev-main); }

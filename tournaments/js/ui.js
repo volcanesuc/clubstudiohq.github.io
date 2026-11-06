@@ -206,6 +206,7 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
 function renderFooter() {
   if (document.getElementById("tnFooter") || document.body.dataset.noFooter !== undefined) return;
   const year = new Date().getFullYear();
+  document.body.classList.add("has-footer");
   document.body.insertAdjacentHTML("beforeend", `
     <footer class="tn-footer" id="tnFooter">
       <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
