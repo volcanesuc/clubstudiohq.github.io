@@ -117,6 +117,8 @@
 .ev-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ev-muted); white-space: nowrap; }
 .ev-table td.num, .ev-table th.num { text-align: center; font-variant-numeric: tabular-nums; }
 .ev-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+/* Resumen: una sola fila; lo que no entra (Goles, el último) se oculta en vez de bajar a otra línea */
+.ev-stat-grid--row { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); grid-template-rows: auto; grid-auto-rows: 0; row-gap: 0; overflow: hidden; }
 .ev-stat { background: #fff; border: 1px solid var(--ev-border); border-radius: 14px; padding: 12px; text-align: center; }
 .ev-stat__value { font-size: 1.6rem; font-weight: 900; color: var(--ev-main); line-height: 1.1; }
 .ev-stat__label { font-size: .78rem; color: var(--ev-muted); font-weight: 600; }

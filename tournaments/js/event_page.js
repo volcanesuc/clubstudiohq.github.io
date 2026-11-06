@@ -176,7 +176,7 @@ function overview() {
   return `
     ${organizerStepsHtml()}
     ${state.event.description ? `<div class="ev-card mb-3" style="white-space:pre-line">${esc(state.event.description)}</div>` : ""}
-    <div class="ev-stat-grid">
+    <div class="ev-stat-grid ev-stat-grid--row">
       ${tile(state.teams.length, EX.overviewTeams, "teams")}
       ${tile(players, EX.overviewPlayers, "stats all")}
       ${tile(`${finals.length}/${games.length}`, EX.overviewGames, "games")}
