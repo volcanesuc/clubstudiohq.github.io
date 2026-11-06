@@ -228,6 +228,12 @@ export async function listApprovalRequests() {
   return list(snap).sort((a, b) => toMillis(a.approval?.requestedAt) - toMillis(b.approval?.requestedAt));
 }
 
+// Admin: torneos creados que todavía no pidieron aprobación (borradores) o que fueron rechazados
+export async function listDraftEvents() {
+  const snap = await getDocs(query(collection(db, COL.events), where("approval.status", "in", [APPROVAL.NONE, APPROVAL.REJECTED])));
+  return list(snap).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+}
+
 export async function listApprovedEvents() {
   const snap = await getDocs(query(collection(db, COL.events), where("approval.status", "==", APPROVAL.APPROVED)));
   return list(snap).sort(byStartDesc);

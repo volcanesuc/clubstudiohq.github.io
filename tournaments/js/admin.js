@@ -2,7 +2,7 @@
 // Admin de la plataforma: aprobar torneos (prueba gratis o pagado), rechazar y desactivar.
 // Un admin es quien tenga un doc en platform_admins/{uid} (se crea a mano en la consola de Firebase).
 import { EX, exf } from "/tournaments/js/strings.js";
-import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, listTeams, setApproval } from "/tournaments/js/services.js";
+import { APPROVAL, isPlatformAdmin, listApprovalRequests, listApprovedEvents, listDraftEvents, listTeams, setApproval } from "/tournaments/js/services.js";
 import {
   approveClaimRequest,
   assignPlayerAccount,
@@ -25,10 +25,11 @@ import { sameName } from "/tournaments/js/names.js";
 import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
-const TABS = ["pending", "active", "import", "players"];
+const TABS = ["pending", "drafts", "active", "import", "players"];
 const HASH_TAB = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "";
 const state = {
   pending: [],
+  drafts: [], // creados sin pedir aprobación (o rechazados): el admin los puede activar igual
   active: [],
   tab: HASH_TAB,
   search: "",
@@ -97,7 +98,9 @@ function pendingCard(e) {
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
             <a class="pa-card__name" href="${esc(eventUrl({ id }))}" target="_blank" rel="noopener">${esc(e.name || "—")} <i class="bi bi-box-arrow-up-right small"></i></a>
-            <span class="pa-pill pa-pill--wait"><i class="bi bi-hourglass-split"></i> ${esc(ago(e.approval?.requestedAt) || EX.adminPending)}</span>
+            ${e.approval?.status === APPROVAL.REQUESTED
+              ? `<span class="pa-pill pa-pill--wait"><i class="bi bi-hourglass-split"></i> ${esc(ago(e.approval?.requestedAt) || EX.adminPending)}</span>`
+              : `<span class="pa-pill"><i class="bi ${e.approval?.status === APPROVAL.REJECTED ? "bi-x-circle" : "bi-pencil"}"></i> ${esc(e.approval?.status === APPROVAL.REJECTED ? EX.adDraftRejected : EX.adDraftNotRequested)}${e.createdAt ? ` · ${esc(ago(e.createdAt))}` : ""}</span>`}
           </div>
           <div class="small ev-muted">${esc([fmtDateRange(e.startDate, e.endDate), e.venue].filter(Boolean).join(" · "))}</div>
           ${(e.divisions || []).length ? `<div class="d-flex flex-wrap gap-1 mt-1">${e.divisions.map((d) => `<span class="ev-chip">${esc(d.name)}</span>`).join("")}</div>` : ""}
@@ -488,12 +491,16 @@ function render() {
 
     <nav class="tp-tabs my-3" role="tablist">
       <button class="tp-tab ${state.tab === "pending" ? "is-active" : ""}" data-pa-tab="pending"><i class="bi bi-inbox"></i> ${esc(EX.adminPending)} <span class="pa-count">${pending.length}</span></button>
+      <button class="tp-tab ${state.tab === "drafts" ? "is-active" : ""}" data-pa-tab="drafts"><i class="bi bi-pencil-square"></i> ${esc(EX.adTabDrafts)} <span class="pa-count">${state.drafts.length}</span></button>
       <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-check2-circle"></i> ${esc(EX.adminActive)} <span class="pa-count">${active.length}</span></button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
       <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
     </nav>
 
-    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "pending"
+    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "drafts"
+      ? `<div class="small ev-muted mb-2">${esc(EX.adDraftsHint)}</div>${state.drafts.length ? `<div class="d-grid gap-3">${state.drafts.map(pendingCard).join("")}</div>`
+        : `<div class="pa-empty small ev-muted">${esc(EX.adNoDrafts)}</div>`}`
+      : state.tab === "pending"
       ? (pending.length ? `<div class="d-grid gap-3">${pending.map(pendingCard).join("")}</div>`
         : `<div class="pa-empty"><div class="display-6">🎉</div><div class="fw-bold mt-2">${esc(EX.adminNoPending)}</div><div class="small ev-muted">${esc(EX.adAllCaughtUp)}</div></div>`)
       : `
@@ -505,8 +512,9 @@ function render() {
 }
 
 async function reload() {
-  const [pending, active, claimReqs] = await Promise.all([listApprovalRequests(), listApprovedEvents(), listClaimRequests().catch(() => [])]);
+  const [pending, active, claimReqs, drafts] = await Promise.all([listApprovalRequests(), listApprovedEvents(), listClaimRequests().catch(() => []), listDraftEvents().catch(() => [])]);
   state.pending = pending;
+  state.drafts = drafts;
   state.active = active;
   state.claimReqs = claimReqs;
   render();
