@@ -906,3 +906,28 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .tn-ic-gym { --ic: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M1 14.5V7.4C1 4.5 4.1 2.2 8 2.2s7 2.3 7 5.2v7.1zM2.8 7.6h2v1.6h-2zM5.9 7.6h1.6v1.6H5.9zM8.5 7.6h1.6v1.6H8.5zM11.2 7.6h2v1.6h-2zM5.6 14.5v-3.9h4.8v3.9zM7.6 10.6h.8v3.9h-.8z'/></svg>"); }
 /* zona para borrar el torneo: al final, lejos de Guardar */
 .tn-danger { border-color: #f5c2c7 !important; }
+
+/* ---------- Llave (vista en columnas: grupos → rondas → posiciones) ---------- */
+.bk-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 8px; -webkit-overflow-scrolling: touch; }
+.bk-board { display: flex; gap: .9rem; align-items: flex-start; min-width: min-content; }
+.bk-col { flex: 0 0 230px; background: #f1eef9; border-radius: 16px; padding: .65rem; }
+.bk-col__title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #5b5675; text-align: center; margin-bottom: .55rem; }
+.bk-col__games { display: flex; flex-direction: column; gap: .55rem; }
+.bk-group { background: #fff; border-radius: 12px; padding: .45rem; display: flex; flex-direction: column; gap: .3rem; }
+.bk-group + .bk-group { margin-top: .55rem; }
+.bk-group__title { font-weight: 800; font-size: .8rem; color: #1f1446; padding: .1rem .25rem .2rem; }
+.bk-game { display: flex; flex-direction: column; gap: .3rem; background: #fff; border-radius: 12px; padding: .45rem; color: inherit; text-decoration: none; border: 1px solid transparent; transition: border-color .15s, box-shadow .15s; }
+.bk-game:hover { border-color: #c4b5fd; box-shadow: 0 4px 14px rgba(76, 29, 149, .1); color: inherit; }
+.bk-game.is-live { border-color: #fca5a5; }
+.bk-game__head { display: flex; justify-content: space-between; gap: .4rem; font-size: .7rem; font-weight: 700; color: #6b6785; padding: 0 .2rem; white-space: nowrap; }
+.bk-live { color: #b91c1c; }
+.bk-row { display: flex; align-items: center; gap: .45rem; padding: .32rem .45rem; border-radius: 8px; background: #f8f7fc; font-size: .82rem; min-width: 0; }
+.bk-row__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.bk-row__score, .bk-row__rec { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.bk-row__rec { font-size: .75rem; color: #6b6785; }
+.bk-row.is-winner { background: #1f1446; color: #fff; }
+.bk-row.is-winner .bk-row__rec, .bk-row.is-winner .bk-rank { color: #c4b5fd; }
+.bk-row.is-loser { color: #8a86a0; }
+.bk-row.is-tbd .bk-row__name { font-style: italic; font-weight: 500; color: #8a86a0; }
+.bk-rank { width: 1.1rem; text-align: center; font-weight: 800; font-size: .75rem; color: #8a86a0; flex-shrink: 0; }
+.bk-trophy { color: #fbbf24; flex-shrink: 0; }

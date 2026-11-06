@@ -4,7 +4,7 @@
 //   registerFormat({ id, label, available: true, generate(teams, options) -> [{ phase, round, teamA, teamB }] })
 // El organizador elige el formato al generar el calendario; los horarios y canchas los asigna assignSlots().
 
-import { doubleElim, nextSwissRound, poolsPlayoffs, singleElimination } from "/tournaments/js/brackets.js";
+import { doubleElim, groupsWithByes, nextSwissRound, poolsPlayoffs, singleElimination, splitTwoPools } from "/tournaments/js/brackets.js";
 
 const FORMATS = new Map();
 
@@ -98,6 +98,26 @@ registerFormat({
     // con un solo grupo los partidos no llevan "pool": la llave lo busca igual
     const { bracket } = poolsPlayoffs(teams, rr, { advance, thirdPlace, divisionId });
     return [...rr, ...bracket.map(toGame)];
+  },
+});
+
+// 2 grupos + llave: el 1º de cada grupo directo a semis, 2º y 3º cruzan en cuartos (ideal para 6 equipos)
+const poolOf = (t) => String(t.pool || "").trim().toUpperCase();
+registerFormat({
+  id: "groups_byes",
+  label: "2 grupos + llave (1º de cada grupo directo a semis)",
+  available: true,
+  minTeams: 6,
+  maxTeams: 8,
+  // si los equipos no tienen exactamente 2 grupos, se reparten por siembra (el organizador guarda el grupo)
+  pools(teams) {
+    const pools = new Set(teams.map(poolOf).filter(Boolean));
+    if (pools.size === 2 && teams.every((t) => poolOf(t))) return null;
+    return splitTwoPools(bySeed(teams));
+  },
+  generate(teams, { divisionId = "" } = {}) {
+    const rr = FORMATS.get("round_robin").generate(teams);
+    return [...rr, ...groupsWithByes(teams, rr, { divisionId }).map(toGame)];
   },
 });
 

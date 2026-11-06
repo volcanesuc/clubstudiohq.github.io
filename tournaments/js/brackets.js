@@ -16,6 +16,8 @@ const LABELS = {
   eighth: "Octavos de final",
   round: (n) => `Ronda ${n}`,
   third: "Tercer lugar",
+  fifth: "Quinto lugar",
+  seventh: "Séptimo lugar",
   winners: "Ganadores",
   losers: "Perdedores",
   grandFinal: "Gran final",
@@ -192,6 +194,38 @@ export function poolsPlayoffs(teams, rrGames, { advance = 2, thirdPlace = false,
   const lastPoolRound = Math.max(0, ...rrGames.map((g) => g.round || 0));
   const bracket = withLabels(collapseByes(elimination(seeds, { prefix: "P", thirdPlace, startRound: lastPoolRound + 1 }).games));
   return { pools, bracket };
+}
+
+/**
+ * Dos grupos + llave con descanso (ej. 6 equipos en 2 grupos de 3):
+ *  - el 1º de cada grupo pasa directo a semis;
+ *  - cuartos cruzados: 2º A vs 3º B y 2º B vs 3º A;
+ *  - semis: 1º A vs ganador de (2º B vs 3º A), 1º B vs ganador de (2º A vs 3º B) → sin revancha del grupo;
+ *  - perdedores de cuartos por el 5º, de semis por el 3º; con grupos de 4, los 4º juegan por el 7º.
+ * @param {object[]} rrGames partidos de grupos ya armados (round robin, con pool "A" / "B")
+ */
+export function groupsWithByes(teams, rrGames, { divisionId = "" } = {}) {
+  const pools = [...new Set(teams.map((t) => String(t.pool || "").trim().toUpperCase()))].filter(Boolean).sort();
+  const [A, B] = pools;
+  const seed = (pool, rank) => ({ pool, rank, divisionId });
+  const r0 = Math.max(0, ...rrGames.map((g) => g.round || 0));
+  const size = (pool) => teams.filter((t) => String(t.pool || "").trim().toUpperCase() === pool).length;
+  const games = [
+    { key: "GQ1", base: LABELS.quarter, round: r0 + 1, slotA: seed(A, 2), slotB: seed(B, 3) },
+    { key: "GQ2", base: LABELS.quarter, round: r0 + 1, slotA: seed(B, 2), slotB: seed(A, 3) },
+    { key: "GS1", base: LABELS.semi, round: r0 + 2, slotA: seed(A, 1), slotB: W("GQ2") },
+    { key: "GS2", base: LABELS.semi, round: r0 + 2, slotA: seed(B, 1), slotB: W("GQ1") },
+    { key: "G5", base: LABELS.fifth, round: r0 + 2, slotA: L("GQ1"), slotB: L("GQ2") },
+    { key: "GF", base: LABELS.final, round: r0 + 3, slotA: W("GS1"), slotB: W("GS2") },
+    { key: "G3", base: LABELS.third, round: r0 + 3, slotA: L("GS1"), slotB: L("GS2") },
+  ];
+  if (size(A) >= 4 && size(B) >= 4) games.push({ key: "G7", base: LABELS.seventh, round: r0 + 1, slotA: seed(A, 4), slotB: seed(B, 4) });
+  return withLabels(games);
+}
+
+// Reparte en 2 grupos por siembra, en zigzag (1, 4, 5 → A; 2, 3, 6 → B) para que queden parejos
+export function splitTwoPools(teams) {
+  return teams.map((t, i) => ({ ...t, pool: [0, 3].includes(i % 4) ? "A" : "B" }));
 }
 
 /**

@@ -1176,7 +1176,7 @@ function wizardHtml() {
           <select class="form-select" id="wzRest">${[0, 1, 2].map((n) => `<option value="${n}" ${Number(w.rules.restSlots) === n ? "selected" : ""}>${esc(n ? exf(EX.wzRestN, { n }) : EX.wzRestNone)}</option>`).join("")}</select></div>
         <div class="col-12 col-md-6 d-flex flex-column gap-1 justify-content-end">
           <label class="wz-check"><input type="checkbox" id="wzSpread" ${w.rules.spread ? "checked" : ""} /> ${esc(EX.wzSpread)}</label>
-          ${f.id === "pools_playoffs" || f.id === "single_elim" || f.id === "double_elim" ? `<label class="wz-check"><input type="checkbox" id="wzPlayoffsLast" ${w.rules.playoffsLastDay ? "checked" : ""} /> ${esc(EX.wzPlayoffsLast)}</label>` : ""}
+          ${["pools_playoffs", "groups_byes", "single_elim", "double_elim"].includes(f.id) ? `<label class="wz-check"><input type="checkbox" id="wzPlayoffsLast" ${w.rules.playoffsLastDay ? "checked" : ""} /> ${esc(EX.wzPlayoffsLast)}</label>` : ""}
         </div>
         ${multiDiv ? `
         <div class="col-12">
@@ -1277,10 +1277,21 @@ function planWizard() {
   const byDivision = {};
   const replaced = []; // partidos sin jugar que se reemplazan
   const notes = [];
+  const poolUpdates = []; // grupos que arma el formato (se guardan en los equipos al confirmar)
   w.divisions.forEach((div) => {
-    const teams = state.teams.filter((t) => (t.divisionId || divisions()[0].id) === div);
+    let teams = state.teams.filter((t) => (t.divisionId || divisions()[0].id) === div);
     const divName = divisions().find((d) => d.id === div)?.name || "";
     if (teams.length < 2) return notes.push(exf(EX.wzFewTeams, { div: divName }));
+    if ((format.minTeams && teams.length < format.minTeams) || (format.maxTeams && teams.length > format.maxTeams)) {
+      return notes.push(exf(EX.wzTeamRange, { div: divName, min: format.minTeams, max: format.maxTeams, n: teams.length }));
+    }
+    const pooled = format.pools?.(teams);
+    if (pooled) {
+      teams = pooled;
+      poolUpdates.push(...pooled.map((t) => ({ id: t.id, pool: t.pool })));
+      const names = (p) => pooled.filter((t) => t.pool === p).map((t) => t.name).join(", ");
+      notes.push(exf(EX.wzPoolsAssigned, { div: divName, a: names("A"), b: names("B") }));
+    }
     const existing = state.games.filter((g) => gameDivision(g) === div);
     if (format.incremental) {
       const played = existing.filter((g) => !g.key && !g.phase);
@@ -1297,7 +1308,7 @@ function planWizard() {
   const replacedIds = new Set(replaced.map((g) => g.id));
   if (w.kind === "manual") {
     const games = Object.entries(byDivision).flatMap(([div, list]) => list.map((g) => ({ ...g, divisionId: div, field: "", startAt: null })));
-    return { games: [], unscheduled: games.map((game) => ({ game, reason: "manual" })), replaced, notes, days: [] };
+    return { games: [], unscheduled: games.map((game) => ({ game, reason: "manual" })), replaced, notes, days: [], poolUpdates };
   }
   const days = playDays(wizardCfg());
   const plan = buildSchedule({
@@ -1309,7 +1320,7 @@ function planWizard() {
     slotMinutes: slotMinutes(eventRules(state.event)),
     rules: w.rules,
   });
-  return { ...plan, replaced, notes, days };
+  return { ...plan, replaced, notes, days, poolUpdates };
 }
 
 function previewWizard() {
@@ -1364,6 +1375,8 @@ function confirmWizard() {
   run(async () => {
     const removed = plan.replaced.length ? await deleteUnplayedGames(state.event.id, plan.replaced, state.keys) : 0;
     const toCreate = [...plan.games.map(({ id: _tmp, status: _s, ...g }) => g), ...plan.unscheduled.map((x) => x.game)];
+    // grupos armados por el formato: quedan en cada equipo (la tabla de posiciones agrupa por ahí)
+    await Promise.all((plan.poolUpdates || []).map((u) => saveTeam(state.event.id, u)));
     await createGames(state.event.id, toCreate);
     // se guardan las respuestas: al regenerar no hay que contestar todo otra vez
     const { eventId: _e, ...cfg } = w;

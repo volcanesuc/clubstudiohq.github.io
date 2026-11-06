@@ -17,6 +17,7 @@ import {
 } from "/tournaments/js/model.js";
 import { deadlineEnd, REG, isApproved, leaveHat, listMyHatEntries, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
 import { isHatEvent } from "/tournaments/js/hat.js";
+import { bracketHtml, finalPlaces, hasBracket } from "/tournaments/js/bracket_view.js";
 import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
 import { avatarHtml, esc, fmtDateRange, fmtDayOnly, fmtTimeOnly, fmtWhen, gameRowHtml, gameUrl, hideLoader, isGoogleUser, phaseLabel, playerLabel, regChip, renderNav, revealActiveTab, showLoader, teamBadge, toMillis, waitForUser, withLiveTeams, atMinutes, downloadIcs, scheduleDays, scheduleGridHtml } from "/tournaments/js/ui.js";
 
@@ -285,7 +286,9 @@ function standingsTab() {
       </section>`;
   };
   // puesto final después de la llave (ej. torneos importados): se muestra arriba de la tabla de grupos
-  const placed = teams.filter((t) => Number(t.finalPlace) > 0).sort((a, b) => a.finalPlace - b.finalPlace);
+  // puesto guardado (importados) o el que sale de los partidos por puesto (final, 3º, 5º…)
+  const placeOf = finalPlaces(teams, state.games.filter(inDivision(state.division)));
+  const placed = teams.filter((t) => placeOf.has(t.id)).map((t) => ({ ...t, finalPlace: placeOf.get(t.id) })).sort((a, b) => a.finalPlace - b.finalPlace);
   // récord de todo el torneo (grupos + llave) junto al puesto final
   const allGames = state.games.filter(inDivision(state.division)).filter((g) => g.status === GAME_STATUS.FINAL);
   const overall = new Map(standings(teams, allGames).map((r) => [r.team.id, r]));
@@ -690,15 +693,29 @@ function spiritTab() {
 const TABS = [
   ["overview", () => EX.tabOverview, overview],
   ["standings", () => EX.tabStandings, standingsTab],
+  ["bracket", () => EX.tabBracket, bracketTab],
   ["stats", () => EX.tabStats, statsTab],
   ["games", () => EX.tabGamesPublic, gamesTab],
   ["teams", () => EX.tabTeamsPublic, teamsTab],
   ["spirit", () => EX.tabSpirit, spiritTab],
 ];
 
+// "Llave" solo si el torneo tiene partidos de llave
+const visibleTabs = () => TABS.filter(([id]) => id !== "bracket" || hasBracket(state.games));
+
+function bracketTab() {
+  const teams = state.teams.filter(inDivision(state.division));
+  const games = state.games.filter(inDivision(state.division));
+  const divName = divisions().find((d) => d.id === state.division)?.name || divisions()[0]?.name || "";
+  return `
+    <div class="sb-toolbar">${divisionPicker()}</div>
+    ${bracketHtml({ teams, games, title: divName, href: (g) => gameUrl(state.event.id, g.id) })}`;
+}
+
 function render() {
   const e = state.event;
-  const tab = TABS.find((t) => t[0] === state.tab) || TABS[0];
+  const tabs = visibleTabs();
+  const tab = tabs.find((t) => t[0] === state.tab) || tabs[0];
   document.title = e.name || EX.appTitle;
   $("tnRoot").innerHTML = `
     <section class="ev-hero mb-3 ${e.image ? "ev-hero--image" : ""}" ${e.image ? `style="background: linear-gradient(to top, rgba(20, 8, 45, .92) 0%, rgba(20, 8, 45, .35) 55%, rgba(20, 8, 45, .1) 100%), url('${esc(e.image)}')"` : ""}>
@@ -717,7 +734,7 @@ function render() {
       ${waiverBanner()}
     </section>
     <ul class="nav nav-pills mb-3 ev-tabs">
-      ${TABS.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
+      ${tabs.map(([id, label]) => `<li class="nav-item"><button class="nav-link ${tab[0] === id ? "active" : ""}" data-tab="${id}">${esc(label())}</button></li>`).join("")}
     </ul>
     <div id="evpTab">${tab[2]()}</div>`;
   revealActiveTab(document.querySelector(".ev-tabs"));
