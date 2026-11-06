@@ -20,12 +20,14 @@ import {
   unlinkTeamFromSquad,
   validateImport,
 } from "/tournaments/js/imports.js";
-import { profileUrl } from "/tournaments/js/squads.js";
+import { listClubDirectory, profileUrl, squadUrl } from "/tournaments/js/squads.js";
+import { countryName, flagOf } from "/tournaments/js/countries.js";
+import { normName } from "/tournaments/js/names.js";
 import { sameName } from "/tournaments/js/names.js";
-import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
+import { avatarHtml, esc, eventUrl, fmtDateRange, fmtWhen, hideLoader, isGoogleUser, playerLabel, renderNav, setAdminMode, showLoader, teamBadge, toMillis, waitForUser } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
-const TABS = ["pending", "drafts", "active", "import", "players"];
+const TABS = ["pending", "drafts", "active", "clubs", "import", "players"];
 const HASH_TAB = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "";
 const state = {
   pending: [],
@@ -33,6 +35,8 @@ const state = {
   active: [],
   tab: HASH_TAB,
   search: "",
+  clubs: null, // pestaña Clubes (se carga al abrirla)
+  clubQ: "",
   // importar
   bundled: null,
   imp: null, // { data, preview, exists, label }
@@ -89,6 +93,35 @@ function ownerLine(e) {
 /* =========================
    Solicitudes pendientes
 ========================= */
+// panel del organizador de cualquier torneo (como admin)
+const editEventUrl = (id) => `/tournaments/organize.html?${new URLSearchParams({ id })}`;
+
+// Pestaña Clubes: todos los clubes, para entrar a editarlos como admin
+function clubsTab() {
+  if (state.clubs === null) return `<div class="pa-empty small ev-muted">${esc(EX.loading)}</div>`;
+  const words = normName(state.clubQ).split(/\s+/).filter(Boolean);
+  const hay = (c) => normName([c.squad.name, c.squad.city, c.squad.country, countryName(c.squad.country)].filter(Boolean).join(" "));
+  const shown = state.clubs.filter((c) => words.every((w) => hay(c).includes(w)));
+  return `
+    <div class="small ev-muted mb-2">${esc(EX.adClubsHint)}</div>
+    <div class="pa-search">
+      <i class="bi bi-search"></i>
+      <input class="form-control" id="paClubQ" placeholder="${esc(EX.adClubSearch)}" value="${esc(state.clubQ)}" />
+    </div>
+    ${shown.length ? `<div class="pa-list">${shown.map(({ squad: q, players, tournaments }) => `
+      <div class="pa-row">
+        ${teamBadge(q, 44)}
+        <div class="flex-grow-1 min-w-0">
+          <a class="fw-bold text-decoration-none" href="${esc(squadUrl(q.id))}">${esc(q.name || "—")}</a>
+          <div class="small ev-muted text-truncate">${esc([q.country ? `${flagOf(q.country)} ${[q.city, countryName(q.country)].filter(Boolean).join(", ")}` : q.city, players === 1 ? EX.clPlayer : exf(EX.clPlayers, { n: players }), tournaments === 1 ? EX.clTournament : exf(EX.clTournaments, { n: tournaments })].filter(Boolean).join(" · "))}</div>
+        </div>
+        <div class="d-flex gap-1 flex-shrink-0">
+          <a class="btn btn-sm btn-light" href="${esc(squadUrl(q.id))}" title="${esc(EX.openPublic)}"><i class="bi bi-eye"></i></a>
+          <a class="btn btn-sm btn-admin" href="${esc(`${squadUrl(q.id)}&tab=admin`)}" title="${esc(EX.adEditClub)}"><i class="bi bi-pencil"></i><span class="d-none d-sm-inline ms-1">${esc(EX.edit)}</span></a>
+        </div>
+      </div>`).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(EX.adNoClubs)}</div>`}`;
+}
+
 function pendingCard(e) {
   const id = e.id;
   return `
@@ -98,6 +131,7 @@ function pendingCard(e) {
         <div class="flex-grow-1 min-w-0">
           <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
             <a class="pa-card__name" href="${esc(eventUrl({ id }))}" target="_blank" rel="noopener">${esc(e.name || "—")} <i class="bi bi-box-arrow-up-right small"></i></a>
+            <a class="btn btn-sm btn-admin" href="${esc(editEventUrl(id))}"><i class="bi bi-pencil me-1"></i>${esc(EX.adEditEvent)}</a>
             ${e.approval?.status === APPROVAL.REQUESTED
               ? `<span class="pa-pill pa-pill--wait"><i class="bi bi-hourglass-split"></i> ${esc(ago(e.approval?.requestedAt) || EX.adminPending)}</span>`
               : `<span class="pa-pill"><i class="bi ${e.approval?.status === APPROVAL.REJECTED ? "bi-x-circle" : "bi-pencil"}"></i> ${esc(e.approval?.status === APPROVAL.REJECTED ? EX.adDraftRejected : EX.adDraftNotRequested)}${e.createdAt ? ` · ${esc(ago(e.createdAt))}` : ""}</span>`}
@@ -167,6 +201,7 @@ function activeRow(e) {
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
         <a class="btn btn-sm btn-light" href="${esc(eventUrl({ id: e.id }))}" target="_blank" rel="noopener" title="${esc(EX.openPublic)}"><i class="bi bi-eye"></i></a>
+        <a class="btn btn-sm btn-admin" href="${esc(editEventUrl(e.id))}" title="${esc(EX.adEditEvent)}"><i class="bi bi-pencil"></i><span class="d-none d-sm-inline ms-1">${esc(EX.edit)}</span></a>
         <button class="btn btn-sm btn-outline-danger" data-act="revoke">${esc(EX.adminRevoke)}</button>
       </div>
     </div>`;
@@ -492,12 +527,13 @@ function render() {
     <nav class="tp-tabs my-3" role="tablist">
       <button class="tp-tab ${state.tab === "pending" ? "is-active" : ""}" data-pa-tab="pending"><i class="bi bi-inbox"></i> ${esc(EX.adminPending)} <span class="pa-count">${pending.length}</span></button>
       <button class="tp-tab ${state.tab === "drafts" ? "is-active" : ""}" data-pa-tab="drafts"><i class="bi bi-pencil-square"></i> ${esc(EX.adTabDrafts)} <span class="pa-count">${state.drafts.length}</span></button>
-      <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-check2-circle"></i> ${esc(EX.adminActive)} <span class="pa-count">${active.length}</span></button>
+      <button class="tp-tab ${state.tab === "active" ? "is-active" : ""}" data-pa-tab="active"><i class="bi bi-trophy"></i> ${esc(EX.adTabEvents)} <span class="pa-count">${active.length}</span></button>
+      <button class="tp-tab ${state.tab === "clubs" ? "is-active" : ""}" data-pa-tab="clubs"><i class="bi bi-shield"></i> ${esc(EX.adTabClubs)}${state.clubs ? ` <span class="pa-count">${state.clubs.length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
       <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
     </nav>
 
-    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "drafts"
+    ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "drafts"
       ? `<div class="small ev-muted mb-2">${esc(EX.adDraftsHint)}</div>${state.drafts.length ? `<div class="d-grid gap-3">${state.drafts.map(pendingCard).join("")}</div>`
         : `<div class="pa-empty small ev-muted">${esc(EX.adNoDrafts)}</div>`}`
       : state.tab === "pending"
@@ -553,6 +589,10 @@ root.addEventListener("submit", (ev) => {
 async function openTab(tab, eventId = "") {
   state.tab = tab;
   history.replaceState(null, "", `#${tab}`);
+  if (tab === "clubs" && state.clubs === null) {
+    render();
+    state.clubs = await listClubDirectory().catch(() => []);
+  }
   if (tab === "import" && state.bundled === null) {
     render();
     state.bundled = await listBundledImports().catch(() => []);
@@ -685,6 +725,15 @@ root.addEventListener("input", (ev) => {
     input.setSelectionRange(pos, pos);
     return;
   }
+  if (ev.target.id === "paClubQ") {
+    state.clubQ = ev.target.value;
+    const pos = ev.target.selectionStart;
+    render();
+    const input = document.getElementById("paClubQ");
+    input.focus();
+    input.setSelectionRange(pos, pos);
+    return;
+  }
   if (ev.target.id === "paSearch") {
     state.search = ev.target.value;
     const pos = ev.target.selectionStart;
@@ -708,8 +757,9 @@ root.addEventListener("input", (ev) => {
       root.innerHTML = `<div class="pa-empty"><div class="display-6">🔒</div><div class="fw-bold mt-2">${esc(EX.adminOnly)}</div></div>`;
       return;
     }
+    setAdminMode(true);
     await reload();
-    if (state.tab === "import" || state.tab === "players") await openTab(state.tab);
+    if (["import", "players", "clubs"].includes(state.tab)) await openTab(state.tab);
   } catch (err) {
     console.error("[admin]", err);
     alertBox(`${EX.error} ${err?.code || ""}`, "danger");

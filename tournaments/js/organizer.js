@@ -24,7 +24,7 @@ import { renderCreate, segHtml, segValue } from "/tournaments/js/create_event.js
 import { getFormat, listFormats } from "/tournaments/js/formats.js";
 import { buildSchedule, playDays, scheduleWarnings } from "/tournaments/js/scheduler.js";
 import { APPROVAL, REG, approveRegistration, deadlineEnd, registrationExpired, rosterLocked, createEvent, createGameKey, createGames, deleteEvent, deleteGame, deleteTeam, deleteUnplayedGames, isApproved, isUnplayed, isPlatformAdmin, listGameKeys, listGames, listMyEvents, listRegistrations, rejectRegistration, listTeams, loadDivisionOptions, loadEvent, requestApproval, saveEvent, saveTeam, scorekeeperUrl, updateGame, CURRENCIES, PAYMENT, decideRegistrationPayment, fmtMoney, teamFee, listWaiverStatus, waiverOn, waiverVersion } from "/tournaments/js/services.js";
-import { askConfirm, atMinutes, scheduleDays, scheduleGridHtml, esc, eventUrl, fmtDateRange, fmtDayOnly, fmtWhen, fromLocalInput, gameUrl, hideLoader, isGoogleUser, phaseLabel, regChip, renderNav, showLoader, signInGoogle, statusChip, teamBadge, toLocalInput, toMillis, waitForUser, withLiveTeams, paymentChip } from "/tournaments/js/ui.js";
+import { askConfirm, atMinutes, esc, eventUrl, fmtDateRange, fmtDayOnly, fmtWhen, fromLocalInput, gameUrl, hideLoader, isGoogleUser, paymentChip, phaseLabel, regChip, renderNav, scheduleDays, scheduleGridHtml, setAdminMode, showLoader, signInGoogle, statusChip, teamBadge, toLocalInput, toMillis, waitForUser, withLiveTeams } from "/tournaments/js/ui.js";
 
 const root = document.getElementById("tnRoot");
 const $ = (sel) => root.querySelector(sel);
@@ -110,6 +110,10 @@ async function openEvent(id) {
   if (!event) return renderList();
   state.event = event;
   setUrl(id);
+  // super usuario en un torneo que no organiza: modo admin (otros colores y la franja "Admin")
+  const email = (state.user?.email || "").toLowerCase();
+  const mine = (event.organizerUids || []).includes(state.user?.uid) || (!!email && (event.organizerEmails || []).includes(email));
+  setAdminMode(!mine && !!state.isPlatformAdmin);
   state.divOptions = await loadDivisionOptions();
   await reloadData();
   renderEvent();
@@ -1713,7 +1717,8 @@ function renderSignIn() {
   try {
     const user = await waitForUser();
     state.user = isGoogleUser(user) ? user : null;
-    renderNav({ active: "org", user, isAdmin: await isPlatformAdmin(state.user?.uid) });
+    state.isPlatformAdmin = !!state.user && (await isPlatformAdmin(state.user.uid));
+    renderNav({ active: "org", user, isAdmin: state.isPlatformAdmin });
     if (!state.user) return renderSignIn();
     const id = params.get("id");
     // link directo a una pestaña (ej. desde "Próximos pasos" del Resumen): ?id=…&tab=games

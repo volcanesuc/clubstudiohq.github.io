@@ -60,6 +60,23 @@ export function revealActiveTab(bar, selector = ".is-active, .active") {
   bar.scrollLeft = Math.max(0, el.offsetLeft - (bar.clientWidth - el.offsetWidth) / 2);
 }
 
+// Modo admin: el super usuario está editando algo que no es suyo (torneo de otro organizador, club ajeno)
+// o está en la página Admin. Cambia los colores de la página y muestra una franja "Admin" debajo del menú.
+export function setAdminMode(on = true) {
+  document.body.classList.toggle("is-admin-mode", !!on);
+  let bar = document.getElementById("tnAdminBar");
+  if (!on) return bar?.remove();
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "tnAdminBar";
+    bar.className = "tn-admin-bar";
+    const nav = document.getElementById("tnNav");
+    if (nav) nav.after(bar);
+    else document.body.prepend(bar);
+  }
+  bar.innerHTML = `<div class="container d-flex align-items-center gap-2"><span class="tn-admin-tag"><i class="bi bi-shield-lock"></i> ${esc(EX.adModeTag)}</span><span class="small">${esc(EX.adModeText)}</span></div>`;
+}
+
 // Barra de pestañas que no entra en pantalla: degradado y flecha del lado donde hay más.
 // `box` es un .tn-scroll con la barra adentro (.tn-scroll__bar) y los botones .tn-scroll__btn.
 export function scrollHints(box) {
@@ -108,7 +125,7 @@ function renderBottomNav({ active, isAdmin, google }) {
 const adminCache = new Map();
 
 // Título de la pestaña en inglés: los HTML lo traen en español ("Torneos · ClubStudioHQ")
-const TITLES_EN = { Aprobaciones: "Approvals", Equipo: "Team", Clubes: "Clubs", Torneo: "Tournament", "Partido en vivo": "Live game", Torneos: "Tournaments", "Unirme a un equipo": "Join a team", "Organizar torneos": "Organize tournaments", Perfil: "Profile", Planillaje: "Scoring", "Espíritu de juego": "Spirit of the game", "Mi equipo": "My team", Formulario: "Form" };
+const TITLES_EN = { Equipo: "Team", Clubes: "Clubs", Torneo: "Tournament", "Partido en vivo": "Live game", Torneos: "Tournaments", "Unirme a un equipo": "Join a team", "Organizar torneos": "Organize tournaments", Perfil: "Profile", Planillaje: "Scoring", "Espíritu de juego": "Spirit of the game", "Mi equipo": "My team", Formulario: "Form" };
 if (LANG === "en") {
   const [first, ...rest] = document.title.split(" · ");
   if (TITLES_EN[first]) document.title = [TITLES_EN[first], ...rest].join(" · ");

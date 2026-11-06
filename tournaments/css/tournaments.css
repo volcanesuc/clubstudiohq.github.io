@@ -1111,3 +1111,18 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .rs-more[open] summary .bi { transform: rotate(180deg); }
 .rs-more[open] { display: flex; flex-direction: column-reverse; }
 .ev-team-roster:has(.rs-more[open]) .rs-preview { display: none; }
+
+/* ===== modo admin (super usuario editando algo ajeno, o en la página Admin) =====
+   Ámbar sobre gris oscuro en vez del violeta, y una franja "Admin" debajo del menú. */
+body.is-admin-mode { --ev-main: #b45309; --ev-accent: #fbbf24; }
+.tn-admin-bar { background: #fef3c7; color: #78350f; border-bottom: 1px solid #fcd34d; padding: .35rem 0; }
+.tn-admin-tag { display: inline-flex; align-items: center; gap: .3rem; background: #b45309; color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; flex-shrink: 0; }
+body.is-admin-mode .tn-nav { border-bottom-color: #b45309; }
+body.is-admin-mode .ev-hero,
+body.is-admin-mode .ev-score,
+body.is-admin-mode .pa-hero { background: radial-gradient(120% 140% at 100% 0%, rgba(251, 191, 36, .3) 0%, transparent 55%), linear-gradient(135deg, #1c1917, #92400e); }
+body.is-admin-mode .tp-tab.is-active { background: #78350f; }
+body.is-admin-mode .tn-bnav__item.is-active i { color: #fbbf24; }
+body.is-admin-mode .os-card { border-color: rgba(180, 83, 9, .35); }
+.btn-admin, .btn.btn-admin { background: #fef3c7; color: #78350f; border: 1px solid #fcd34d; font-weight: 700; }
+.btn-admin:hover, .btn.btn-admin:hover { background: #fde68a; color: #78350f; }

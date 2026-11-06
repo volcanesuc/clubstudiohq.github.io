@@ -345,7 +345,8 @@ service cloud.firestore {
       allow create: if isGoogle()
         && request.resource.data.ownerUids == [request.auth.uid];
 
-      allow update: if isGoogle() && (
+      // super usuario de la plataforma: puede ajustar cualquier club (logo, color, datos)
+      allow update: if isPlatformAdmin() || isGoogle() && (
         // admins: todo, mientras quede al menos un admin
         (request.auth.uid in resource.data.ownerUids && request.resource.data.ownerUids.size() > 0)
         // co-admin nuevo con el link de admin: solo se agrega a sí mismo
@@ -364,7 +365,7 @@ service cloud.firestore {
       // roster: id = uid del jugador con cuenta, o id al azar si lo cargó un admin
       match /members/{memberId} {
         allow read: if true;
-        allow write: if isSquadAdmin(squadId);
+        allow write: if isSquadAdmin(squadId) || isPlatformAdmin();
         // jugador: se une con el link, edita sus datos y puede salir
         allow create: if isGoogle()
           && memberId == request.auth.uid

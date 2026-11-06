@@ -28,21 +28,7 @@ import {
   saveSquad,
   setOwners,
 } from "/tournaments/js/squads.js";
-import {
-  avatarHtml,
-  esc,
-  eventUrl,
-  fmtDateRange,
-  hideLoader,
-  isGoogleUser,
-  refreshTeamBadge,
-  regChip,
-  renderNav,
-  showLoader,
-  spiritPendingHtml,
-  teamBadge,
-  waitForUser,
-} from "/tournaments/js/ui.js";
+import { avatarHtml, esc, eventUrl, fmtDateRange, hideLoader, isGoogleUser, refreshTeamBadge, regChip, renderNav, setAdminMode, showLoader, spiritPendingHtml, teamBadge, waitForUser } from "/tournaments/js/ui.js";
 import { isPlatformAdmin } from "/tournaments/js/services.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
 import { countryName, countryOptions, flagOf } from "/tournaments/js/countries.js";
@@ -70,7 +56,9 @@ const state = {
   newUids: new Set(), // jugadores que se unieron y este admin todavía no vio
 };
 
-const admin = () => isSquadAdmin(state.squad, state.user?.uid);
+// admin del club, o super usuario de la plataforma (puede ajustar logo, color, datos y roster de cualquier club)
+const owner = () => isSquadAdmin(state.squad, state.user?.uid);
+const admin = () => owner() || !!state.platformAdmin;
 const isMember = () => !!state.user && state.members.some((m) => m.id === state.user.uid);
 
 function alertBox(msg, kind = "success") {
@@ -601,11 +589,13 @@ root.addEventListener("click", (ev) => {
   try {
     const user = await waitForUser();
     state.user = isGoogleUser(user) ? user : null;
-    renderNav({ active: "team", user, isAdmin: await isPlatformAdmin(state.user?.uid) });
+    state.platformAdmin = !!state.user && (await isPlatformAdmin(state.user.uid));
+    renderNav({ active: "team", user, isAdmin: state.platformAdmin });
     if (!(await load())) {
       alertBox(EX.sqNotFound, "warning");
       return;
     }
+    setAdminMode(!owner() && state.platformAdmin);
     render();
     loadResults();
   } catch (err) {
