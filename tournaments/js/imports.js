@@ -108,6 +108,7 @@ export async function importTournament(data, onProgress) {
     startDate: src.startDate || "",
     endDate: src.endDate || "",
     venue: src.venue || "",
+    ...(src.country ? { country: src.country } : {}),
     ...(src.logo ? { logo: src.logo } : {}),
     address: src.address || "",
     description: src.description || "",

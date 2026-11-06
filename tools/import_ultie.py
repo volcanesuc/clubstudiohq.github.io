@@ -111,7 +111,7 @@ def phase_of(logical_id, finals_rr_teams):
     return "Eliminatoria"
 
 
-def convert(slug, hat=False):
+def convert(slug, hat=False, country="CR"):
     ev = gql(EVENT_QUERY, {"u": slug})["event"]["getByURLName"]
     if not ev:
         raise SystemExit(f"No existe el torneo '{slug}' en ultie")
@@ -272,6 +272,7 @@ def convert(slug, hat=False):
             "startDate": ev["startDate"],
             "endDate": ev["endDate"],
             "venue": (ev.get("city") or {}).get("title") or "",
+            "country": country,
             "logo": logo_data_url(ev.get("avatarId"), 400),
             "description": f"Resultados importados de ultie.org/{ev['urlName']}.",
             "divisions": divisions,
@@ -376,9 +377,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug", help="url del torneo en ultie (ej. ciuf2025)")
     ap.add_argument("--out", help="archivo de salida")
+    ap.add_argument("--country", default="CR", help="código ISO del país (por defecto CR)")
     ap.add_argument("--hat", action="store_true", help="torneo hat (equipos armados por el organizador, sin club)")
     args = ap.parse_args()
-    data = convert(args.slug, hat=args.hat)
+    data = convert(args.slug, hat=args.hat, country=args.country.upper())
     out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "tournaments" / "data" / "imports" / f"{args.slug}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
