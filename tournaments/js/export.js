@@ -4,6 +4,7 @@
 import { EX } from "/tournaments/js/strings.js";
 import { GAME_STATUS, SPIRIT_KEYS, eventRules, playerTotals, spiritTable, standings } from "/tournaments/js/model.js";
 import { phaseLabel, playerLabel, toMillis } from "/tournaments/js/ui.js";
+import { finalPlaces } from "/tournaments/js/bracket_view.js";
 
 const LIBS = {
   xlsx: "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
@@ -59,6 +60,21 @@ export function tournamentTables(event, teams = [], games = []) {
       standings(pts, pg).forEach((r, i) => standRows.push([divName(d.id), pool, i + 1, r.team.name, r.played, r.w, r.l, r.pf, r.pa, r.diff]));
     });
   });
+  // puestos finales (después del bracket) con el récord de todo el torneo: pools + bracket
+  const finalRows = [];
+  divisions.forEach((d) => {
+    const ts = byDiv(teams, d);
+    const dg = byDiv(games, d);
+    const places = finalPlaces(ts, dg);
+    if (!places.size) return;
+    const overall = new Map(standings(ts, dg).map((r) => [r.team.id, r]));
+    ts.filter((t) => places.has(t.id)).sort((a, b) => places.get(a.id) - places.get(b.id)).forEach((t) => {
+      const r = overall.get(t.id) || { played: 0, w: 0, l: 0, pf: 0, pa: 0, diff: 0 };
+      finalRows.push([divName(d.id), places.get(t.id), t.name, r.played, r.w, r.l, r.pf, r.pa, r.diff]);
+    });
+  });
+  const finalSheet = { name: EX.finalStandings, head: [EX.exDivision, "#", EX.standTeam, EX.standPlayed, EX.standW, EX.standL, EX.standPF, EX.standPA, EX.standDiff], rows: finalRows };
+
   const standSheet = { name: EX.exStandings, head: [EX.exDivision, EX.teamPool, "#", EX.standTeam, EX.standPlayed, EX.standW, EX.standL, EX.standPF, EX.standPA, EX.standDiff], rows: standRows };
 
   const rosterRows = [];
@@ -80,7 +96,7 @@ export function tournamentTables(event, teams = [], games = []) {
     rows: spirit.map((r, i) => [i + 1, r.team.name, Number(r.avg.toFixed(1)), ...SPIRIT_KEYS.map((k) => Number(r.catAvg[k].toFixed(1))), r.count]),
   };
 
-  return { title: event.name || "Torneo", sheets: [gamesSheet, standSheet, teamsSheet, playersSheet, spiritSheet].filter((s) => s.rows.length) };
+  return { title: event.name || "Torneo", sheets: [gamesSheet, finalSheet, standSheet, teamsSheet, playersSheet, spiritSheet].filter((s) => s.rows.length) };
 }
 
 const fileBase = (event) => String(event.slug || event.name || "torneo").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
