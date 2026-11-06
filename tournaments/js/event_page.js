@@ -288,11 +288,11 @@ function standingsTab() {
   const placed = teams.filter((t) => Number(t.finalPlace) > 0).sort((a, b) => a.finalPlace - b.finalPlace);
   // récord de todo el torneo (grupos + llave) junto al puesto final
   const allGames = state.games.filter(inDivision(state.division)).filter((g) => g.status === GAME_STATUS.FINAL);
-  const overall = new Map(standings(placed, allGames).map((r) => [r.team.id, r]));
+  const overall = new Map(standings(teams, allGames).map((r) => [r.team.id, r]));
   const recordOf = (t) => {
     const r = overall.get(t.id);
     if (!r?.played) return "";
-    return `<div class="st-final__rec" title="${esc(EX.standOverall)}"><b>${r.w}-${r.l}</b><span class="st-diff ${r.diff > 0 ? "is-pos" : r.diff < 0 ? "is-neg" : ""}">${r.diff > 0 ? "+" : ""}${r.diff}</span></div>`;
+    return `<div class="st-final__rec" title="${esc(EX.standOverall)}">${r.w}-${r.l}</div>`;
   };
   const finalCard = placed.length ? `
     <section class="st-card">

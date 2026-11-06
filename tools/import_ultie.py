@@ -96,8 +96,8 @@ PLACE_GAMES = {1: "Final", 2: "Tercer lugar", 3: "Quinto lugar", 4: "Séptimo lu
 def phase_of(logical_id, finals_rr_teams):
     """Fase del partido según su logicalId de ultie ('' = fase de grupos, cuenta para posiciones)."""
     lid = logical_id or ""
-    if lid.startswith("/GROUP/"):
-        return ""
+    if lid.startswith("/GROUP/") or lid.startswith("/SWISS/"):
+        return ""  # grupos o rondas suizas: cuentan para la tabla
     if lid.startswith("/S_"):
         # llave por puestos: /S_1_4/ = cuartos (de ahí salen 1º-4º), /S_1_2/ = semis
         span = lid.split("/")[1].split("_")[-1]
@@ -147,7 +147,9 @@ def convert(slug, hat=False):
                 pos = (slot.get("logicalId") or "").rsplit("/", 1)[-1]
                 draw_pos[gid] = min(draw_pos.get(gid, 999), int(pos) if pos.isdigit() else 999)
         letters = {gid: chr(65 + i) for i, gid in enumerate(sorted(draw_pos, key=lambda g: (draw_pos[g], g)))}
-        pool_of = {tid: letters[gid] for tid, gid in group_of.items()} if len(letters) > 1 else {}
+        # solo si de verdad se jugó en grupos (algunos torneos traen grupos del sorteo y juegan suizo)
+        played_groups = any((x.get("logicalId") or "").startswith("/GROUP/") for x in dv["games"])
+        pool_of = {tid: letters[gid] for tid, gid in group_of.items()} if len(letters) > 1 and played_groups else {}
 
         for t in dv["teams"]:
             key = f"tmu{t['id']}"
@@ -348,6 +350,23 @@ def final_places(dv, games, team_key):
                 rows[g["teamB"]][1] += b - a
                 rows[g["teamA" if a > b else "teamB"]][0] += 1
         start = 5
+        for i, t in enumerate(sorted(rows, key=lambda t: (-rows[t][0], -rows[t][1]))):
+            out[t] = start + i
+    # los que no jugaron por un puesto (ej. suizo con solo final): siguen según su récord en la tabla
+    rest = [team_key[t["id"]] for t in dv["teams"] if team_key.get(t["id"]) and team_key[t["id"]] not in out]
+    if out and rest:
+        rows = {t: [0, 0] for t in rest}
+        for g in div_games:
+            if g["phase"]:
+                continue
+            goals = [p for p in g["plays"] if p["type"] == "goal" and not p.get("deleted")]
+            a = goals[-1]["scoreA"] if goals else 0
+            b = goals[-1]["scoreB"] if goals else 0
+            for side, us, them in (("teamA", a, b), ("teamB", b, a)):
+                if g[side] in rows:
+                    rows[g[side]][1] += us - them
+                    rows[g[side]][0] += 1 if us > them else 0
+        start = max(out.values()) + 1
         for i, t in enumerate(sorted(rows, key=lambda t: (-rows[t][0], -rows[t][1]))):
             out[t] = start + i
     return out

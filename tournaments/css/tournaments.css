@@ -758,8 +758,7 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .st-final { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem; padding: .75rem 1rem 1rem; }
 .st-final__row { display: flex; align-items: center; gap: .6rem; padding: .5rem .65rem; border: 1px solid var(--ev-border); border-radius: 14px; background: #fff; min-width: 0; }
 .st-final__row.is-top { background: linear-gradient(135deg, #fef9c3, #fff); border-color: #fde68a; }
-.st-final__rec { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-size: .78rem; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.st-final__rec b { font-size: .9rem; }
+.st-final__rec { margin-left: auto; padding-left: .25rem; font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .st-final__pos { font-weight: 900; font-size: 1.1rem; width: 2rem; text-align: center; font-variant-numeric: tabular-nums; }
 
 /* ===== MVP: carrusel de tarjetas (5 por página, el mejor al centro) ===== */
@@ -816,7 +815,7 @@ a.sg-chip:hover { color: inherit; border-color: var(--ev-main); }
 .st-all .st-team { max-width: 16rem; }
 
 /* posiciones finales: número en vez de medalla */
-.st-final__row .st-final__pos { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: rgba(0, 0, 0, .05); color: #3b3651; font-size: .95rem; }
+.st-final__row .st-final__pos { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: rgba(0, 0, 0, .05); color: #3b3651; font-size: .95rem; }
 .st-final__row.is-top-1 .st-final__pos { background: linear-gradient(135deg, #fde047, #f59e0b); color: #4a2a00; }
 .st-final__row.is-top-2 .st-final__pos { background: linear-gradient(135deg, #e5e7eb, #9ca3af); color: #1f2937; }
 .st-final__row.is-top-3 .st-final__pos { background: linear-gradient(135deg, #fdba74, #c2410c); color: #fff; }

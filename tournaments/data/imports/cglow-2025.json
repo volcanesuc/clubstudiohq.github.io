@@ -4,7 +4,7 @@
   "provider": "ultie",
   "url": "https://ultie.org/cglow-2025",
   "eventId": 333,
-  "fetchedAt": "2026-11-06T00:17:24Z"
+  "fetchedAt": "2026-11-06T00:23:02Z"
  },
  "event": {
   "id": "evu333",
@@ -47,7 +47,7 @@
    "color": "#e63946",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "B",
+   "pool": "",
    "players": [
     {
      "id": "pu35009",
@@ -210,7 +210,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 3884
-   }
+   },
+   "finalPlace": 6
   },
   {
    "id": "tmu3881",
@@ -219,7 +220,7 @@
    "color": "#1d4ed8",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "A",
+   "pool": "",
    "players": [
     {
      "id": "pu35029",
@@ -382,7 +383,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 3881
-   }
+   },
+   "finalPlace": 3
   },
   {
    "id": "tmu3919",
@@ -391,7 +393,7 @@
    "color": "#059669",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "B",
+   "pool": "",
    "players": [
     {
      "id": "pu35061",
@@ -564,7 +566,7 @@
    "color": "#f59e0b",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "B",
+   "pool": "",
    "players": [
     {
      "id": "pu35048",
@@ -727,7 +729,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 3882
-   }
+   },
+   "finalPlace": 4
   },
   {
    "id": "tmu3920",
@@ -736,7 +739,7 @@
    "color": "#7c3aed",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "A",
+   "pool": "",
    "players": [
     {
      "id": "pu35074",
@@ -921,7 +924,7 @@
    "color": "#db2777",
    "logo": "",
    "divisionId": "mixto",
-   "pool": "A",
+   "pool": "",
    "players": [
     {
      "id": "pu35038",
@@ -1096,14 +1099,15 @@
    "source": {
     "provider": "ultie",
     "teamId": 3883
-   }
+   },
+   "finalPlace": 5
   }
  ],
  "games": [
   {
    "id": "gmu13678",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -1330,7 +1334,7 @@
   {
    "id": "gmu13677",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -1509,7 +1513,7 @@
   {
    "id": "gmu13679",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -1700,7 +1704,7 @@
   {
    "id": "gmu13680",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -1867,7 +1871,7 @@
   {
    "id": "gmu13682",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2034,7 +2038,7 @@
   {
    "id": "gmu13681",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2201,7 +2205,7 @@
   {
    "id": "gmu13684",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2356,7 +2360,7 @@
   {
    "id": "gmu13683",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2571,7 +2575,7 @@
   {
    "id": "gmu13685",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2774,7 +2778,7 @@
   {
    "id": "gmu13686",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -2965,7 +2969,7 @@
   {
    "id": "gmu13688",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
@@ -3144,7 +3148,7 @@
   {
    "id": "gmu13687",
    "divisionId": "mixto",
-   "phase": "Eliminatoria",
+   "phase": "",
    "pool": "",
    "round": null,
    "field": "",
