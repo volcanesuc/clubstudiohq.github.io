@@ -152,6 +152,7 @@ function renderEvent() {
   // hat: pestaña con el pool de jugadores, el armado de equipos y publicar (organizer_hat.js)
   const hat = isHatEvent(e);
   if (!hat && state.tab === "hat") state.tab = "info";
+  if (!["info", "hat", "teams", "schedule", "games"].includes(state.tab)) state.tab = "info";
   const tabs = [
     ["info", EX.tabInfo],
     ...(hat ? [["hat", EX.hatTab]] : []),
@@ -1715,6 +1716,8 @@ function renderSignIn() {
     renderNav({ active: "org", user, isAdmin: await isPlatformAdmin(state.user?.uid) });
     if (!state.user) return renderSignIn();
     const id = params.get("id");
+    // link directo a una pestaña (ej. desde "Próximos pasos" del Resumen): ?id=…&tab=games
+    if (id && params.get("tab")) state.tab = params.get("tab");
     if (id) await openEvent(id);
     else await renderList();
   } catch (err) {

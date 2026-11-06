@@ -15,7 +15,7 @@ import {
   spiritTable,
   standings,
 } from "/tournaments/js/model.js";
-import { deadlineEnd, REG, isApproved, leaveHat, listMyHatEntries, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
+import { deadlineEnd, REG, isApproved, isPlatformAdmin, leaveHat, listGameKeys, listMyHatEntries, listTeams, registrationIsOpen, loadEvent, loadPublicEventBySlug, subscribeGames, withdrawRegistration, fmtMoney, teamFee, listWaiverStatus, waiverOn } from "/tournaments/js/services.js";
 import { isHatEvent } from "/tournaments/js/hat.js";
 import { bracketHtml, finalPlaces, hasBracket } from "/tournaments/js/bracket_view.js";
 import { myRegistrationsFor, loadProfile } from "/tournaments/js/squads.js";
@@ -174,6 +174,7 @@ function overview() {
     : `<div class="ev-stat"><div class="ev-stat__value">${esc(v)}</div><div class="ev-stat__label">${esc(l)}</div></div>`);
   const list = (title, arr) => (arr.length ? `<h2 class="h6 mt-4 mb-2">${esc(title)}</h2><div class="d-grid gap-2">${arr.map(row).join("")}</div>` : "");
   return `
+    ${organizerStepsHtml()}
     ${state.event.description ? `<div class="ev-card mb-3" style="white-space:pre-line">${esc(state.event.description)}</div>` : ""}
     <div class="ev-stat-grid">
       ${tile(state.teams.length, EX.overviewTeams, "teams")}
@@ -197,6 +198,49 @@ const teamAttrs = (t) => `href="${esc(teamHref(t))}" data-team-go="${esc(t?.id |
 const playerAttrs = (p) => (p.uid
   ? `href="/tournaments/profile.html?u=${encodeURIComponent(p.uid)}"`
   : `href="#stats" data-tab="stats" data-sview="all" data-q="${esc(p.name || "")}"`);
+
+/* ---------- Resumen: próximos pasos para el organizador ---------- */
+// Solo lo ve quien organiza: aprobación → equipos → generar partidos → links de planilla → resultados.
+// Cada paso lleva directo a la pestaña del panel del organizador.
+const orgUrl = (tab) => `/tournaments/organize.html?${new URLSearchParams({ id: state.event.id, tab })}`;
+function organizerStepsHtml() {
+  // importados: ya terminaron, no hay nada que hacer
+  if (!state.isOrg || state.event.imported) return "";
+  const e = state.event;
+  const games = state.games;
+  const pending = games.filter((g) => g.status !== GAME_STATUS.FINAL);
+  const keyed = state.gameKeys ? new Set(state.gameKeys.map((k) => k.gameId)) : null;
+  const noLink = keyed ? pending.filter((g) => !keyed.has(g.id)).length : 0;
+  const finals = games.filter((g) => g.status === GAME_STATUS.FINAL).length;
+  const steps = [
+    { done: isApproved(e), title: EX.osApproval, todo: EX.osApprovalTodo, ok: EX.osApprovalOk, tab: "info", icon: "bi-patch-check" },
+    { done: state.teams.length >= 2, title: EX.osTeams, todo: EX.osTeamsTodo, ok: exf(EX.osTeamsOk, { n: state.teams.length }), tab: isHatEvent(e) ? "hat" : "teams", icon: "bi-people" },
+    { done: games.length > 0, title: EX.osGames, todo: EX.osGamesTodo, ok: exf(EX.osGamesOk, { n: games.length }), tab: "schedule", icon: "bi-calendar3" },
+    { done: games.length > 0 && (!pending.length || (keyed !== null && noLink === 0)), title: EX.osLinks, todo: keyed && games.length ? (noLink === 1 ? EX.osLinksTodo1 : exf(EX.osLinksTodo, { n: noLink })) : EX.osLinksTodoAny, ok: EX.osLinksOk, tab: "games", icon: "bi-link-45deg" },
+    { done: games.length > 0 && finals === games.length, title: EX.osResults, todo: exf(EX.osResultsTodo, { n: finals, total: games.length }), ok: EX.osResultsOk, tab: "games", icon: "bi-flag" },
+  ];
+  const current = steps.findIndex((x) => !x.done);
+  return `
+    <section class="os-card">
+      <div class="os-card__head">
+        <div><div class="os-card__title"><i class="bi bi-signpost-split me-1"></i>${esc(EX.osTitle)}</div><div class="os-card__sub">${esc(EX.osSub)}</div></div>
+        <a class="btn btn-sm btn-light" href="${esc(orgUrl("info"))}"><i class="bi bi-gear me-1"></i>${esc(EX.osPanel)}</a>
+      </div>
+      <ol class="os-steps">
+        ${steps.map((x, i) => `
+          <li class="os-step ${x.done ? "is-done" : i === current ? "is-current" : ""}">
+            <span class="os-step__n">${x.done ? `<i class="bi bi-check-lg"></i>` : i + 1}</span>
+            <div class="flex-grow-1 min-w-0">
+              <div class="os-step__title">${esc(x.title)}</div>
+              <div class="os-step__text">${esc(x.done ? x.ok : x.todo)}</div>
+            </div>
+            ${i === current
+              ? `<a class="btn btn-sm btn-primary text-nowrap" href="${esc(orgUrl(x.tab))}"><i class="bi ${x.icon} me-1"></i>${esc(EX.osGo)}</a>`
+              : x.tab === "games" && games.length && i === 3 ? `<a class="btn btn-sm btn-outline-secondary text-nowrap" href="${esc(orgUrl("games"))}">${esc(EX.osSeeLinks)}</a>` : ""}
+          </li>`).join("")}
+      </ol>
+    </section>`;
+}
 
 /* ---------- Resumen: podio y mejores jugadores por división (femenino primero) ---------- */
 const GENDER_ORDER = { femenino: 0, mixto: 1 };
@@ -1008,6 +1052,17 @@ $("tnRoot").addEventListener("input", (ev) => {
     state.division = divisions().length > 1 ? divisions()[0].id : "";
     state.teams = await listTeams(event.id);
     render();
+    // organizador (o admin de la plataforma): ve los próximos pasos en el Resumen
+    if (state.user) {
+      const email = (state.user.email || "").toLowerCase();
+      const org = (event.organizerUids || []).includes(state.user.uid) || (!!email && (event.organizerEmails || []).includes(email));
+      Promise.resolve(org || isPlatformAdmin(state.user.uid)).then(async (yes) => {
+        if (!yes) return;
+        state.isOrg = true;
+        state.gameKeys = await listGameKeys(event.id).catch(() => null);
+        render();
+      }).catch(() => {});
+    }
     // formulario: ¿ya firmé? (público: solo dice quién firmó)
     if (state.user && waiverOn(event)) {
       listWaiverStatus(event.id).then((ws) => {

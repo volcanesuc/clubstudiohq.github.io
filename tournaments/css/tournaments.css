@@ -651,6 +651,22 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .sk-pick--M .sk-pick__icon { background: #dbeafe; color: #1d4ed8; }
 .sk-pick--ratio.sk-pick--F.is-on { border-color: #db2777; background: #fdf2f8; box-shadow: 0 0 0 2px #db2777; }
 .sk-pick--ratio.sk-pick--M.is-on { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 2px #2563eb; }
+/* Resumen: próximos pasos del organizador */
+.os-card { background: #fff; border: 1px solid rgba(124, 58, 237, .3); border-radius: 18px; padding: .9rem 1rem; margin-bottom: 1rem; }
+.os-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; margin-bottom: .5rem; }
+.os-card__title { font-weight: 800; }
+.os-card__sub { font-size: .78rem; color: var(--ev-muted); }
+.os-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: .15rem; }
+.os-step { display: flex; align-items: center; gap: .65rem; padding: .5rem .4rem; border-radius: 12px; }
+.os-step__n { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; background: #f1f0f6; color: #8a85a3; }
+.os-step__title { font-weight: 700; font-size: .92rem; color: #8a85a3; }
+.os-step__text { font-size: .78rem; color: var(--ev-muted); }
+.os-step.is-done .os-step__n { background: #16a34a; color: #fff; }
+.os-step.is-done .os-step__title { color: inherit; }
+.os-step.is-current { background: #f5f3ff; }
+.os-step.is-current .os-step__n { background: var(--ev-main, #6d28d9); color: #fff; }
+.os-step.is-current .os-step__title { color: inherit; }
+.os-step.is-current .os-step__text { color: #4b4566; }
 .sk-start { border-radius: 16px; min-height: 56px; font-weight: 800; margin-top: .25rem; }
 .sk-start__hint { text-align: center; font-size: .8rem; color: var(--ev-muted); margin-top: -.35rem; }
 
