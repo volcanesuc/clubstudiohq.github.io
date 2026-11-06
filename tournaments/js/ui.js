@@ -167,10 +167,8 @@ export function renderNav({ active = "", isAdmin, user = null } = {}) {
         ${google ? link("profile", "/tournaments/profile.html", EX.navProfile).replace("tn-nav__link", "tn-nav__link tn-nav__link--profile") : ""}
         ${link("org", "/tournaments/organize.html", EX.navOrganize)}
         ${isAdmin ? link("admin", "/tournaments/admin.html", EX.navAdmin) : ""}
-        ${link("docs", "/docs/", EX.navDocs)}
       </div>
       ${isAdmin ? `<a class="btn btn-sm tn-nav__help tn-nav__admin ${active === "admin" ? "is-active" : ""}" href="/tournaments/admin.html" title="${esc(EX.navAdmin)}" aria-label="${esc(EX.navAdmin)}"><i class="bi bi-shield-check"></i></a>` : ""}
-      <a class="btn btn-sm tn-nav__help" href="/docs/" title="${esc(EX.navDocs)}" aria-label="${esc(EX.navDocs)}"><i class="bi bi-question-circle"></i></a>
       <button class="btn btn-sm tn-nav__lang" id="tnLang" title="${esc(EX.langSwitchTitle)}" aria-label="${esc(EX.langSwitchTitle)}">${LANG === "en" ? "ES" : "EN"}</button>
       ${google
         ? `<div class="d-flex align-items-center gap-2">
