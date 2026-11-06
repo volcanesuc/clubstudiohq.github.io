@@ -342,6 +342,11 @@ body.tn-busy::before {
 .tn-cover-preview { width: 100%; max-width: 420px; aspect-ratio: 2 / 1; border-radius: 14px; object-fit: cover; display: block; border: 1px solid var(--ev-border); }
 .tn-cover-empty { width: 100%; max-width: 420px; aspect-ratio: 2 / 1; border-radius: 14px; border: 2px dashed var(--ev-border); display: flex; align-items: center; justify-content: center; color: var(--ev-muted); flex-direction: column; gap: .25rem; }
 .tn-event-card { overflow: hidden; }
+/* directorio: buscador y filtro por país */
+.dir-filters { display: flex; gap: .5rem; flex-wrap: wrap; align-items: stretch; }
+.dir-filters .pa-search { min-width: 14rem; }
+.dir-country { width: auto; min-width: 11rem; flex: 0 1 auto; }
+@media (max-width: 575px) { .dir-country { flex: 1 1 100%; } }
 .tn-event-card__img { margin: -16px -16px 12px; aspect-ratio: 2 / 1; background-size: cover; background-position: center; }
 .tn-event-card__img--logo { background-color: #fff; background-size: contain; background-repeat: no-repeat; border-bottom: 1px solid var(--ev-border, #ece8f5); }
 /* logo del torneo junto al nombre */

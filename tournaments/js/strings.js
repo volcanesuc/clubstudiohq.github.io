@@ -561,6 +561,13 @@ export const EX = {
   dirSubtitle: "Resultados en vivo, posiciones y estadísticas de torneos que usan ClubStudioHQ.",
   dirLive: "En curso y próximos",
   dirPast: "Finalizados",
+  dirSearch: "Buscar por nombre, sede, categoría o país",
+  dirCountry: "País",
+  dirAllCountries: "Todos los países",
+  dirResults: "{n} torneo(s) encontrados",
+  dirNoMatch: "No hay torneos que coincidan con tu búsqueda.",
+  dirClear: "Limpiar búsqueda",
+  dirMore: "Ver más ({n})",
   dirEmpty: "Todavía no hay torneos publicados.",
   dirOrganize: "Organizar un torneo",
 
