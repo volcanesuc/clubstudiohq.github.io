@@ -643,8 +643,8 @@ a.tp-row__link:hover .tp-row__name { color: var(--ev-main); }
 .pa-pill--sugg a { color: inherit; }
 .pa-count--alert { background: #ef4444 !important; color: #fff !important; }
 /* "¿Sos vos?" en el perfil */
-.cl-card { border-color: rgba(124, 58, 237, .35); }
-.cl-card__icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #ede9fe; color: #6d28d9; font-size: 1.1rem; }
+.clm-card { border-color: rgba(124, 58, 237, .35); }
+.clm-card__icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #ede9fe; color: #6d28d9; font-size: 1.1rem; }
 .cl-row { display: flex; align-items: center; gap: .65rem; padding: .6rem 0; border-top: 1px solid var(--ev-border); }
 @media (max-width: 480px) { .cl-row { flex-wrap: wrap; } .cl-row > .flex-grow-1 { flex-basis: calc(100% - 50px); } .cl-row > :last-child { margin-left: auto; } }
 .pa-pill--paid { background: #dcfce7; color: #166534; }
@@ -1214,3 +1214,7 @@ body.is-admin-mode .os-card { border-color: rgba(180, 83, 9, .35); }
   .ev-event-item { column-gap: .5rem; }
   .ev-chip { max-width: 100%; white-space: normal; }
 }
+
+/* Admin > Jugadores: encabezado de equipo plegable */
+.pa-team-toggle { background: #faf9fe; cursor: pointer; color: inherit; }
+.pa-team-toggle:hover { background: #f3f0fd; }

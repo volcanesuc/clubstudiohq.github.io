@@ -48,7 +48,7 @@ const state = {
   progress: "",
   done: null, // { eventId, slug }
   // jugadores sin cuenta
-  pl: { eventId: "", event: null, teams: [], onlyFree: true, search: "" },
+  pl: { eventId: "", event: null, teams: [], onlyFree: true, search: "", open: new Set() },
   profiles: null,
   squads: null,
   pick: null, // { team, player }
@@ -467,21 +467,32 @@ function playersTab() {
             : `<button class="btn btn-sm btn-primary" data-act="assign"><i class="bi bi-person-plus me-1"></i>${esc(EX.plAssign)}</button>`}
         </div>`;
     }).join("");
+  // equipos plegados (solo el encabezado); al buscar se abren solos para ver los resultados
   const teamBlocks = teams.map((t) => {
     const r = rows(t);
     if (!r) return "";
     const tFree = (t.players || []).filter((p) => !p.uid).length;
+    const open = !!q || state.pl.open.has(t.id);
     return `
-      <section class="pa-list mb-3">
-        <div class="pa-row" style="background:#faf9fe">
+      <section class="pa-list mb-2">
+        <button type="button" class="pa-row pa-team-toggle w-100 text-start border-0" data-act="toggleTeam" data-id="${esc(t.id)}" aria-expanded="${open}">
           ${teamBadge(t, 32)}
-          <div class="flex-grow-1 fw-bold">${esc(t.name)}</div>
+          <div class="flex-grow-1 min-w-0 fw-bold text-truncate">${esc(t.name)}</div>
           <span class="pa-pill">${esc(exf(EX.plCount, { free: tFree, total: (t.players || []).length }))}</span>
-        </div>
-        <div class="pa-row small" data-team="${esc(t.id)}" style="background:#faf9fe">${squadLink(t)}</div>
-        ${r}
+          <i class="bi ${open ? "bi-chevron-up" : "bi-chevron-down"} ev-muted"></i>
+        </button>
+        ${open ? `
+          <div class="pa-row small" data-team="${esc(t.id)}" style="background:#faf9fe">${squadLink(t)}</div>
+          ${r}` : ""}
       </section>`;
   }).join("");
+  const anyOpen = teams.some((t) => state.pl.open.has(t.id));
+  const foldBar = teams.length > 1 && !q ? `
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-sm btn-link text-decoration-none" data-act="${anyOpen ? "collapseTeams" : "expandTeams"}">
+        <i class="bi ${anyOpen ? "bi-arrows-collapse" : "bi-arrows-expand"} me-1"></i>${esc(anyOpen ? EX.plCollapseAll : EX.plExpandAll)}
+      </button>
+    </div>` : "";
   return `
     ${claimRequestsSection()}
     <section class="ev-card mb-3">
@@ -502,6 +513,7 @@ function playersTab() {
       ${event ? `<div class="small ev-muted mt-2">${esc(exf(EX.plCount, { free, total: all.length }))}</div>` : ""}
     </section>
     <div class="pa-search"><i class="bi bi-search"></i><input class="form-control" id="plSearch" placeholder="${esc(EX.plSearch)}" value="${esc(search)}" /></div>
+    ${foldBar}
     ${teamBlocks || `<div class="pa-empty small ev-muted">${esc(EX.plNoPlayers)}</div>`}`;
 }
 
@@ -768,6 +780,16 @@ root.addEventListener("click", (ev) => {
     }, EX.imDone);
   }
   if (tool?.dataset.act === "goAssign") return openTab("players", tool.dataset.id);
+  if (tool?.dataset.act === "toggleTeam") {
+    const id = tool.dataset.id;
+    if (state.pl.open.has(id)) state.pl.open.delete(id);
+    else state.pl.open.add(id);
+    return render();
+  }
+  if (tool?.dataset.act === "expandTeams" || tool?.dataset.act === "collapseTeams") {
+    state.pl.open = tool.dataset.act === "expandTeams" ? new Set(state.pl.teams.map((t) => t.id)) : new Set();
+    return render();
+  }
   if (["migDone", "migReopen", "migDelete"].includes(tool?.dataset.act)) {
     const id = tool.closest("[data-mig]").dataset.mig;
     if (tool.dataset.act === "migDelete") {

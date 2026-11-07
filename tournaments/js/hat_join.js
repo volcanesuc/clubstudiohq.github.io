@@ -187,8 +187,8 @@ function profileStep() {
         <label class="form-label small" for="hatGender">${esc(EX.pfGender)}</label>
         <select class="form-select form-select-lg" id="hatGender" required>
           <option value="">—</option>
-          <option value="F" ${f.gender === "F" ? "selected" : ""}>F</option>
-          <option value="M" ${f.gender === "M" ? "selected" : ""}>M</option>
+          <option value="F" ${f.gender === "F" ? "selected" : ""}>${esc(EX.pfGenderF)}</option>
+          <option value="M" ${f.gender === "M" ? "selected" : ""}>${esc(EX.pfGenderM)}</option>
         </select>
       </div>
     </div>

@@ -98,7 +98,7 @@ function editForm() {
       <div class="col-6 col-md-3"><label class="form-label small" for="pfNumber">${esc(EX.playerNumber)}</label><input class="form-control" id="pfNumber" type="number" min="0" max="999" value="${esc(p.number ?? "")}" /></div>
       <div class="col-6 col-md-3">
         <label class="form-label small" for="pfGender">${esc(EX.pfGender)}</label>
-        <select class="form-select" id="pfGender"><option value="">—</option><option ${p.gender === "F" ? "selected" : ""}>F</option><option ${p.gender === "M" ? "selected" : ""}>M</option></select>
+        <select class="form-select" id="pfGender"><option value="">—</option><option value="F" ${p.gender === "F" ? "selected" : ""}>${esc(EX.pfGenderF)}</option><option value="M" ${p.gender === "M" ? "selected" : ""}>${esc(EX.pfGenderM)}</option></select>
       </div>
       <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="form-text m-0">${esc(EX.pfSyncHint)}</div>
@@ -130,9 +130,9 @@ function claimsSection() {
   const rows = sugg.filter((x) => !no.has(claimKey(x)) && reqOf.get(claimKey(x))?.status !== CLAIM_REQ.REJECTED);
   if (!rows.length) return "";
   return `
-    <section class="ev-card cl-card">
+    <section class="ev-card clm-card">
       <div class="d-flex gap-2 align-items-start mb-2">
-        <span class="cl-card__icon"><i class="bi bi-person-bounding-box"></i></span>
+        <span class="clm-card__icon"><i class="bi bi-person-bounding-box"></i></span>
         <div>
           <h2 class="h6 fw-bold mb-1">${esc(EX.clmTitle)}</h2>
           <div class="small ev-muted">${esc(EX.clmSub)}</div>

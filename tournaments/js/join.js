@@ -112,8 +112,8 @@ function renderForm() {
           <label class="form-label small" for="jnGender">${esc(EX.pfGender)}</label>
           <select class="form-select form-select-lg" id="jnGender" required>
             <option value="">—</option>
-            <option value="F" ${p.gender === "F" ? "selected" : ""}>F</option>
-            <option value="M" ${p.gender === "M" ? "selected" : ""}>M</option>
+            <option value="F" ${p.gender === "F" ? "selected" : ""}>${esc(EX.pfGenderF)}</option>
+            <option value="M" ${p.gender === "M" ? "selected" : ""}>${esc(EX.pfGenderM)}</option>
           </select>
         </div>
       </div>
