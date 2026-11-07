@@ -213,7 +213,7 @@ export function mountPickups(box, ctx) {
     let actions = "";
     if (spot === SPOT.WAITLIST) actions = `<button class="btn btn-sm btn-light" data-pl-act="promote"><i class="bi bi-arrow-up me-1"></i>${esc(PK.plPromote)}</button>`;
     else if (pl.paymentStatus === PAY.SUBMITTED) actions = `<button class="btn btn-sm btn-light" data-pl-act="proof"><i class="bi bi-eye me-1"></i>${esc(PK.plProof)}</button>`;
-    else if (paidable && pl.paymentStatus !== PAY.APPROVED) actions = `<button class="btn btn-sm btn-light" data-pl-act="paid"><i class="bi bi-cash me-1"></i>${esc(PK.plMarkPaid)}</button>`;
+    else if (paidable && pl.paymentStatus !== PAY.APPROVED && pl.paymentStatus !== PAY.FREE) actions = `<button class="btn btn-sm btn-light" data-pl-act="paid"><i class="bi bi-cash me-1"></i>${esc(PK.plMarkPaid)}</button>`;
     return `
       <div class="pa-row pk-player" data-pl="${esc(pl.id)}">
         ${spot === SPOT.WAITLIST ? `<span class="pk-num">${i + 1}</span>` : avatarHtml(pl, 34)}
