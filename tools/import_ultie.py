@@ -27,7 +27,7 @@ COLORS = ["#e63946", "#1d4ed8", "#059669", "#f59e0b", "#7c3aed", "#db2777", "#08
 
 EVENT_QUERY = """
 query Q($u: String!) { event { getByURLName(urlName: $u) {
-  id urlName title titleShort startDate endDate status avatarId city { title }
+  id urlName title titleShort startDate endDate status avatarId city { title country { title } }
   divisions { id title divisionType gameType teamMap
     teams { id title club { title avatarId city { title } }
       sotgStats { id gameId r f fm p c }
@@ -86,6 +86,40 @@ def full_name(acc):
     return " ".join(x.strip() for x in [acc.get("firstName") or "", acc.get("lastName") or ""] if x.strip())
 
 
+# país de ultie (nombre en inglés) -> código ISO de la plataforma
+COUNTRY_CODES = {
+    "Costa Rica": "CR", "Panama": "PA", "Nicaragua": "NI", "Honduras": "HN", "El Salvador": "SV", "Guatemala": "GT",
+    "Belize": "BZ", "Mexico": "MX", "Cuba": "CU", "Dominican Republic": "DO", "Puerto Rico": "PR", "Jamaica": "JM",
+    "Colombia": "CO", "Venezuela": "VE", "Ecuador": "EC", "Peru": "PE", "Bolivia": "BO", "Chile": "CL", "Argentina": "AR",
+    "Uruguay": "UY", "Paraguay": "PY", "Brazil": "BR", "United States": "US", "USA": "US", "Canada": "CA",
+    "Spain": "ES", "Portugal": "PT", "France": "FR", "Italy": "IT", "Germany": "DE", "Austria": "AT", "Switzerland": "CH",
+    "Belgium": "BE", "Netherlands": "NL", "United Kingdom": "GB", "Great Britain": "GB", "England": "GB", "Ireland": "IE",
+    "Denmark": "DK", "Sweden": "SE", "Norway": "NO", "Finland": "FI", "Poland": "PL", "Czech Republic": "CZ", "Czechia": "CZ",
+    "Slovakia": "SK", "Hungary": "HU", "Slovenia": "SI", "Croatia": "HR", "Romania": "RO", "Latvia": "LV", "Lithuania": "LT",
+    "Estonia": "EE", "Japan": "JP", "China": "CN", "Taiwan": "TW", "South Korea": "KR", "Korea": "KR", "Philippines": "PH",
+    "Singapore": "SG", "Malaysia": "MY", "Thailand": "TH", "India": "IN", "United Arab Emirates": "AE", "Australia": "AU",
+    "New Zealand": "NZ", "South Africa": "ZA", "Kenya": "KE", "Uganda": "UG",
+}
+
+
+def swiss_round(logical_id):
+    """Ronda de un partido suizo: /SWISS/<id>/Swiss/<ronda>/game/<n> -> ronda (None si no es suizo)."""
+    parts = (logical_id or "").split("/Swiss/")
+    if len(parts) == 2 and parts[1].split("/")[0].isdigit():
+        return int(parts[1].split("/")[0])
+    return None
+
+
+def table_ranks(dv, team_key):
+    """Orden oficial de la tabla de ultie (/SWISS/<id>/Swiss/out/<n>): en un suizo no alcanza con
+    ganados y diferencia (ultie desempata por la fuerza de los rivales), así que se guarda tal cual."""
+    out = {}
+    for lid, s in (dv.get("teamMap") or {}).items():
+        if s and lid.startswith("/SWISS/") and "/Swiss/out/" in lid and s.get("teamId") in team_key:
+            out[team_key[s["teamId"]]] = int(lid.rsplit("/", 1)[1])
+    return out
+
+
 DIVISION_GENDER = {"MIXED": ("mixto", "Mixto", True), "OPEN": ("open", "Open", False), "WOMEN": ("femenino", "Femenino", False), "MEN": ("masculino", "Masculino", False)}
 GAME_MODE = {"GAME_TYPE_7x7": ("7v7", 7), "GAME_TYPE_5x5": ("5v5", 5), "GAME_TYPE_4x4": ("4v4", 4), "GAME_TYPE_3x3": ("3v3", 3)}
 
@@ -113,10 +147,13 @@ def phase_of(logical_id, finals_rr_teams):
     return "Eliminatoria"
 
 
-def convert(slug, hat=False, country="CR"):
+def convert(slug, hat=False, country=None):
     ev = gql(EVENT_QUERY, {"u": slug})["event"]["getByURLName"]
     if not ev:
         raise SystemExit(f"No existe el torneo '{slug}' en ultie")
+    ultie_country = (((ev.get("city") or {}).get("country") or {}).get("title") or "").strip()
+    country = country or COUNTRY_CODES.get(ultie_country) or "CR"
+    max_points = []  # "juego a N" de cada partido (el más común es el del torneo)
 
     divisions, teams, games = [], [], []
     team_key = {}
@@ -192,6 +229,8 @@ def convert(slug, hat=False, country="CR"):
 
         for g in dv["games"]:
             detail = gql(GAME_QUERY, {"id": g["id"]})["game"]["get"]
+            if detail.get("maxPoint"):
+                max_points.append(int(detail["maxPoint"]))
             home, away = g["homeTeamId"], g["visitorTeamId"]
             side = {home: "A", away: "B"}
             start = ms(g["startedAt"])
@@ -241,7 +280,7 @@ def convert(slug, hat=False, country="CR"):
                 "divisionId": div_id,
                 "phase": phase_of(g["logicalId"], finals_rr),
                 "pool": pool_of.get(g["homeTeamId"], "") if (g["logicalId"] or "").startswith("/GROUP/") else "",
-                "round": None,
+                "round": swiss_round(g["logicalId"]),
                 "field": "",
                 "startAt": g["startedAt"],
                 "finishedAt": g["finishedAt"],
@@ -255,13 +294,22 @@ def convert(slug, hat=False, country="CR"):
             })
 
         # puesto final de cada equipo según la llave (para mostrarlo y para el historial)
-        relabel_place_games(dv, [g for g in games if g["divisionId"] == div_id], team_key)
+        div_games = [g for g in games if g["divisionId"] == div_id]
+        relabel_place_games(dv, div_games, team_key)
+        # suizo de una sola ronda (ultie lo usa como contenedor de todos contra todos): sin número de ronda
+        if len({g["round"] for g in div_games if g["round"]}) == 1:
+            for g in div_games:
+                g["round"] = None
         places = final_places(dv, games, team_key)
+        ranks = table_ranks(dv, team_key)
         for t in teams:
             if t["divisionId"] == div_id and t["id"] in places:
                 t["finalPlace"] = places[t["id"]]
+            if t["divisionId"] == div_id and t["id"] in ranks:
+                t["tableRank"] = ranks[t["id"]]
 
     games.sort(key=lambda g: g["startAt"] or "")
+    game_to = max(set(max_points), key=max_points.count) if max_points else 13
     first = ev["divisions"][0]
     mode, on_field = GAME_MODE.get(first["gameType"], ("7v7", 7))
     return {
@@ -281,7 +329,7 @@ def convert(slug, hat=False, country="CR"):
             "divisions": divisions,
             "fields": [],
             "format": "round_robin",
-            "rules": {"mode": mode, "playersOnField": on_field, "gameTo": 13, "halftimeAt": 7, "gameMinutes": 90},
+            "rules": {"mode": mode, "playersOnField": on_field, "gameTo": game_to, "halftimeAt": (game_to + 1) // 2, "gameMinutes": 90},
             **({"type": "hat", "hat": {"multiDivision": False}} if hat else {}),
         },
         "teams": teams,
@@ -340,6 +388,19 @@ def relabel_place_games(dv, games, team_key):
     if not places:
         return
     tm = dv.get("teamMap") or {}
+    # semis/cuartos por puestos: según dónde terminaron sus dos equipos, el bloque que reparte el partido
+    # (semis = 4 puestos, cuartos = 8…). Si no es el bloque del 1º, es "Puestos 5-8 · Semifinal".
+    # (Una llave con bye para los 1º sigue siendo la principal: sus equipos caen en el bloque del 1º.)
+    block = {"Semifinal": 4, "Cuartos de final": 8, "Octavos de final": 16}
+    for g in games:
+        lid = g["source"]["logicalId"] or ""
+        n = block.get(g["phase"])
+        pa, pb = places.get(g["teamA"]), places.get(g["teamB"])
+        if not (lid.startswith("/S_") and n and pa and pb):
+            continue
+        lo = (min(pa, pb) - 1) // n * n + 1
+        if lo > 1:
+            g["phase"] = f"Puestos {lo}-{lo + n - 1} · {g['phase']}"
     for g in games:
         lid = g["source"]["logicalId"] or ""
         if not (lid.startswith("/FINALS/") and "/GameUnion/game/" in lid):
@@ -417,10 +478,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug", help="url del torneo en ultie (ej. ciuf2025)")
     ap.add_argument("--out", help="archivo de salida")
-    ap.add_argument("--country", default="CR", help="código ISO del país (por defecto CR)")
+    ap.add_argument("--country", default="", help="código ISO del país (por defecto el de ultie, o CR)")
     ap.add_argument("--hat", action="store_true", help="torneo hat (equipos armados por el organizador, sin club)")
     args = ap.parse_args()
-    data = convert(args.slug, hat=args.hat, country=args.country.upper())
+    data = convert(args.slug, hat=args.hat, country=args.country.upper() or None)
     out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "tournaments" / "data" / "imports" / f"{args.slug}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")

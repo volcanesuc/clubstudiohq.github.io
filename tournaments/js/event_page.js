@@ -9,6 +9,7 @@ import {
   SURFACES,
   SURFACE_ICONS,
   eventRules,
+  hasOfficialOrder,
   slotMinutes,
   leaders,
   playerTotals,
@@ -346,14 +347,17 @@ function standingsTab() {
     const ts = teams.filter((t) => (t.pool || "").toUpperCase() === pool);
     const ids = new Set(ts.map((t) => t.id));
     const poolGames = games.filter((g) => ids.has(g.teamA?.id) && ids.has(g.teamB?.id));
+    const official = hasOfficialOrder(ts);
     const rows = standings(ts, poolGames);
+    const ties = rows.some((r) => r.t > 0);
+    const swiss = !pool && poolGames.some((g) => Number(g.round) > 0);
     const played = poolGames.filter((g) => g.status === GAME_STATUS.FINAL).length;
     return `
       <section class="st-card">
         <header class="st-card__head">
           <div>
             <div class="st-card__title">${esc(pool ? exf(EX.phasePool, { pool }) : divName || EX.tabStandings)}</div>
-            <div class="st-card__sub">${hasBracket ? `${esc(EX.standGroupStage)} · ` : ""}${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}</div>
+            <div class="st-card__sub">${hasBracket ? `${esc(swiss ? EX.standSwissStage : EX.standGroupStage)} · ` : ""}${esc(exf(EX.standGamesPlayed, { n: played, total: poolGames.length }))}${official ? ` · ${esc(EX.standOfficial)}` : ""}</div>
           </div>
           ${state.event.status === "finished" ? "" : `<span class="st-live"><i class="bi bi-broadcast"></i> ${esc(EX.standUpdated)}</span>`}
         </header>
@@ -365,6 +369,7 @@ function standingsTab() {
               <th class="num" title="${esc(EX.standPlayedLong)}">${esc(EX.standPlayed)}</th>
               <th class="num" title="${esc(EX.standWLong)}">${esc(EX.standW)}</th>
               <th class="num" title="${esc(EX.standLLong)}">${esc(EX.standL)}</th>
+              ${ties ? `<th class="num" title="${esc(EX.standTLong)}">${esc(EX.standT)}</th>` : ""}
               <th class="num d-none d-md-table-cell" title="${esc(EX.standPctLong)}">${esc(EX.standPct)}</th>
               <th class="num d-none d-sm-table-cell" title="${esc(EX.standPFLong)}">${esc(EX.standPF)}</th>
               <th class="num d-none d-sm-table-cell" title="${esc(EX.standPALong)}">${esc(EX.standPA)}</th>
@@ -388,6 +393,7 @@ function standingsTab() {
                 <td class="num">${r.played}</td>
                 <td class="num fw-bold">${r.w}</td>
                 <td class="num">${r.l}</td>
+                ${ties ? `<td class="num">${r.t}</td>` : ""}
                 <td class="num d-none d-md-table-cell">${pct}</td>
                 <td class="num d-none d-sm-table-cell">${r.pf}</td>
                 <td class="num d-none d-sm-table-cell">${r.pa}</td>
@@ -410,7 +416,7 @@ function standingsTab() {
   const recordOf = (t) => {
     const r = overall.get(t.id);
     if (!r?.played) return "";
-    return `<div class="st-final__rec" title="${esc(EX.standOverall)}">${r.w}-${r.l}</div>`;
+    return `<div class="st-final__rec" title="${esc(EX.standOverall)}">${r.w}-${r.l}${r.t ? `-${r.t}` : ""}</div>`;
   };
   const finalCard = placed.length ? `
     <section class="st-card">

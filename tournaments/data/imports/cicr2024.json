@@ -31,8 +31,8 @@
   "rules": {
    "mode": "7v7",
    "playersOnField": 7,
-   "gameTo": 13,
-   "halftimeAt": 7,
+   "gameTo": 15,
+   "halftimeAt": 8,
    "gameMinutes": 90
   }
  },
@@ -254,7 +254,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2702
-   }
+   },
+   "finalPlace": 4
   },
   {
    "id": "tmu2724",
@@ -545,7 +546,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2724
-   }
+   },
+   "finalPlace": 1
   },
   {
    "id": "tmu2721",
@@ -824,7 +826,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2721
-   }
+   },
+   "finalPlace": 6
   },
   {
    "id": "tmu2722",
@@ -1031,7 +1034,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2722
-   }
+   },
+   "finalPlace": 3
   },
   {
    "id": "tmu2723",
@@ -1322,7 +1326,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2723
-   }
+   },
+   "finalPlace": 5
   },
   {
    "id": "tmu2726",
@@ -1589,7 +1594,8 @@
    "source": {
     "provider": "ultie",
     "teamId": 2726
-   }
+   },
+   "finalPlace": 2
   }
  ],
  "games": [

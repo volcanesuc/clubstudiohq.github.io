@@ -188,7 +188,7 @@ export function bracketHtml({ teams, games, href, title = "", section = "" }) {
                 <span class="bk-rank">${i + 1}</span>
                 ${teamBadge(r.team, 20)}
                 <span class="bk-row__name">${esc(r.team.name)}</span>
-                <span class="bk-row__rec">${r.w}-${r.l}</span>
+                <span class="bk-row__rec">${r.w}-${r.l}${r.t ? `-${r.t}` : ""}</span>
               </div>`).join("")}
           </div>`;
       }).join("")}

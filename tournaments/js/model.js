@@ -460,6 +460,8 @@ export function leaders(totals, key, limit = 10) {
    Posiciones
 ========================= */
 // Orden: ganados, enfrentamiento directo (empate de 2), diferencia, puntos a favor, nombre
+export const hasOfficialOrder = (teams = []) => teams.length > 1 && teams.every((t) => Number(t.tableRank) > 0);
+
 export function standings(teams = [], games = []) {
   const rows = new Map(teams.map((t) => [t.id, { team: t, played: 0, w: 0, l: 0, pf: 0, pa: 0 }]));
   const finals = games.filter((g) => g.status === GAME_STATUS.FINAL && rows.has(g.teamA?.id) && rows.has(g.teamB?.id));
@@ -484,7 +486,9 @@ export function standings(teams = [], games = []) {
     return diff;
   };
 
-  const list = [...rows.values()].map((r) => ({ ...r, diff: r.pf - r.pa }));
+  const list = [...rows.values()].map((r) => ({ ...r, t: r.played - r.w - r.l, diff: r.pf - r.pa }));
+  // importados con orden oficial (ej. suizo de ultie, que desempata por la fuerza de los rivales): se respeta
+  if (hasOfficialOrder(teams)) return list.sort((a, b) => a.team.tableRank - b.team.tableRank);
   list.sort((a, b) => {
     if (b.w !== a.w) return b.w - a.w;
     const tiedTwo = list.filter((r) => r.w === a.w).length === 2;
