@@ -5,7 +5,7 @@ import { EX, exf } from "/tournaments/js/strings.js";
 import { isPlatformAdmin } from "/tournaments/js/services.js";
 import { cropFromInput } from "/tournaments/js/cropper.js";
 import { cancelClaimRequest, CLAIM_REQ, findClaimSuggestions, myClaimRequests, requestClaim } from "/tournaments/js/imports.js";
-import { ensureProfile, isSquadAdmin, loadProfile, loadSquad, pendingSpirit, playerHistory, profileUrl, saveProfile, squadUrl } from "/tournaments/js/squads.js";
+import { ensureProfile, isSquadAdmin, loadProfile, pendingSpirit, playerHistory, profileSquads, profileUrl, saveProfile, squadUrl } from "/tournaments/js/squads.js";
 import {
   avatarHtml,
   esc,
@@ -387,7 +387,7 @@ function renderSignIn() {
     if (!state.profile) return alertBox(EX.pfNotFound, "warning");
     // sin F/M todavía: abre la edición para completarlo
     state.editing = state.own && !state.profile.gender;
-    state.squads = (await Promise.all((state.profile.squadIds || []).map((id) => loadSquad(id).catch(() => null)))).filter(Boolean);
+    state.squads = await profileSquads(state.uid, state.profile, state.user);
     render();
     hideLoader();
     // el historial puede tardar (lee los partidos de cada torneo)
@@ -395,7 +395,7 @@ function renderSignIn() {
       state.spirit = list;
       if (list.length) render();
     }).catch(() => {});
-    state.history = await playerHistory(state.uid, state.profile.squadIds || [], state.profile.hatEventIds || []);
+    state.history = await playerHistory(state.uid, state.squads.map((s) => s.id), state.profile.hatEventIds || []);
     render();
     if (state.own) loadClaims().catch(() => {});
   } catch (err) {

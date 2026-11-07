@@ -76,6 +76,26 @@ export async function saveProfile(user, data) {
   }));
 }
 
+/**
+ * Equipos de un jugador: los de su perfil (squadIds) más los que administra (ownerUids).
+ * Un admin agregado desde la plataforma no tiene el equipo en su perfil (solo él puede escribirlo);
+ * si es su propio perfil, se completa la lista para que lo encuentren las demás páginas.
+ * @returns {Promise<object[]>} equipos, ordenados por nombre
+ */
+export async function profileSquads(uid, prof, user = null) {
+  if (!uid) return [];
+  const owned = await getDocs(query(collection(db, COL.squads), where("ownerUids", "array-contains", uid))).then(list).catch(() => []);
+  const map = new Map(owned.map((s) => [s.id, s]));
+  const ids = prof?.squadIds || [];
+  const extra = await Promise.all(ids.filter((id) => !map.has(id)).map((id) => loadSquad(id).catch(() => null)));
+  extra.filter(Boolean).forEach((s) => map.set(s.id, s));
+  const missing = owned.map((s) => s.id).filter((id) => !ids.includes(id));
+  if (user?.uid === uid && missing.length) {
+    await setDoc(profileRef(uid), { squadIds: [...ids, ...missing], updatedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+  }
+  return [...map.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+
 async function addSquadToProfile(user, sid) {
   const prof = await ensureProfile(user);
   const ids = prof.squadIds || [];
