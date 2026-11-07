@@ -721,7 +721,7 @@ function scoreCard(game, records) {
     <a class="sb-card ${live ? "is-live" : ""}" href="${esc(gameUrl(state.event.id, g.id))}">
       <div class="sb-card__head">
         ${status}
-        <span class="sb-card__meta">${esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}</span>
+        <span class="sb-card__meta">${esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}${g.videoUrl ? ` <i class="bi bi-camera-video-fill text-danger" title="${esc(EX.vidHas)}"></i>` : ""}</span>
       </div>
       ${team(g.teamA, a, b)}
       ${team(g.teamB, b, a)}

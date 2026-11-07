@@ -547,12 +547,52 @@ export function gameRowHtml(game, { href = "", teams = null } = {}) {
       </div>
       <div class="ev-game-row__mid">
         ${final || live ? `<div class="ev-game-row__score"><span class="${bWin ? "is-loser" : ""}">${g.scoreA || 0}</span> – <span class="${aWin ? "is-loser" : ""}">${g.scoreB || 0}</span></div>` : `<div class="fw-bold">${esc(fmtTimeOnly(g.startAt) || EX.vs)}</div>`}
-        <div class="ev-game-row__meta">${live ? statusChip(g.status) : esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}</div>
+        <div class="ev-game-row__meta">${live ? statusChip(g.status) : esc([g.field, phaseLabel(g)].filter(Boolean).join(" · "))}${g.videoUrl ? ` <i class="bi bi-camera-video-fill text-danger" title="${esc(EX.vidHas)}"></i>` : ""}</div>
       </div>
       <div class="ev-game-row__team ev-game-row__team--b ${bWin ? "is-winner" : aWin ? "is-loser" : ""}">
         <span class="ev-game-row__name">${esc(g.teamB?.name || "—")}</span>${teamBadge(g.teamB || {}, 34)}
       </div>
     </${tag}>`;
+}
+
+/* =========================
+   Video de un partido (link a YouTube, Vimeo, Drive o cualquier página)
+========================= */
+export const isVideoUrl = (url) => /^https:\/\/[^\s/]+\.[^\s]+$/i.test(String(url || "").trim());
+
+// "1h2m3s", "90s" o "90" -> segundos (para empezar el video en ese momento)
+const startSeconds = (t) => {
+  if (!t) return 0;
+  if (/^\d+$/.test(t)) return Number(t);
+  const m = String(t).match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  return m ? (Number(m[1]) || 0) * 3600 + (Number(m[2]) || 0) * 60 + (Number(m[3]) || 0) : 0;
+};
+
+/**
+ * Link para embeber el video en la página, o "" si el sitio no se puede embeber (se muestra como link).
+ * @returns {string}
+ */
+export function videoEmbedUrl(raw) {
+  let u;
+  try { u = new URL(String(raw || "").trim()); } catch { return ""; }
+  const host = u.hostname.replace(/^(www\.|m\.)/, "");
+  if (host === "youtube.com" || host === "youtu.be" || host === "youtube-nocookie.com") {
+    const id = host === "youtu.be"
+      ? u.pathname.slice(1).split("/")[0]
+      : u.searchParams.get("v") || (u.pathname.match(/^\/(?:embed|live|shorts|v)\/([\w-]{6,})/) || [])[1];
+    if (!/^[\w-]{6,}$/.test(id || "")) return "";
+    const start = startSeconds(u.searchParams.get("t") || u.searchParams.get("start"));
+    return `https://www.youtube-nocookie.com/embed/${id}${start ? `?start=${start}` : ""}`;
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    const id = (u.pathname.match(/(\d{6,})/) || [])[1];
+    return id ? `https://player.vimeo.com/video/${id}` : "";
+  }
+  if (host === "drive.google.com") {
+    const id = (u.pathname.match(/\/file\/d\/([\w-]+)/) || [])[1] || u.searchParams.get("id");
+    return id ? `https://drive.google.com/file/d/${id}/preview` : "";
+  }
+  return "";
 }
 
 export const gameUrl = (eventId, gameId) => `/tournaments/game.html?event=${encodeURIComponent(eventId)}&game=${encodeURIComponent(gameId)}`;

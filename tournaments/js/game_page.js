@@ -13,15 +13,55 @@ import {
   pointRatio,
   ratioLabel,
 } from "/tournaments/js/model.js";
-import { listTeams, loadEvent, subscribeGame, subscribePlays } from "/tournaments/js/services.js";
-import { esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, waitForUser, possessionDot, downloadIcs, googleCalendarUrl, toMillis } from "/tournaments/js/ui.js";
+import { isPlatformAdmin, listTeams, loadEvent, subscribeGame, subscribePlays, updateGame } from "/tournaments/js/services.js";
+import { askConfirm, esc, eventUrl, feedItemHtml, fmtWhen, hideLoader, isGoogleUser, isVideoUrl, phaseLabel, playerLabel, renderNav, showLoader, statusChip, teamBadge, videoEmbedUrl, waitForUser, possessionDot, downloadIcs, googleCalendarUrl, toMillis } from "/tournaments/js/ui.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const EID = params.get("event") || "";
 const GID = params.get("game") || "";
 
-const state = { event: null, rules: eventRules({}), teams: [], game: null, plays: [], playersById: new Map() };
+const state = { event: null, rules: eventRules({}), teams: [], game: null, plays: [], playersById: new Map(), canEdit: false, videoForm: false, videoMsg: "" };
+
+// Video del partido: embebido si es YouTube / Vimeo / Drive; si no, un botón al link.
+// El organizador del torneo (o un admin de la plataforma) lo agrega, cambia o quita.
+function videoCard(g) {
+  const url = g.videoUrl || "";
+  if (!url && !state.canEdit) return "";
+  const form = state.videoForm ? `
+    <form class="mt-2" data-video-form>
+      <div class="input-group">
+        <input class="form-control" type="url" name="url" value="${esc(url)}" placeholder="${esc(EX.vidPlaceholder)}" required>
+        <button class="btn btn-primary" type="submit">${esc(EX.vidSave)}</button>
+        <button class="btn btn-outline-secondary" type="button" data-video-cancel>${esc(EX.vidCancel)}</button>
+      </div>
+      <div class="form-text">${esc(EX.vidHint)}</div>
+    </form>` : "";
+  const msg = state.videoMsg ? `<div class="small mt-2 ${state.videoMsg === EX.vidSaved ? "text-success" : "text-danger"}">${esc(state.videoMsg)}</div>` : "";
+  if (!url) {
+    return `<div class="ev-card mt-3">${state.videoForm ? `<h2 class="h6 mb-0">${esc(EX.vidAdd)}</h2>${form}` : `<button class="btn btn-sm btn-outline-primary" data-video-edit><i class="bi bi-camera-video me-1"></i>${esc(EX.vidAdd)}</button>`}${msg}</div>`;
+  }
+  const embed = videoEmbedUrl(url);
+  const tools = state.canEdit && !state.videoForm ? `
+    <div class="d-flex gap-1">
+      <button class="btn btn-sm btn-outline-secondary" data-video-edit><i class="bi bi-pencil me-1"></i>${esc(EX.vidEdit)}</button>
+      <button class="btn btn-sm btn-outline-danger" data-video-remove title="${esc(EX.vidRemove)}"><i class="bi bi-trash"></i><span class="visually-hidden">${esc(EX.vidRemove)}</span></button>
+    </div>` : "";
+  return `
+    <div class="ev-card mt-3">
+      <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+        <h2 class="h6 mb-0"><i class="bi bi-camera-video-fill text-danger me-1"></i>${esc(EX.vidTitle)}</h2>
+        ${tools}
+      </div>
+      ${embed ? `
+        <div class="ratio ratio-16x9 rounded overflow-hidden bg-dark">
+          <iframe src="${esc(embed)}" title="${esc(EX.vidTitle)}" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <a class="small d-inline-block mt-2" href="${esc(url)}" target="_blank" rel="noopener">${esc(EX.vidOpen)} <i class="bi bi-box-arrow-up-right"></i></a>` : `
+        <a class="btn btn-outline-primary" href="${esc(url)}" target="_blank" rel="noopener"><i class="bi bi-play-circle me-1"></i>${esc(EX.vidOpen)}</a>`}
+      ${form}${msg}
+    </div>`;
+}
 
 // mixto: proporción del punto en juego (FMP / MMP)
 const ratioChip = (letter) => (letter ? `<div class="ev-chip ev-chip--ok mt-1">${esc(letter === "F" ? EX.skFmp : EX.skMmp)} · ${esc(ratioLabel(letter, state.rules.playersOnField))}</div>` : "");
@@ -120,6 +160,7 @@ function render() {
       </div>
       ${side("B")}
     </div>
+    ${videoCard(g)}
 
     <div class="row g-3 mt-1">
       <div class="col-12 col-lg-5 order-lg-2">
@@ -151,8 +192,15 @@ setInterval(() => {
 (async function init() {
   showLoader();
   try {
-    renderNav({ active: "dir", user: await waitForUser() });
+    const user = await waitForUser();
+    renderNav({ active: "dir", user });
     const [event, teams] = await Promise.all([loadEvent(EID), listTeams(EID)]);
+    // quién puede agregar el video: organizador del torneo o admin de la plataforma
+    if (event && isGoogleUser(user)) {
+      const email = (user.email || "").toLowerCase();
+      state.canEdit = (event.organizerUids || []).includes(user.uid) || (!!email && (event.organizerEmails || []).includes(email))
+        || (await isPlatformAdmin(user.uid).catch(() => false));
+    }
     if (!event || !GID) {
       $("tnAlert").className = "alert alert-warning";
       $("tnAlert").textContent = EX.eventNotFound;
@@ -179,6 +227,47 @@ setInterval(() => {
     hideLoader();
   }
 })();
+
+// partido › video: agregar, cambiar o quitar el link
+document.addEventListener("click", async (ev) => {
+  if (!state.canEdit || !state.game) return;
+  if (ev.target.closest("[data-video-edit]")) {
+    state.videoForm = true;
+    state.videoMsg = "";
+    render();
+    document.querySelector("[data-video-form] input")?.focus();
+  } else if (ev.target.closest("[data-video-cancel]")) {
+    state.videoForm = false;
+    state.videoMsg = "";
+    render();
+  } else if (ev.target.closest("[data-video-remove]")) {
+    if (!(await askConfirm(EX.vidRemoveAsk, { ok: EX.vidRemove, danger: true }))) return;
+    await saveVideo("");
+  }
+});
+document.addEventListener("submit", async (ev) => {
+  const form = ev.target.closest("[data-video-form]");
+  if (!form) return;
+  ev.preventDefault();
+  const url = form.url.value.trim();
+  if (!isVideoUrl(url)) {
+    state.videoMsg = EX.vidInvalid;
+    render();
+    return;
+  }
+  await saveVideo(url);
+});
+async function saveVideo(url) {
+  try {
+    await updateGame(EID, GID, { videoUrl: url });
+    state.videoForm = false;
+    state.videoMsg = url ? EX.vidSaved : "";
+  } catch (err) {
+    console.error("[game_view] video", err);
+    state.videoMsg = `${EX.error} ${err?.code || ""}`;
+  }
+  render();
+}
 
 // partido › agregar al calendario (.ics)
 document.addEventListener("click", (ev) => {

@@ -21,7 +21,7 @@ import {
   writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { computeGameState, DEFAULT_RULES, EVENT_STATUS, eventRules, gameSummary, GAME_STATUS } from "/tournaments/js/model.js";
-import { APPROVAL, listPublicEvents, listTeams, loadEvent } from "/tournaments/js/services.js";
+import { APPROVAL, listGames, listPublicEvents, listTeams, loadEvent } from "/tournaments/js/services.js";
 import { sameName } from "/tournaments/js/names.js";
 
 export const IMPORT_FORMAT = "cshq-import/1";
@@ -181,6 +181,8 @@ export async function importTournament(data, onProgress) {
     return { id, name: t?.name || "", color: t?.color || "" };
   };
   const evRules = eventRules({ rules });
+  // videos que el organizador agregó a los partidos: se conservan al volver a importar
+  const prevVideos = new Map((existing ? await listGames(eid).catch(() => []) : []).filter((g) => g.videoUrl).map((g) => [g.id, g.videoUrl]));
   const gameOps = [];
   const playOps = [];
   data.games.forEach((g) => {
@@ -203,6 +205,7 @@ export async function importTournament(data, onProgress) {
       spirit: g.spirit || {},
       clock: startMs ? { startedAt: startMs, pausedMs: 0, pausedAt: null, offsetMs: 0, endedAt: endMs, break: null } : {},
       source: g.source || null,
+      ...(prevVideos.has(g.id) ? { videoUrl: prevVideos.get(g.id) } : {}),
     })]);
     // fechas como Timestamp (clean() las volvería texto)
     const last = gameOps[gameOps.length - 1][1];

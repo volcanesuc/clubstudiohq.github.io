@@ -7,6 +7,12 @@
    "startDate": "2026-08-29"
   },
   {
+   "file": "windmill2026.json",
+   "name": "Windmill 2026",
+   "source": "https://ultie.org/windmill2026",
+   "startDate": "2026-06-19"
+  },
+  {
    "file": "ciuf2025.json",
    "name": "Copa de Invierno 2025",
    "source": "https://ultie.org/ciuf2025",
