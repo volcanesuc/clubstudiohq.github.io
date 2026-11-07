@@ -12,6 +12,7 @@ import {
   PAY,
   PICKUP_STATUS,
   PLAYER_STATUS,
+  RAFFLE,
   SPOT,
   canLeave,
   fmtMoney,
@@ -19,9 +20,11 @@ import {
   isFull,
   isJoinOpen,
   owes,
+  raffleState,
   splitSpots,
   spotOf,
 } from "/tournaments/js/pickups.js";
+import { playRaffle, raffleCard } from "/tournaments/js/pickups_raffle.js";
 import { joinPickup, leavePickup, listPlayers, loadPickupBySlug, pickupAbsUrl, submitProof } from "/tournaments/js/pickups_services.js";
 import { payChip, statusLabel } from "/tournaments/js/pickups_manage.js";
 import {
@@ -241,6 +244,7 @@ function whoCard(p) {
     <div class="pa-row pk-player">
       ${n ? `<span class="pk-num">${n}</span>` : avatarHtml(pl, 32)}
       <div class="flex-grow-1 min-w-0"><div class="fw-semibold text-truncate">${esc(pl.name || "—")}</div></div>
+      ${pl.raffleWinner ? `<span class="ev-chip pk-pay-free"><i class="bi bi-ticket-perforated-fill me-1"></i>${esc(PK.rfChip)}</span>` : ""}
       ${state.user && pl.id === state.user.uid ? `<span class="ev-chip">${esc(PK.pgYou)}</span>` : ""}
     </div>`;
   return `
@@ -268,6 +272,7 @@ function render() {
     <div class="row g-3">
       <div class="col-12 col-lg-7 order-2 order-lg-1">${whoCard(p)}</div>
       <div class="col-12 col-lg-5 order-1 order-lg-2">
+        ${raffleCard(raffleState(p, state.players), { pickup: p, admin: state.canManage, meId: state.user?.uid || "" })}
         ${myCard(p)}
         ${joinCard(p)}
         ${spotsCard(p)}
@@ -313,6 +318,18 @@ root.addEventListener("click", async (ev) => {
   if (!btn) return;
   const p = state.pickup;
   const act = btn.dataset.act;
+
+  // rifa: volver a ver el sorteo (el ganador ya está guardado). Sortear se hace desde Organizar.
+  if (btn.dataset.raffle === "replay") {
+    const r = p.raffle || {};
+    const i = (r.pool || []).findIndex((x) => x.id === r.winnerId);
+    if (i >= 0) await playRaffle(r.pool.map((x) => x.name || "—"), i);
+    return;
+  }
+  if (btn.dataset.raffle === "draw") {
+    location.href = `/pickups/organize.html?org=${encodeURIComponent(p.orgId)}&tab=pickups&p=${encodeURIComponent(p.id)}`;
+    return;
+  }
 
   if (btn.dataset.frDel != null) {
     state.friends.splice(Number(btn.dataset.frDel), 1);

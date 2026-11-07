@@ -111,3 +111,33 @@ export function fmtMoney(value, currency = "USD", locale = "es-CR") {
     return `${currency} ${n}`;
   }
 }
+
+/* =========================
+   Rifa: uno de los confirmados juega gratis
+   Condición: a la hora límite tiene que haber al menos `minPlayers` confirmados.
+   Se sortea después de la hora límite (ya nadie se puede salir); el ganador se guarda en pickup.raffle.
+========================= */
+export const RAFFLE = { OFF: "off", WAITING: "waiting", READY: "ready", SHORT: "short", DRAWN: "drawn", VOID: "void" };
+export const RAFFLE_MIN = 2;
+
+/**
+ * Estado de la rifa de un pickup.
+ * @returns {{ status: string, min?: number, count?: number, pool?: object[], winnerId?: string, winnerName?: string }}
+ */
+export function raffleState(pickup, players = [], now = Date.now()) {
+  const r = pickup?.raffle;
+  if (!r?.enabled) return { status: RAFFLE.OFF };
+  const min = Math.max(RAFFLE_MIN, Number(r.minPlayers || 0));
+  const pool = splitSpots(pickup, players).in;
+  const base = { min, count: pool.length, pool };
+  if (r.winnerId) return { ...base, status: RAFFLE.DRAWN, winnerId: r.winnerId, winnerName: r.winnerName || "" };
+  if (pickup.status === PICKUP_STATUS.CANCELLED || pickup.status === PICKUP_STATUS.DRAFT) return { ...base, status: RAFFLE.VOID };
+  if (canLeave(pickup, now)) return { ...base, status: RAFFLE.WAITING };
+  return { ...base, status: pool.length >= min ? RAFFLE.READY : RAFFLE.SHORT };
+}
+
+/** Índice del ganador; `rand` da un número en [0, 1) (en la página se usa crypto). */
+export function drawIndex(size, rand = Math.random) {
+  if (!size) return -1;
+  return Math.min(size - 1, Math.floor(rand() * size));
+}

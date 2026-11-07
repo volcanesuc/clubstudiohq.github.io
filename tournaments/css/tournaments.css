@@ -1218,3 +1218,29 @@ body.is-admin-mode .os-card { border-color: rgba(180, 83, 9, .35); }
 /* Admin > Jugadores: encabezado de equipo plegable */
 .pa-team-toggle { background: #faf9fe; cursor: pointer; color: inherit; }
 .pa-team-toggle:hover { background: #f3f0fd; }
+
+/* Pickups: rifa (tarjeta y animación del sorteo) */
+.pk-raffle { border: 1px solid rgba(124, 58, 237, .3); background: linear-gradient(135deg, #faf5ff, #fff7ed); border-radius: 14px; padding: .85rem 1rem; }
+.pk-raffle.is-drawn { border-color: #f59e0b; }
+.pk-raffle__head { display: flex; align-items: center; gap: .5rem; margin-bottom: .35rem; }
+.pk-raffle__icon { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: #ede9fe; color: #6d28d9; flex-shrink: 0; }
+.pk-raffle__winner { font-weight: 800; font-size: 1.05rem; }
+.pk-raffle__count { display: inline-block; margin-top: .4rem; font-size: .8rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; background: #fef3c7; color: #92400e; }
+.pk-raffle__count.is-ok { background: #d1fae5; color: #065f46; }
+.pk-rf-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(17, 12, 34, .72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.pk-rf-box { position: relative; overflow: hidden; width: min(420px, 100%); background: #fff; color: #111; border-radius: 20px; padding: 1.4rem 1.2rem; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.pk-rf-title { font-weight: 800; font-size: 1.15rem; color: #6d28d9; }
+.pk-rf-sub { font-size: .85rem; color: #6b7280; margin-bottom: .9rem; }
+.pk-rf-window { position: relative; height: 192px; overflow: hidden; border-radius: 14px; background: #f5f3ff;
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent); }
+.pk-rf-reel { will-change: transform; }
+.pk-rf-item { height: 64px; display: flex; align-items: center; justify-content: center; padding: 0 1rem; font-weight: 700; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-rf-item.is-winner { color: #6d28d9; font-size: 1.35rem; }
+.pk-rf-marker { position: absolute; left: 8px; right: 8px; top: 64px; height: 64px; border: 3px solid #7c3aed; border-radius: 12px; pointer-events: none; }
+.pk-rf-result { min-height: 3.2rem; margin-top: .8rem; }
+.pk-rf-name { font-weight: 800; font-size: 1.3rem; animation: pk-rf-pop .5s ease-out; }
+@keyframes pk-rf-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.pk-rf-confetti { position: absolute; inset: 0; pointer-events: none; }
+.pk-rf-confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation-name: pk-rf-fall; animation-timing-function: ease-in; animation-fill-mode: forwards; }
+@keyframes pk-rf-fall { to { top: 105%; transform: translateX(30px) rotate(540deg); opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .pk-rf-confetti { display: none; } .pk-rf-name { animation: none; } }

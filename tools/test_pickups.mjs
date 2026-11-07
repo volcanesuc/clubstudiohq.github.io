@@ -1,6 +1,6 @@
 // node tools/test_pickups.mjs — prueba la lógica pura de pickups (cupos, lista de espera, hora límite, quién debe)
 import assert from "node:assert/strict";
-import { PAY, SPOT, canLeave, leaveDeadline, owes, spotOf, splitSpots, totals } from "../tournaments/js/pickups.js";
+import { PAY, RAFFLE, SPOT, canLeave, drawIndex, leaveDeadline, owes, raffleState, spotOf, splitSpots, totals } from "../tournaments/js/pickups.js";
 
 const H = 3600000;
 const start = Date.UTC(2026, 10, 12, 1, 0); // jue 12 nov 19:00 en Costa Rica
@@ -47,6 +47,26 @@ const same = start - 24 * H;
 const group = [pl("yo", 0, { joinedAt: same, order: 0 }), pl("amigo2", 0, { joinedAt: same, order: 2 }), pl("amigo1", 0, { joinedAt: same, order: 1 })];
 assert.deepEqual(splitSpots({ ...pickup, capacity: 0 }, group).in.map((p) => p.id), ["yo", "amigo1", "amigo2"]);
 
-console.log("pickups: 6 casos OK");
+// 7. rifa: entre los confirmados, después de la hora límite y con el mínimo de anotados
+const rp = { ...pickup, raffle: { enabled: true, minPlayers: 3 } };
+assert.equal(raffleState(pickup, players, after).status, RAFFLE.OFF);
+assert.equal(raffleState(rp, players, before).status, RAFFLE.WAITING); // todavía se pueden salir
+const ready = raffleState(rp, players, after);
+assert.equal(ready.status, RAFFLE.READY);
+assert.deepEqual(ready.pool.map((p) => p.id), ["ana", "caro", "dani"]); // la espera no entra
+assert.equal(raffleState({ ...rp, raffle: { enabled: true, minPlayers: 4 } }, players, after).status, RAFFLE.SHORT);
+assert.equal(raffleState({ ...rp, status: "cancelled" }, players, after).status, RAFFLE.VOID);
+const drawn = raffleState({ ...rp, raffle: { ...rp.raffle, winnerId: "caro", winnerName: "caro" } }, players, after);
+assert.equal(drawn.status, RAFFLE.DRAWN);
+assert.equal(drawn.winnerId, "caro");
+assert.equal(raffleState({ ...rp, raffle: { enabled: true, minPlayers: 0 } }, players, after).min, 2); // mínimo 2
+assert.equal(drawIndex(3, () => 0), 0);
+assert.equal(drawIndex(3, () => 0.999999), 2);
+assert.equal(drawIndex(0, () => 0.5), -1);
+const hits = [0, 0, 0];
+for (let i = 0; i < 3000; i++) hits[drawIndex(3)]++;
+assert.ok(hits.every((n) => n > 800), `reparto parejo: ${hits}`);
+
+console.log("pickups: 7 casos OK");
 console.log("  confirmados:", s.in.map((p) => p.id).join(", "), "| espera:", s.waitlist.map((p) => p.id).join(", "));
 console.log("  totales después de la hora límite:", JSON.stringify(t));

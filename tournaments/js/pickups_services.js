@@ -81,10 +81,13 @@ export async function savePickup(id, data, org) {
     orgColor: org.color || "",
     updatedAt: serverTimestamp(),
   };
+  // rifa: al editar solo se tocan enabled/minPlayers (el ganador, si ya se sorteó, queda)
+  const raffle = { enabled: !!data.raffle?.enabled, minPlayers: Math.max(2, Number(data.raffle?.minPlayers || 0)) };
   if (id) {
-    await updateDoc(pickupRef(id), payload);
+    await updateDoc(pickupRef(id), { ...payload, "raffle.enabled": raffle.enabled, "raffle.minPlayers": raffle.minPlayers });
     return id;
   }
+  payload.raffle = raffle;
   const newId = randomId("pk");
   const d = new Date(startMs); // fecha local del organizador (19:00 en CR no es "mañana" en UTC)
   const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -251,6 +254,31 @@ export async function setPlayerTier(pickup, plid, tierId, player) {
   if (tier.price <= 0) patch.paymentStatus = PAY.FREE;
   else if (player?.paymentStatus === PAY.FREE) patch.paymentStatus = PAY.NONE;
   await updatePlayer(pickup.id, plid, patch);
+}
+
+/**
+ * Guarda el resultado de la rifa: el ganador juega gratis (se anota cómo estaba su pago por si hay que devolverlo).
+ * @param {object} pickup
+ * @param {object[]} pool confirmados que entraron
+ * @param {object} winner jugador elegido
+ */
+export async function saveRaffle(pickup, pool, winner) {
+  const batch = writeBatch(db);
+  batch.update(pickupRef(pickup.id), {
+    "raffle.winnerId": winner.id,
+    "raffle.winnerName": winner.name || "",
+    "raffle.pool": pool.map((p) => ({ id: p.id, name: p.name || "" })),
+    "raffle.drawnAt": serverTimestamp(),
+    "raffle.drawnBy": auth.currentUser?.uid || "",
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(playerRef(pickup.id, winner.id), {
+    raffleWinner: true,
+    prevPaymentStatus: winner.paymentStatus || PAY.NONE,
+    paymentStatus: PAY.FREE,
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
 }
 
 export async function removePlayer(pid, plid) {

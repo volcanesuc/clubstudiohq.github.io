@@ -7,8 +7,10 @@ import {
   PAY,
   PICKUP_STATUS,
   PLAYER_STATUS,
+  RAFFLE,
   SPOT,
   canLeave,
+  raffleState,
   defaultPickupSettings,
   fmtMoney,
   hasStarted,
@@ -28,6 +30,7 @@ import {
   pickupUrl,
   removePlayer,
   savePickup,
+  saveRaffle,
   setPayment,
   setPickupCapacity,
   setPickupStatus,
@@ -35,6 +38,7 @@ import {
   updatePlayer,
 } from "/tournaments/js/pickups_services.js";
 import { askConfirm, avatarHtml, esc, fmtWhen } from "/tournaments/js/ui.js";
+import { pickWinner, playRaffle, raffleCard } from "/tournaments/js/pickups_raffle.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 const dateInput = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -50,6 +54,7 @@ export function payChip(pl, pickup, spot) {
     [PAY.REJECTED]: ["pk-pay-no", PK.payRejected],
     [PAY.NONE]: [late ? "pk-pay-no" : "pk-pay-pending", late ? PK.payOwes : PK.payNone],
   };
+  if (pl.raffleWinner) return `<span class="ev-chip pk-pay-free"><i class="bi bi-ticket-perforated-fill me-1"></i>${esc(PK.rfChip)}</span>`;
   const [cls, label] = Number(pl.price || 0) <= 0 ? map[PAY.FREE] : map[pl.paymentStatus] || map[PAY.NONE];
   return `<span class="ev-chip ${cls}">${esc(label)}</span>`;
 }
@@ -137,6 +142,19 @@ export function mountPickups(box, ctx) {
           <div class="col-12 col-md-8"><label class="form-label small fw-semibold" for="pfLeave">${esc(PK.setLeaveHours)}</label>
             <select class="form-select" id="pfLeave">${hours.sort((a, b) => a - b).map((h) => `<option value="${h}" ${h === lh ? "selected" : ""}>${esc(h ? pkf(PK.setLeaveOpt, { n: h }) : PK.setLeaveStart)}</option>`).join("")}</select>
             <div class="form-text">${esc(PK.pfLeaveHint)}</div></div>
+          <div class="col-12">
+            <div class="pk-box p-2">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="form-check form-switch mb-0 flex-grow-1">
+                  <input class="form-check-input" type="checkbox" role="switch" id="pfRaffle" ${p?.raffle?.enabled ? "checked" : ""} ${p?.raffle?.winnerId ? "disabled" : ""} />
+                  <label class="form-check-label fw-semibold small" for="pfRaffle"><i class="bi bi-ticket-perforated me-1"></i>${esc(PK.pfRaffle)}</label>
+                </div>
+                <label class="small ev-muted" for="pfRaffleMin">${esc(PK.pfRaffleMin)}</label>
+                <input class="form-control form-control-sm" type="number" min="2" id="pfRaffleMin" value="${esc(p?.raffle?.minPlayers ?? Math.max(2, Math.round((p?.capacity ?? settings.defaultCapacity) / 2) || 10))}" style="width:90px" ${p?.raffle?.winnerId ? "disabled" : ""} />
+              </div>
+              <div class="form-text mt-1">${esc(p?.raffle?.winnerId ? PK.pfRaffleDone : PK.pfRaffleHint)}</div>
+            </div>
+          </div>
         </div>
         <div class="fw-semibold small mt-3 mb-1">${esc(PK.pfTiers)}</div>
         <div class="pk-box">
@@ -172,7 +190,8 @@ export function mountPickups(box, ctx) {
       rule: l.dataset.rule,
       price: Math.max(0, Number(l.querySelector("input[type=number]").value || 0)),
     }));
-    return { title: v("pfTitle"), venue: v("pfVenue"), city: v("pfCity"), startAt, endAt, capacity: v("pfCap"), leaveHours: Number(v("pfLeave")), tiers, payInfo: v("pfPay"), currency: st.form?.currency || settings.currency };
+    const raffle = { enabled: box.querySelector("#pfRaffle").checked, minPlayers: Number(v("pfRaffleMin")) || 2 };
+    return { title: v("pfTitle"), venue: v("pfVenue"), city: v("pfCity"), startAt, endAt, capacity: v("pfCap"), leaveHours: Number(v("pfLeave")), tiers, payInfo: v("pfPay"), currency: st.form?.currency || settings.currency, raffle };
   }
 
   /* ----- un pickup ----- */
@@ -247,6 +266,13 @@ export function mountPickups(box, ctx) {
         </div>
         ${cancelled ? `<div class="pk-note pk-note--off">${esc(PK.pkCancelledNote)}</div>` : `<div class="pk-note ${open ? "" : "pk-note--off"}"><i class="bi bi-clock me-1"></i>${esc(open ? pkf(PK.deadlineOpen, { when: fmtWhen(p.leaveDeadlineAt) }) : PK.deadlinePassed)}</div>`}
         ${t.review ? `<div class="pk-note pk-note--review mt-2"><i class="bi bi-receipt me-1"></i>${esc(pkf(PK.reviewCount, { n: t.review }))}</div>` : ""}
+        ${(() => {
+          const rs = raffleState(p, st.players);
+          if (rs.status === RAFFLE.OFF) return "";
+          const w = rs.status === RAFFLE.DRAWN ? st.players.find((x) => x.id === rs.winnerId) : null;
+          const refund = w && [PAY.APPROVED, PAY.SUBMITTED].includes(w.prevPaymentStatus) ? `<div class="pk-note mt-2"><i class="bi bi-arrow-counterclockwise me-1"></i>${esc(pkf(PK.rfRefund, { name: w.name }))}</div>` : "";
+          return `<div class="mt-3">${raffleCard(rs, { pickup: p, admin: true, locked })}${refund}</div>`;
+        })()}
         <div class="pk-sec mt-3">${esc(PK.secIn)} · ${inList.length}</div>
         ${inList.length ? `<div class="pa-list">${inList.map((pl, i) => playerRow(pl, SPOT.IN, i)).join("")}</div>` : `<div class="small ev-muted">${esc(PK.noPlayers)}</div>`}
         ${waitlist.length ? `<div class="pk-sec mt-3">${esc(PK.secWait)} · ${waitlist.length}</div><div class="small ev-muted mb-1">${esc(PK.secWaitHint)}</div><div class="pa-list">${waitlist.map((pl, i) => playerRow(pl, SPOT.WAITLIST, i)).join("")}</div>` : ""}
@@ -403,6 +429,27 @@ export function mountPickups(box, ctx) {
     }
     if (pk === "publish") return run(async () => { await setPickupStatus(p.id, PICKUP_STATUS.PUBLISHED); await showPickup(p.id); await copyLink(); }, PK.pkPublished);
     if (pk === "copy") return copyLink();
+    const rf = ev.target.closest("[data-raffle]")?.dataset.raffle;
+    if (rf === "replay") {
+      const r = p.raffle || {};
+      const names = (r.pool || []).map((x) => x.name || "—");
+      const i = (r.pool || []).findIndex((x) => x.id === r.winnerId);
+      if (i >= 0) await playRaffle(names, i);
+      return;
+    }
+    if (rf === "draw") {
+      const rs = raffleState(p, st.players);
+      if (rs.status !== RAFFLE.READY) return renderPickup();
+      if (!(await askConfirm(pkf(PK.rfDrawConfirm, { n: rs.count }), { ok: PK.rfDraw }))) return;
+      const winner = pickWinner(rs.pool);
+      if (!winner) return;
+      let saved = false;
+      // primero se guarda (el ganador no cambia aunque se recargue), después se anima
+      await run(async () => { await saveRaffle(p, rs.pool, winner); saved = true; });
+      if (!saved) return;
+      await playRaffle(rs.pool.map((x) => x.name || "—"), rs.pool.indexOf(winner));
+      return run(() => showPickup(p.id), pkf(PK.rfDone, { name: winner.name }));
+    }
     if (pk === "add") return addPlayerDialog();
     if (pk === "finish") return run(async () => { await setPickupStatus(p.id, PICKUP_STATUS.FINISHED); await showPickup(p.id); }, PK.orgSaved);
     if (pk === "draft") return run(async () => { await setPickupStatus(p.id, PICKUP_STATUS.DRAFT); await showPickup(p.id); }, PK.orgSaved);
