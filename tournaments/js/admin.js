@@ -49,6 +49,7 @@ const state = {
   done: null, // { eventId, slug }
   // jugadores sin cuenta
   pl: { eventId: "", event: null, teams: [], onlyFree: true, search: "", open: new Set() },
+  np: { days: 7, noTeam: false, more: false }, // jugadores nuevos (registros recientes)
   profiles: null,
   squads: null,
   pick: null, // { team, player }
@@ -72,7 +73,8 @@ function ago(v) {
   if (min < 60) return exf(EX.adAgoMin, { n: min });
   const h = Math.round(min / 60);
   if (h < 24) return exf(EX.adAgoHours, { n: h });
-  return exf(EX.adAgoDays, { n: Math.round(h / 24) });
+  const d = Math.round(h / 24);
+  return d === 1 ? EX.adAgoDay : exf(EX.adAgoDays, { n: d });
 }
 
 const daysLeft = (v) => {
@@ -439,6 +441,79 @@ function claimRequestsSection() {
     </section>`;
 }
 
+/* ----- Jugadores nuevos: cuentas creadas hace poco ----- */
+const NP_PAGE = 15;
+
+// equipos del jugador: los de su perfil (squadIds) más los que administra (ownerUids); solo los que existen
+function npTeams(prof) {
+  const squads = state.squads || [];
+  const ids = new Set(prof.squadIds || []);
+  return squads.filter((s) => ids.has(s.id) || (s.ownerUids || []).includes(prof.id));
+}
+
+function newProfiles(days) {
+  const since = days ? Date.now() - days * DAY : 0;
+  return (state.profiles || [])
+    .filter((p) => (days ? toMillis(p.createdAt) >= since : true))
+    .sort((a, b) => (toMillis(b.createdAt) || 0) - (toMillis(a.createdAt) || 0));
+}
+
+const newThisWeek = () => (state.profiles ? newProfiles(7).length : 0);
+
+function newPlayersSection() {
+  if (!state.profiles) return "";
+  const { days, noTeam, more } = state.np;
+  const all = newProfiles(days).map((p) => ({ p, teams: npTeams(p) }));
+  const lonely = all.filter((x) => !x.teams.length).length;
+  const rows = noTeam ? all.filter((x) => !x.teams.length) : all;
+  const shown = more ? rows : rows.slice(0, NP_PAGE);
+  const seg = (v, label) => `
+    <input type="radio" class="btn-check" name="npRange" id="npR${v}" value="${v}" ${days === v ? "checked" : ""} />
+    <label class="btn" for="npR${v}">${esc(label)}</label>`;
+  const row = ({ p, teams }) => {
+    const made = teams.filter((s) => s.createdBy === p.id);
+    const admin = teams.filter((s) => s.createdBy !== p.id && (s.ownerUids || []).includes(p.id));
+    const member = teams.filter((s) => !(s.ownerUids || []).includes(p.id));
+    const incomplete = !p.gender || !p.photoURL;
+    const link = (s) => `<a class="text-decoration-none" href="${esc(squadUrl(s.id))}" target="_blank" rel="noopener">${esc(s.name || s.id)}</a>`;
+    const when = toMillis(p.createdAt);
+    return `
+      <div class="pa-row">
+        ${avatarHtml(p, 36)}
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a class="fw-semibold text-decoration-none text-truncate" href="${esc(profileUrl(p.id))}" target="_blank" rel="noopener">${esc(p.name || EX.npNoName)}</a>
+            ${p.number != null && p.number !== "" ? `<span class="small ev-muted">#${esc(p.number)}</span>` : ""}
+            ${p.gender ? `<span class="small ev-muted">${esc(p.gender)}</span>` : ""}
+            <span class="small ev-muted" title="${esc(when ? fmtWhen(p.createdAt) : "")}">${esc(when ? ago(p.createdAt) : EX.npNoDate)}</span>
+          </div>
+          <div class="small d-flex flex-wrap gap-1 mt-1">
+            ${made.map((s) => `<span class="pa-pill pa-pill--sugg"><i class="bi bi-plus-circle"></i> ${exf(esc(EX.npCreated), { team: link(s) })}</span>`).join("")}
+            ${admin.map((s) => `<span class="pa-pill"><i class="bi bi-shield-check"></i> ${exf(esc(EX.npAdmin), { team: link(s) })}</span>`).join("")}
+            ${member.map((s) => `<span class="pa-pill"><i class="bi bi-people"></i> ${link(s)}</span>`).join("")}
+            ${teams.length ? "" : `<span class="pa-pill"><i class="bi bi-person"></i> ${esc(EX.npNoTeam)}</span>`}
+            ${incomplete ? `<span class="pa-pill pa-pill--wait"><i class="bi bi-exclamation-circle"></i> ${esc(EX.npIncomplete)}</span>` : ""}
+          </div>
+        </div>
+      </div>`;
+  };
+  return `
+    <section class="ev-card mb-3">
+      <h2 class="h5 fw-bold mb-1"><i class="bi bi-person-plus me-1"></i>${esc(EX.npTitle)}</h2>
+      <p class="small ev-muted mb-2">${esc(EX.npSub)}</p>
+      <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+        <div class="pa-seg">${seg(7, EX.np7)}${seg(30, EX.np30)}${seg(0, EX.npAllTime)}</div>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="npNoTeam" ${noTeam ? "checked" : ""} />
+          <label class="form-check-label small" for="npNoTeam">${esc(EX.npOnlyNoTeam)}</label>
+        </div>
+      </div>
+      <div class="small ev-muted mb-2">${esc(exf(EX.npCount, { n: all.length, none: lonely }))}</div>
+      ${shown.length ? `<div class="pa-list">${shown.map(row).join("")}</div>` : `<div class="pa-empty small ev-muted">${esc(EX.npEmpty)}</div>`}
+      ${rows.length > NP_PAGE ? `<div class="text-center mt-2"><button class="btn btn-sm btn-link text-decoration-none" data-act="npMore">${esc(more ? EX.npLess : exf(EX.npMore, { n: rows.length - NP_PAGE }))}</button></div>` : ""}
+    </section>`;
+}
+
 function playersTab() {
   const events = [...state.active, ...state.pending];
   if (!events.length) return `<div class="pa-empty small ev-muted">${esc(EX.plNoEvents)}</div>`;
@@ -495,6 +570,7 @@ function playersTab() {
     </div>` : "";
   return `
     ${claimRequestsSection()}
+    ${newPlayersSection()}
     <section class="ev-card mb-3">
       <h2 class="h5 fw-bold mb-1"><i class="bi bi-person-badge me-1"></i>${esc(EX.plTitle)}</h2>
       <p class="small ev-muted mb-2">${esc(EX.plSub)}</p>
@@ -675,7 +751,7 @@ function render() {
       <button class="tp-tab ${state.tab === "orgs" ? "is-active" : ""}" data-pa-tab="orgs"><i class="bi bi-building"></i> ${esc(PK.adTabOrgs)}${state.orgs ? (orgAlerts().soon + orgAlerts().expired ? ` <span class="pa-count pa-count--alert">${orgAlerts().soon + orgAlerts().expired}</span>` : ` <span class="pa-count">${state.orgs.length}</span>`) : ""}</button>
       <button class="tp-tab ${state.tab === "migrations" ? "is-active" : ""}" data-pa-tab="migrations"><i class="bi bi-arrow-left-right"></i> ${esc(EX.adTabMigrations)}${state.migrations.some((r) => r.status !== "done") ? ` <span class="pa-count pa-count--alert">${state.migrations.filter((r) => r.status !== "done").length}</span>` : ""}</button>
       <button class="tp-tab ${state.tab === "import" ? "is-active" : ""}" data-pa-tab="import"><i class="bi bi-cloud-download"></i> ${esc(EX.adTabImport)}</button>
-      <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : ""}</button>
+      <button class="tp-tab ${state.tab === "players" ? "is-active" : ""}" data-pa-tab="players"><i class="bi bi-person-badge"></i> ${esc(EX.adTabPlayers)}${state.claimReqs?.length ? ` <span class="pa-count pa-count--alert">${state.claimReqs.length}</span>` : newThisWeek() ? ` <span class="pa-count" title="${esc(EX.npTabHint)}">+${newThisWeek()}</span>` : ""}</button>
     </nav>
 
     ${state.tab === "import" ? importTab() : state.tab === "players" ? playersTab() : state.tab === "clubs" ? clubsTab() : state.tab === "migrations" ? migrationsTab() : state.tab === "orgs" ? orgsTab() : state.tab === "drafts"
@@ -780,6 +856,10 @@ root.addEventListener("click", (ev) => {
     }, EX.imDone);
   }
   if (tool?.dataset.act === "goAssign") return openTab("players", tool.dataset.id);
+  if (tool?.dataset.act === "npMore") {
+    state.np.more = !state.np.more;
+    return render();
+  }
   if (tool?.dataset.act === "toggleTeam") {
     const id = tool.dataset.id;
     if (state.pl.open.has(id)) state.pl.open.delete(id);
@@ -877,6 +957,16 @@ root.addEventListener("change", (ev) => {
     act(async () => pickImport(JSON.parse(await file.text()), file.name), "", { reload: false });
   }
   if (ev.target.id === "plEvent") act(() => loadPlayersEvent(ev.target.value), "", { reload: false });
+  if (ev.target.name === "npRange") {
+    state.np.days = Number(ev.target.value);
+    state.np.more = false;
+    return render();
+  }
+  if (ev.target.id === "npNoTeam") {
+    state.np.noTeam = ev.target.checked;
+    state.np.more = false;
+    return render();
+  }
   if (ev.target.name === "plFilter") {
     state.pl.onlyFree = ev.target.value === "free";
     render();
